@@ -1,5 +1,5 @@
 <p align="center">
-  <span style="font-size: 60px;">🟣</span>
+  <span style="font-size: 75px;">🟣</span>
 </p>
 
 <h1 align="center">InnerCircle</h1>
@@ -9,22 +9,22 @@
 </p>
 
 <p align="center">
-  <a href="#-features">Features</a> •
-  <a href="#-how-it-works">How It Works</a> •
-  <a href="#-tech-stack">Tech Stack</a> •
-  <a href="#-project-structure">Project Structure</a> •
-  <a href="#-quick-start">Quick Start</a> •
-  <a href="#-api-documentation">API</a> •
-  <a href="#-deployment">Deployment</a> •
-  <a href="#-contributing">Contributing</a>
+  <a href="#-features"><img src="https://img.shields.io/badge/Features-6DB33F?style=flat-square&logo=spring&logoColor=white" alt="Features" /></a>
+  <a href="#-how-it-works"><img src="https://img.shields.io/badge/How_It_Works-FF6F61?style=flat-square" alt="How It Works" /></a>
+  <a href="#-tech-stack"><img src="https://img.shields.io/badge/Tech_Stack-4FC3F7?style=flat-square" alt="Tech Stack" /></a>
+  <a href="#-project-structure"><img src="https://img.shields.io/badge/Structure-FFB74D?style=flat-square" alt="Structure" /></a>
+  <a href="#-quick-start"><img src="https://img.shields.io/badge/Quick_Start-81C784?style=flat-square" alt="Quick Start" /></a>
+  <a href="#-api-documentation"><img src="https://img.shields.io/badge/API-AB47BC?style=flat-square" alt="API" /></a>
+  <a href="#-deployment"><img src="https://img.shields.io/badge/Deploy-4DD0E1?style=flat-square" alt="Deploy" /></a>
+  <a href="#-contributing"><img src="https://img.shields.io/badge/Contributing-F06292?style=flat-square" alt="Contributing" /></a>
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" />
-  <img src="https://img.shields.io/badge/made_with-Flutter-blue?logo=flutter" alt="Flutter" />
-  <img src="https://img.shields.io/badge/backend-Java_Spring_Boot-6DB33F?logo=spring" alt="Spring Boot" />
-  <img src="https://img.shields.io/badge/LLM-Groq-000000?logo=groq" alt="Groq" />
-  <img src="https://img.shields.io/badge/database-PostgreSQL-336791?logo=postgresql" alt="PostgreSQL" />
+  <img src="https://img.shields.io/badge/license-MIT-blue.svg?style=flat-square" alt="License" />
+  <img src="https://img.shields.io/badge/made_with-Flutter-blue?logo=flutter&style=flat-square" alt="Flutter" />
+  <img src="https://img.shields.io/badge/backend-Java_Spring_Boot-6DB33F?logo=spring&style=flat-square" alt="Spring Boot" />
+  <img src="https://img.shields.io/badge/LLM-Groq-000000?logo=groq&style=flat-square" alt="Groq" />
+  <img src="https://img.shields.io/badge/database-PostgreSQL-336791?logo=postgresql&style=flat-square" alt="PostgreSQL" />
 </p>
 
 ---
