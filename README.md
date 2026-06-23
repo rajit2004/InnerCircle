@@ -10,258 +10,538 @@
 
 <p align="center">
   <a href="#-features">Features</a> •
+  <a href="#-how-it-works">How It Works</a> •
   <a href="#-tech-stack">Tech Stack</a> •
+  <a href="#-project-structure">Project Structure</a> •
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-api-documentation">API</a> •
-  <a href="#-deployment">Deploy</a> •
+  <a href="#-deployment">Deployment</a> •
   <a href="#-contributing">Contributing</a>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" />
   <img src="https://img.shields.io/badge/made_with-Flutter-blue?logo=flutter" alt="Flutter" />
-  <img src="https://img.shields.io/badge/backend-Node.js-339933?logo=node.js" alt="Node.js" />
+  <img src="https://img.shields.io/badge/backend-Java_Spring_Boot-6DB33F?logo=spring" alt="Spring Boot" />
   <img src="https://img.shields.io/badge/LLM-Groq-000000?logo=groq" alt="Groq" />
-  <img src="https://img.shields.io/badge/database-Supabase-3ECF8E?logo=supabase" alt="Supabase" />
+  <img src="https://img.shields.io/badge/database-PostgreSQL-336791?logo=postgresql" alt="PostgreSQL" />
 </p>
 
 ---
 
 ## 💡 What is InnerCircle?
 
-**InnerCircle** is a multi-persona AI companion app that gives users a personal support system. Instead of one generic chatbot, you get **distinct AI personalities** — each with its own voice, communication style, and long-term memory.
+**InnerCircle** is a multi-persona AI companion platform designed to provide users with an emotional support network. Rather than interacting with a single generic chatbot, users engage with distinct AI personalities—each featuring its own tone, communication style, behavior patterns, and long-term memory.
 
-| Persona | Vibe |
-|---------|------|
-| 👩 **Mom** | Nurturing, gentle, gives life advice |
-| 🙌 **Best Friend** | Upbeat, hype, non-judgmental |
-| 💕 **Girlfriend** | Romantic, affectionate, sends good morning texts |
-| 💪 **Big Sister** | Protective, blunt, fun |
+### Available Personas
 
-Built with **Flutter** (frontend), **Node.js + Express** (backend), **Supabase** (auth + DB + pgvector), and **Groq** (Llama 3 70B) for fast, free LLM responses.
+| Persona            | Personality                                                |
+| ------------------ | ---------------------------------------------------------- |
+| 👩 **Mom**         | Nurturing, gentle, and offers thoughtful life advice       |
+| 🙌 **Best Friend** | Energetic, encouraging, and non-judgmental                 |
+| 💕 **Girlfriend**  | Affectionate, romantic, and proactive with daily check-ins |
+| 💪 **Big Sister**  | Protective, honest, and playful                            |
+
+Built using **Flutter** for mobile, **Spring Boot** for backend services, **PostgreSQL + pgvector** for memory storage, and **Groq (Llama 3 70B)** for ultra-fast conversational AI.
 
 ---
 
 ## ✨ Features
 
-- 🧠 **Persistent Memory** — Each persona remembers facts you tell them (e.g. *"I have an exam Friday"*)
-- 💬 **Real-time Chat** — Streams AI replies token-by-token via SSE
-- 🔔 **Proactive Notifications** — Personas send scheduled messages (good morning, check-ins)
-- 📱 **Cross-platform** — iOS & Android with a single Flutter codebase
-- 🔐 **Authentication** — Email/password + Google via Supabase Auth
-- 💎 **Freemium Model** — Free tier: 2 personas + 50 messages/day. Premium: all personas, unlimited chat
-- 🎛️ **Admin Dashboard** — Manage personas, view usage stats (React + Vite)
-- 🧩 **Extensible** — Add new personas or customise prompts without touching core logic
+* 🧠 **Persistent Memory**
+  Each persona remembers important facts shared by the user.
+
+* 💬 **Real-Time Chat Streaming**
+  AI responses stream token-by-token using Server-Sent Events (SSE).
+
+* 🔔 **Proactive Notifications**
+  Personas can initiate conversations through scheduled messages and reminders.
+
+* 📱 **Cross-Platform Mobile App**
+  Single Flutter codebase supporting both Android and iOS.
+
+* 🔐 **Secure Authentication**
+  JWT-based authentication powered by Spring Security.
+
+* 💎 **Freemium Subscription Model**
+
+    * **Free Tier:** 2 personas + 50 messages/day
+    * **Premium Tier:** Unlimited messaging + access to all personas
+
+* 🎛️ **Admin Dashboard**
+  Manage personas, moderate content, and monitor platform usage.
+
+* 🧩 **Highly Extensible Architecture**
+  Add or customize personas without modifying core business logic.
 
 ---
 
 ## 🧠 How It Works
 
-```
-User signs up → Supabase Auth issues session
-        ↓
-User picks a persona → Persona system prompt + memory loaded
-        ↓
+```text
+User signs up
+        │
+        ▼
+Spring Security issues JWT
+        │
+        ▼
+User selects a persona
+        │
+        ▼
+Persona prompt + user memories are loaded
+        │
+        ▼
 User sends message → POST /api/chat
-        ↓
-Backend queries pgvector for relevant memories
-        ↓
-Groq (Llama 3 70B) streams response token-by-token (SSE)
-        ↓
-Key facts extracted → Stored as new memory
-        ↓
-Scheduled job checks notification table → FCM push fires at set time
+        │
+        ▼
+Backend retrieves relevant memories using pgvector
+        │
+        ▼
+Groq (Llama 3 70B) generates streamed response via SSE
+        │
+        ▼
+Important facts are extracted and stored as memories
+        │
+        ▼
+Scheduler checks notification queue
+        │
+        ▼
+FCM push notifications are delivered
 ```
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Mobile | Flutter + Riverpod + Dio |
-| Backend | Node.js + Express + TypeScript |
-| Database | Supabase (PostgreSQL + pgvector) |
-| LLM | Groq Cloud — Llama 3 70B (free tier) |
-| Auth | Supabase Auth (email/Google) |
-| Admin Dashboard | React + Vite |
-| Push Notifications | Firebase Cloud Messaging (FCM) |
-| Hosting | Render / Fly.io (backend) · Supabase (DB) |
+| Layer                        | Technology                                               |
+| ---------------------------- | -------------------------------------------------------- |
+| **Mobile**                   | Flutter, Riverpod, Dio                                   |
+| **Backend**                  | Java 17, Spring Boot 3, Spring Security, Spring Data JPA |
+| **Database**                 | PostgreSQL + pgvector                                    |
+| **LLM Provider**             | Groq Cloud (Llama 3 70B)                                 |
+| **Authentication**           | JWT                                                      |
+| **Admin Dashboard**          | React + Vite                                             |
+| **Push Notifications**       | Firebase Cloud Messaging (FCM)                           |
+| **Hosting**                  | Render, Fly.io                                           |
+| **Managed Database Options** | Supabase, AWS RDS                                        |
 
 ---
 
 ## 📂 Project Structure
 
-```
+```text
 innercircle/
 ├── backend/
-│   ├── admin/                          # React + Vite admin dashboard
-│   ├── src/                            # Express + TypeScript API
-│   ├── .env.example
+│   ├── src/main/java/com/innercircle/
+│   │   ├── InnerCircleApplication.java
+│   │   ├── config/           # Security, JWT, WebClient
+│   │   ├── controller/       # REST APIs
+│   │   ├── service/          # Business logic
+│   │   ├── repository/       # Data access layer
+│   │   ├── model/            # JPA entities
+│   │   └── dto/              # Request/Response DTOs
+│   │
+│   ├── src/main/resources/
+│   │   └── application.yml
+│   └── pom.xml
+│
+├── admin/
+│   ├── src/
 │   └── package.json
+│
 ├── mobile/
 │   ├── lib/
-│   │   └── services/
-│   │       └── supabase_service.dart
 │   └── pubspec.yaml
-├── supabase/
-│   └── migrations/
-│       └── 001_initial_schema.sql
-├── docs/
-│   └── postman_collection.json
+│
+├── database/
+│   └── schema.sql
+│
 ├── LICENSE
 └── README.md
 ```
 
 ---
 
-## 🚀 Quick Start
+# 🚀 Quick Start
 
-### Prerequisites
-- Node.js ≥ 18
-- Flutter ≥ 3.16
-- Supabase account (free)
-- Groq API key — free at [console.groq.com](https://console.groq.com)
+## Prerequisites
 
-### 1. Clone the repo
+* Java 17+
+* Maven 3.8+
+* Flutter 3.16+
+* PostgreSQL 14+ with `pgvector`
+* Groq API Key
+
+Obtain a free API key from:
+
+```text
+https://console.groq.com
+```
+
+---
+
+## 1. Clone the Repository
 
 ```bash
 git clone https://github.com/your-username/innercircle.git
 cd innercircle
 ```
 
-### 2. Set up the backend
+---
+
+## 2. Set Up PostgreSQL
+
+Create a database:
+
+```sql
+CREATE DATABASE innercircle;
+```
+
+Enable the pgvector extension:
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+Run the schema:
+
+```bash
+psql -d innercircle -f database/schema.sql
+```
+
+---
+
+## 3. Configure the Backend
 
 ```bash
 cd backend
-cp .env.example .env   # fill in your keys
-npm install
-npm run dev
+
+cp src/main/resources/application.yml.example \
+   src/main/resources/application.yml
 ```
 
-Backend runs at **http://localhost:3000**
+Update the following values inside `application.yml`:
 
-### 3. Run the admin dashboard (optional)
+* Database URL
+* Database username/password
+* JWT secret
+* Groq API key
+* Firebase credentials (optional)
+
+---
+
+## 4. Run the Backend
 
 ```bash
-cd backend/admin
+./mvnw spring-boot:run
+```
+
+Backend server:
+
+```text
+http://localhost:8080
+```
+
+---
+
+## 5. Run the Admin Dashboard (Optional)
+
+```bash
+cd admin
+
 npm install
 npm run dev
 ```
 
-Dashboard runs at **http://localhost:5173** — use the admin key from `.env`
+Dashboard URL:
 
-### 4. Set up the Flutter app
+```text
+http://localhost:5173
+```
+
+Use the admin key configured in `application.yml`.
+
+---
+
+## 6. Run the Flutter App
 
 ```bash
 cd mobile
+
 flutter pub get
-# Update Supabase URL & anon key in lib/services/supabase_service.dart
+
+# Update API base URL in:
+# lib/config/api.dart
+
 flutter run
 ```
 
-> 📱 For Android emulators, use `10.0.2.2` for localhost in `api.dart`. For physical devices, use your machine's local IP.
+### Android Emulator Notes
 
-### 5. Database migration
+Use:
 
-Copy the SQL from `supabase/migrations/001_initial_schema.sql` into the Supabase SQL Editor and run it.
-
----
-
-## 📚 API Documentation
-
-All endpoints are prefixed with `/api`.
-
-### `POST /api/auth/register`
-Register a new user.
-```json
-{ "email": "user@example.com", "password": "secret" }
+```text
+10.0.2.2
 ```
 
-### `POST /api/auth/login`
-Login.
-```json
-{ "email": "user@example.com", "password": "secret" }
+instead of `localhost`.
+
+For physical devices, use your machine's local network IP.
+
+---
+
+# 📚 API Documentation
+
+All endpoints are prefixed with:
+
+```text
+/api
 ```
 
-### `GET /api/personas`
-List available personas *(auth required)*.
+---
 
-### `POST /api/chat`
-Send a message — streams via SSE.
-```json
-{ "persona_id": "uuid", "content": "I'm stressed", "conversation_id": "optional" }
-```
-Returns `text/event-stream` with `data: { "token": "..." }` chunks.
+## Authentication
 
-### `GET /api/memories`
-List user memories. Filter with `?persona_id=`.
+### Register
 
-### `POST /api/notifications/register`
-Register a push token.
-```json
-{ "token": "fcm_token", "platform": "ios" }
+```http
+POST /api/auth/register
 ```
 
-### `POST /api/notifications/schedule`
-Schedule proactive messages.
+**Request Body**
+
 ```json
-{ "persona_id": "uuid", "scheduled_at": "08:00", "days_of_week": "1,2,3,4,5" }
+{
+  "email": "user@example.com",
+  "password": "secret"
+}
 ```
 
-> Full Postman collection available in `/docs`.
+---
+
+### Login
+
+```http
+POST /api/auth/login
+```
+
+**Request Body**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "secret"
+}
+```
+
+**Response**
+
+```json
+{
+  "token": "jwt_token"
+}
+```
 
 ---
 
-## 📦 Deployment
+## Personas
 
-**Backend (Render / Fly.io)**
-- Build: `npm run build` (compiles TypeScript)
-- Start: `npm start`
-- Set environment variables in your hosting dashboard
+### List Personas
 
-**Flutter App**
-- Android: `flutter build apk` or `flutter build appbundle`
-- iOS: `flutter build ios` → upload to TestFlight
+```http
+GET /api/personas
+```
 
-**Supabase**
-- Fully managed — just keep migrations up to date
+> Authentication required.
 
 ---
 
-## 🤝 Contributing
+## Chat
 
-Contributions are welcome!
+### Send Message
 
-1. Fork the repo
-2. Create a feature branch — `git checkout -b feature/amazing-idea`
-3. Commit your changes — `git commit -m "Add amazing feature"`
-4. Push — `git push origin feature/amazing-idea`
-5. Open a Pull Request
+```http
+POST /api/chat
+```
 
-Read the [Code of Conduct](CODE_OF_CONDUCT.md) and [Contributing Guide](CONTRIBUTING.md) for more details.
+**Request Body**
+
+```json
+{
+  "persona_id": "uuid",
+  "content": "I'm stressed",
+  "conversation_id": "optional"
+}
+```
+
+**Response Type**
+
+```text
+text/event-stream
+```
+
+Example stream chunk:
+
+```json
+{
+  "token": "..."
+}
+```
+
+---
+
+## Memory
+
+### Retrieve Memories
+
+```http
+GET /api/memories?persona_id={uuid}
+```
+
+Returns stored memories for a specific persona.
 
 ---
 
-## 📄 License
+## Notifications
 
-This project is open-source under the [MIT License](LICENSE).
+### Register Device Token
+
+```http
+POST /api/notifications/register
+```
+
+```json
+{
+  "token": "fcm_token",
+  "platform": "ios"
+}
+```
+
+---
+
+### Schedule Proactive Messages
+
+```http
+POST /api/notifications/schedule
+```
+
+```json
+{
+  "persona_id": "uuid",
+  "scheduled_at": "08:00",
+  "days_of_week": "1,2,3,4,5"
+}
+```
+
+A complete Postman collection is available under:
+
+```text
+/docs
+```
 
 ---
 
-## 🙌 Acknowledgements
+# 📦 Deployment
 
-- [Groq](https://groq.com) — for the lightning-fast LLM API
-- [Supabase](https://supabase.com) — for the all-in-one backend
-- [Flutter](https://flutter.dev) — for beautiful cross-platform UIs
+## Backend
+
+Build production artifact:
+
+```bash
+./mvnw package
+```
+
+Run the generated JAR:
+
+```bash
+java -jar target/*.jar
+```
+
+Configure production environment variables through:
+
+* `application.yml`
+* Docker secrets
+* OS environment variables
 
 ---
 
-## 👨‍💻 Author
+## Flutter Application
 
-**Ranesh Rajit** — B.Tech CS Student, India
+### Android
 
-[![GitHub](https://img.shields.io/badge/GitHub-rajit2004-black?style=flat&logo=github)](https://github.com/rajit2004)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-ranesh--kun-blue?style=flat&logo=linkedin)](https://linkedin.com/in/ranesh-kun)
+```bash
+flutter build apk
+flutter build appbundle
+```
+
+### iOS
+
+```bash
+flutter build ios
+```
+
+Upload builds to TestFlight before App Store release.
 
 ---
+
+## Database Hosting Options
+
+* Supabase
+* AWS RDS
+* Self-hosted PostgreSQL
+* Managed cloud PostgreSQL providers
+
+---
+
+# 🤝 Contributing
+
+Contributions are welcome.
+
+1. Fork the repository.
+2. Create a feature branch.
+
+```bash
+git checkout -b feature/amazing-idea
+```
+
+3. Commit changes.
+
+```bash
+git commit -m "Add amazing feature"
+```
+
+4. Push branch.
+
+```bash
+git push origin feature/amazing-idea
+```
+
+5. Open a Pull Request.
+
+Please review the project's Code of Conduct and Contributing Guidelines before contributing.
+
+---
+
+# 📄 License
+
+Distributed under the **MIT License**.
+
+---
+
+# 🙌 Acknowledgements
+
+* **Groq** — ultra-fast LLM inference
+* **Spring Boot** — robust backend ecosystem
+* **Flutter** — cross-platform mobile framework
+* **Supabase** — PostgreSQL hosting and pgvector support
+
+---
+
+# 👨‍💻 Author
+
+**Ranesh Rajit**
+B.Tech Computer Science Student • India
+
+![GitHub](https://img.shields.io/badge/GitHub-rajit2004-black?style=flat\&logo=github)
+
+![LinkedIn](https://img.shields.io/badge/LinkedIn-ranesh--kun-blue?style=flat\&logo=linkedin)
