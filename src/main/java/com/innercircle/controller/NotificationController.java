@@ -1,6 +1,7 @@
 package com.innercircle.controller;
 
-import com.innercircle.dto.NotificationRequest;
+import com.innercircle.dto.NotificationRegisterRequest;
+import com.innercircle.dto.NotificationScheduleRequest;
 import com.innercircle.model.User;
 import com.innercircle.service.NotificationService;
 import jakarta.validation.Valid;
@@ -22,18 +23,18 @@ public class NotificationController {
 
     @PostMapping("/register")
     public Map<String, String> registerToken(@AuthenticationPrincipal User user,
-                                             @Valid @RequestBody NotificationRequest request) {
+                                             @Valid @RequestBody NotificationRegisterRequest request) {
         notificationService.registerToken(user, request.getToken(), request.getPlatform());
         return Map.of("status", "registered");
     }
 
     @PostMapping("/schedule")
     public Map<String, String> scheduleMessage(@AuthenticationPrincipal User user,
-                                               @Valid @RequestBody NotificationRequest request) {
+                                               @Valid @RequestBody NotificationScheduleRequest request) {
         notificationService.scheduleMessage(
                 user,
                 request.getPersonaId(),
-                request.getScheduledAt().toString(),
+                request.getScheduledAt(),
                 request.getDaysOfWeek(),
                 request.getMessageType()
         );
