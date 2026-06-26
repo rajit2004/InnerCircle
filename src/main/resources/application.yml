@@ -18,7 +18,7 @@ spring:
     # "HHH90000025: PostgreSQLDialect does not need to be specified explicitly"
 
 groq:
-  api-key: my-key
+  api-key: my-api-key
   model: llama-3.1-8b-instant
   url: https://api.groq.com/openai/v1/chat/completions
 
