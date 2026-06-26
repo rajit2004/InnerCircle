@@ -4,33 +4,40 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.innercircle.dto.ChatRequest;
 import com.innercircle.dto.ChatResponse;
+import com.innercircle.exception.DailyLimitExceededException;
+import com.innercircle.exception.ForbiddenException;
 import com.innercircle.exception.ResourceNotFoundException;
-import com.innercircle.exception.UnauthorizedException;
 import com.innercircle.model.*;
 import com.innercircle.repository.ConversationRepository;
 import com.innercircle.repository.MessageRepository;
-import com.innercircle.repository.MemoryRepository;
+import com.innercircle.repository.UserRepository;
 import com.innercircle.repository.PersonaRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
+import java.time.LocalDate;
 import java.util.*;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class ChatService {
+
+    private static final int FREE_TIER_DAILY_MESSAGE_LIMIT = 50;
 
     private final WebClient webClient;
     private final PersonaRepository personaRepository;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
-    private final MemoryRepository memoryRepository;
+    private final UserRepository userRepository;
     private final PersonaService personaService;
     private final MemoryService memoryService;
 
@@ -45,28 +52,26 @@ public class ChatService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // ---------- Reactive streaming method (existing) ----------
     public Flux<String> streamChat(ChatRequest request, User user) {
-        System.out.println(">>> ChatService.streamChat() START for persona: " + request.getPersonaId());
-
         try {
-            // Check tier
             if (!personaService.isPersonaAccessible(user, request.getPersonaId())) {
-                System.err.println("❌ Tier check failed");
-                return Flux.error(new UnauthorizedException("Upgrade to premium"));
+                return Flux.error(new ForbiddenException("Upgrade to premium to chat with this persona"));
             }
-            System.out.println("✅ Tier check passed");
+
+            // BUG FIX: enforceDailyMessageLimit was called without @Transactional context,
+            // so userRepository.save(user) inside it was not guaranteed to flush/commit.
+            // Fixed by making enforceDailyMessageLimit @Transactional (see below).
+            enforceDailyMessageLimit(user);
 
             Persona persona = personaRepository.findById(request.getPersonaId())
                     .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
-            System.out.println("✅ Persona found: " + persona.getName());
 
             final Conversation conversation;
             if (request.getConversationId() != null) {
                 conversation = conversationRepository.findById(request.getConversationId())
                         .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
                 if (!conversation.getUser().getId().equals(user.getId())) {
-                    return Flux.error(new UnauthorizedException("No access to this conversation"));
+                    return Flux.error(new ForbiddenException("No access to this conversation"));
                 }
             } else {
                 conversation = new Conversation();
@@ -74,48 +79,39 @@ public class ChatService {
                 conversation.setPersona(persona);
                 conversationRepository.save(conversation);
             }
-            System.out.println("✅ Conversation ready: " + conversation.getId());
 
-            // Save user message
             Message userMsg = new Message();
             userMsg.setConversation(conversation);
             userMsg.setRole("user");
             userMsg.setContent(request.getContent());
             messageRepository.save(userMsg);
-            System.out.println("✅ User message saved");
 
-            // Get recent messages
             List<Message> recent = messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
             recent = recent.stream().skip(Math.max(0, recent.size() - 20)).toList();
-            System.out.println("✅ Retrieved " + recent.size() + " recent messages");
 
-            // Get memories
-            List<Memory> memories = memoryRepository.findByUserAndPersonaOrderByImportanceDesc(user, persona);
+            List<Memory> memories = memoryService.findRelevantMemories(user, persona.getId(), request.getContent());
             String memoryText = memories.stream()
-                    .limit(3)
                     .map(Memory::getFact)
                     .reduce((a, b) -> a + "\n" + b)
                     .orElse("");
-            System.out.println("✅ Retrieved memories: " + (memoryText.isEmpty() ? "none" : memoryText));
 
-            // Build Groq request
             List<Map<String, String>> messages = new ArrayList<>();
-            messages.add(Map.of("role", "system", "content",
-                    persona.getSystemPrompt() + "\n\nFacts about user:\n" + memoryText));
+            String systemPrompt = persona.getSystemPrompt();
+            if (!memoryText.isEmpty()) {
+                systemPrompt = systemPrompt + "\n\nFacts about user:\n" + memoryText;
+            }
+            messages.add(Map.of("role", "system", "content", systemPrompt));
             for (Message m : recent) {
                 messages.add(Map.of("role", m.getRole(), "content", m.getContent()));
             }
-            System.out.println("✅ Built Groq messages (" + messages.size() + " entries)");
 
             Map<String, Object> body = new HashMap<>();
             body.put("model", groqModel);
             body.put("messages", messages);
             body.put("stream", true);
             body.put("max_tokens", 300);
-            System.out.println("✅ Groq request body ready. Model: " + groqModel);
 
             final List<String> tokenAccumulator = Collections.synchronizedList(new ArrayList<>());
-            System.out.println("🚀 About to send request to Groq...");
 
             return webClient.post()
                     .uri(groqUrl)
@@ -125,85 +121,92 @@ public class ChatService {
                     .onStatus(HttpStatusCode::isError, response ->
                             response.bodyToMono(String.class)
                                     .flatMap(errorBody -> {
-                                        System.err.println("🔥 Groq API error: " + errorBody);
+                                        log.error("Groq API error: {}", errorBody);
                                         return Mono.error(new RuntimeException("Groq API error: " + errorBody));
                                     })
                     )
                     .bodyToFlux(String.class)
-                    .doOnSubscribe(sub -> System.out.println("✅ Groq request subscribed"))
                     .flatMap(chunk -> {
-                        if (chunk.startsWith("data: ")) {
-                            String json = chunk.substring(6).trim();
-                            if ("[DONE]".equals(json)) {
-                                return Flux.empty();
-                            }
-                            try {
-                                JsonNode node = objectMapper.readTree(json);
-                                JsonNode choices = node.path("choices");
-                                if (choices.isEmpty()) return Flux.empty();
-                                String token = choices.get(0).path("delta").path("content").asText("");
-                                if (!token.isEmpty()) {
-                                    tokenAccumulator.add(token);
-                                    return Flux.just(token);
-                                }
-                                return Flux.empty();
-                            } catch (Exception e) {
-                                System.err.println("⚠️ Parse error: " + e.getMessage());
-                                return Flux.empty();
-                            }
+                        if (!chunk.startsWith("data: ")) {
+                            return Flux.empty();
                         }
-                        return Flux.empty();
+                        String json = chunk.substring(6).trim();
+                        if ("[DONE]".equals(json)) {
+                            return Flux.empty();
+                        }
+                        try {
+                            JsonNode node = objectMapper.readTree(json);
+                            JsonNode choices = node.path("choices");
+                            if (choices.isEmpty()) return Flux.empty();
+                            String token = choices.get(0).path("delta").path("content").asText("");
+                            if (token.isEmpty()) return Flux.empty();
+                            tokenAccumulator.add(token);
+                            return Flux.just(token);
+                        } catch (Exception e) {
+                            log.debug("Skipping unparseable SSE chunk: {}", e.getMessage());
+                            return Flux.empty();
+                        }
                     })
-                    .doOnNext(token -> System.out.println("📝 Token: " + token))
                     .doOnComplete(() -> {
-                        System.out.println("✅ Stream complete");
                         String fullReply = String.join("", tokenAccumulator);
-                        if (!fullReply.isEmpty()) {
-                            Message assistantMsg = new Message();
-                            assistantMsg.setConversation(conversation);
-                            assistantMsg.setRole("assistant");
-                            assistantMsg.setContent(fullReply);
-                            messageRepository.save(assistantMsg);
-                            System.out.println("✅ Assistant reply saved");
+                        if (fullReply.isEmpty()) return;
 
-                            Mono.fromRunnable(() -> {
-                                try {
-                                    memoryService.extractAndStoreMemory(
-                                            user,
-                                            request.getPersonaId().toString(),
-                                            request.getContent(),
-                                            fullReply
-                                    );
-                                } catch (Exception e) {
-                                    System.err.println("⚠️ Memory extraction failed: " + e.getMessage());
-                                }
-                            }).subscribeOn(Schedulers.boundedElastic()).subscribe();
-                        }
+                        Message assistantMsg = new Message();
+                        assistantMsg.setConversation(conversation);
+                        assistantMsg.setRole("assistant");
+                        assistantMsg.setContent(fullReply);
+                        messageRepository.save(assistantMsg);
+
+                        Mono.fromRunnable(() -> {
+                            try {
+                                memoryService.extractAndStoreMemory(
+                                        user,
+                                        request.getPersonaId().toString(),
+                                        request.getContent(),
+                                        fullReply
+                                );
+                            } catch (Exception e) {
+                                log.warn("Memory extraction failed: {}", e.getMessage());
+                            }
+                        }).subscribeOn(Schedulers.boundedElastic()).subscribe();
                     })
-                    .doOnError(e -> {
-                        System.err.println("❌ Chat stream error: " + e.getMessage());
-                        e.printStackTrace();
-                    });
+                    .doOnError(e -> log.error("Chat stream error: {}", e.getMessage(), e));
 
         } catch (Exception e) {
-            System.err.println("❌ Exception in ChatService.streamChat(): " + e.getMessage());
-            e.printStackTrace();
+            log.error("Exception in ChatService.streamChat(): {}", e.getMessage(), e);
             return Flux.error(e);
         }
     }
 
-    // ---------- Synchronous wrapper for non‑reactive endpoints ----------
     /**
-     * Synchronous wrapper for streamChat – collects the full response and returns a ChatResponse.
-     * This is intended for testing/non‑reactive endpoints.
-     * For production, use the reactive streamChat directly.
+     * BUG FIX: Added @Transactional so that userRepository.save(user) inside this method
+     * is guaranteed to commit. Without it, the JPA session may not flush the updated
+     * messagesUsedToday count to the DB, effectively making the daily limit bypass-able
+     * (every request would see messagesUsedToday = 0 on a fresh entity load).
      */
+    @Transactional
+    public void enforceDailyMessageLimit(User user) {
+        if (user.getSubscriptionTier() == SubscriptionTier.premium) {
+            return;
+        }
+
+        LocalDate today = LocalDate.now();
+        if (!today.equals(user.getLastMessageDate())) {
+            user.setMessagesUsedToday(0);
+            user.setLastMessageDate(today);
+        }
+
+        if (user.getMessagesUsedToday() >= FREE_TIER_DAILY_MESSAGE_LIMIT) {
+            throw new DailyLimitExceededException(
+                    "Daily free message limit reached (" + FREE_TIER_DAILY_MESSAGE_LIMIT + "/day). Upgrade to premium for unlimited messages.");
+        }
+
+        user.setMessagesUsedToday(user.getMessagesUsedToday() + 1);
+        userRepository.save(user);
+    }
+
     public ChatResponse processChat(ChatRequest request, User user) {
-        String fullReply = streamChat(request, user)
-                .collectList()
-                .block()                // block until the stream completes
-                .stream()
-                .reduce("", (a, b) -> a + b);
+        String fullReply = String.join("", streamChat(request, user).collectList().block());
         return new ChatResponse(fullReply);
     }
 }
