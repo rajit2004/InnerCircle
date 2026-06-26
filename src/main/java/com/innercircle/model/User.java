@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -25,12 +26,16 @@ public class User {
     private String avatarUrl;
 
     @Column(nullable = false)
-    private String passwordHash;   // ✅ NEW
+    private String passwordHash;
 
     @Enumerated(EnumType.STRING)
     private SubscriptionTier subscriptionTier = SubscriptionTier.free;
 
     private int messagesUsedToday = 0;
+
+    // FIX: needed to know whether messagesUsedToday should be reset before
+    // incrementing -- without this the daily free-tier cap can never reset.
+    private LocalDate lastMessageDate;
 
     @CreationTimestamp
     private Instant createdAt;
