@@ -8,6 +8,7 @@ import com.innercircle.model.Persona;
 import com.innercircle.model.User;
 import com.innercircle.repository.MemoryRepository;
 import com.innercircle.repository.PersonaRepository;
+import com.innercircle.service.EmbeddingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,6 +24,7 @@ public class MemoryController {
 
     private final MemoryRepository memoryRepository;
     private final PersonaRepository personaRepository;
+    private final EmbeddingService embeddingService;
 
     @GetMapping
     public List<Memory> getMemories(@AuthenticationPrincipal User user,
@@ -48,6 +50,7 @@ public class MemoryController {
         memory.setUser(user);
         memory.setPersona(persona);
         memory.setFact(request.getFact());
+        memory.setEmbedding(embeddingService.toPgVectorLiteral(embeddingService.embed(request.getFact())));
         memory.setImportance(1);
         return memoryRepository.save(memory);
     }
