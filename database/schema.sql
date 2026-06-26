@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS profiles (
                                         password_hash TEXT NOT NULL,
                                         subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'premium')),
                                         messages_used_today INT DEFAULT 0,
+                                        last_message_date DATE,
                                         created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -59,7 +60,31 @@ CREATE TABLE IF NOT EXISTS memories (
                                         created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Seed personas (All FREE tier by default)
+-- Push tokens (for FCM delivery)
+CREATE TABLE IF NOT EXISTS push_tokens (
+                                           id UUID PRIMARY KEY,
+                                           user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+                                           token TEXT NOT NULL,
+                                           platform TEXT NOT NULL CHECK (platform IN ('android', 'ios')),
+                                           created_at TIMESTAMPTZ DEFAULT NOW(),
+                                           updated_at TIMESTAMPTZ DEFAULT NOW(),
+                                           UNIQUE (user_id, platform)
+);
+
+-- Scheduled proactive check-ins
+CREATE TABLE IF NOT EXISTS scheduled_messages (
+                                                  id UUID PRIMARY KEY,
+                                                  user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+                                                  persona_id UUID NOT NULL REFERENCES personas(id) ON DELETE CASCADE,
+                                                  scheduled_at TIME NOT NULL,
+                                                  days_of_week TEXT DEFAULT '1,2,3,4,5,6,7',
+                                                  message_type TEXT DEFAULT 'check_in',
+                                                  is_active BOOLEAN DEFAULT TRUE,
+                                                  last_sent_at TIMESTAMPTZ,
+                                                  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Seed personas (Mom & Best Friend are free; Girlfriend & Big Sister are premium)
 INSERT INTO personas (id, name, role, avatar_emoji, system_prompt, greeting, subscription_tier, is_active)
 VALUES
     (
@@ -87,9 +112,9 @@ VALUES
         'Girlfriend',
         'affectionate_companion',
         '💕',
-        'You are a sweet, affectionate AI companion. Be warm, romantic, and proactive about checking in on the user. Show genuine care and interest in their day. Initiate conversations and be supportive through challenges.',
+        'You are a sweet, affectionate AI companion. Be warm, romantic, and proactive about checking in on the user. Show genuine care and interest in their day. Initiate conversations and be supportive through challenges. Keep romance affectionate and PG -- no explicit sexual content.',
         'Hi babe 💕 I was just thinking about you. How was your day?',
-        'free',
+        'premium',
         TRUE
     ),
     (
@@ -99,7 +124,7 @@ VALUES
         '💪',
         'You are a protective yet playful older sister AI. Be honest, direct but caring. Give practical advice, call out when needed, but always with love. Be fun and teasing while genuinely supporting the user.',
         'Hey! What''s going on? Spill the tea with me! 💪',
-        'free',
+        'premium',
         TRUE
     )
 ON CONFLICT DO NOTHING;
