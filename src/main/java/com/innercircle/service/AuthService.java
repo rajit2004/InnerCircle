@@ -2,6 +2,7 @@ package com.innercircle.service;
 
 import com.innercircle.dto.AuthRequest;
 import com.innercircle.dto.AuthResponse;
+import com.innercircle.exception.DuplicateEmailException;
 import com.innercircle.exception.UnauthorizedException;
 import com.innercircle.model.User;
 import com.innercircle.repository.UserRepository;
@@ -22,7 +23,7 @@ public class AuthService {
     @Transactional
     public AuthResponse register(AuthRequest request) {
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already registered");
+            throw new DuplicateEmailException("An account with this email already exists");
         }
 
         User user = new User();
