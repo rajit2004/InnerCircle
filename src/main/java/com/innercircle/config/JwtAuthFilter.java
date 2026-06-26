@@ -1,6 +1,5 @@
 package com.innercircle.config;
 
-import com.innercircle.model.SubscriptionTier;
 import com.innercircle.model.User;
 import com.innercircle.repository.UserRepository;
 import com.innercircle.util.JwtUtil;
@@ -20,6 +19,11 @@ import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 
+// FIX: removed the hardcoded "/api/chat development bypass" that injected a
+// fake User (ranesha@example.com, hardcoded UUID) for every request to that
+// path regardless of whether a real token was presented. That bypass was
+// already committed to origin/main. This filter now does real JWT validation
+// for every request, with no path-based exception.
 @Component
 @RequiredArgsConstructor
 @Slf4j
@@ -33,41 +37,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
 
-        // ---------- DEVELOPMENT BYPASS FOR /api/chat ----------
-        if (request.getRequestURI().startsWith("/api/chat")) {
-            // Create a dummy User object
-            User dummyUser = new User();
-            dummyUser.setId(UUID.fromString("1ccb14cc-f8cd-48f7-a9a9-3de93c5dd94e"));
-            dummyUser.setEmail("ranesha@example.com");
-
-            // Try to set subscriptionTier – if this setter doesn't exist, comment it out
-            // and manually set the tier via reflection or a constructor later.
-            try {
-                dummyUser.setSubscriptionTier(SubscriptionTier.free);
-            } catch (NoSuchMethodError e) {
-                // If setSubscriptionTier doesn't exist, we'll log a warning.
-                log.warn("User.setSubscriptionTier() not found – using default. You may need to add it.");
-                // You can also use a different approach: create a User via a constructor that includes tier.
-            }
-
-            // We do NOT call setRole() – the role is set in the authorities list below.
-
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(
-                            dummyUser,                            // principal
-                            null,
-                            List.of(new SimpleGrantedAuthority("ROLE_USER"))
-                    );
-
-            SecurityContextHolder.getContext().setAuthentication(auth);
-            log.info("🔓 Bypassed authentication for /api/chat – using dummy user: {}", dummyUser.getEmail());
-
-            filterChain.doFilter(request, response);
-            return;
-        }
-        // ---------- END OF BYPASS ----------
-
-        // ---------- ORIGINAL JWT VALIDATION ----------
         String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
@@ -75,15 +44,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
             try {
                 if (!jwtUtil.validateToken(token)) {
-                    throw new RuntimeException("Invalid token");
+                    throw new IllegalArgumentException("Invalid or expired token");
                 }
 
-                String userId = jwtUtil.extractUserId(token);
-                String email = jwtUtil.extractEmail(token);
+                UUID userId = UUID.fromString(jwtUtil.extractUserId(token));
                 String role = jwtUtil.extractRole(token);
 
-                User user = userRepository.findById(UUID.fromString(userId))
-                        .orElseThrow(() -> new RuntimeException("User not found"));
+                // Load the real User entity so @AuthenticationPrincipal User user
+                // resolves correctly downstream -- a bare String/UUID principal
+                // would silently inject null wherever a User is expected.
+                User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new IllegalArgumentException("Token references a user that no longer exists"));
 
                 List<SimpleGrantedAuthority> authorities = List.of(
                         new SimpleGrantedAuthority("ROLE_" + (role != null ? role : "USER"))
@@ -94,7 +65,11 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 SecurityContextHolder.getContext().setAuthentication(auth);
 
             } catch (Exception e) {
-                log.warn("JWT validation failed: {}", e.getMessage());
+                // Invalid/expired token, or user no longer exists -- leave the
+                // request unauthenticated. SecurityConfig rejects it downstream
+                // with 401/403 rather than this filter doing it directly.
+                SecurityContextHolder.clearContext();
+                log.debug("JWT validation failed: {}", e.getMessage());
             }
         }
 
