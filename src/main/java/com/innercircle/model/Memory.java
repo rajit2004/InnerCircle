@@ -30,7 +30,7 @@ public class Memory {
     private String fact;
 
     @Column(columnDefinition = "vector(1536)")
-    private String embedding;  // placeholder – we'll implement pgvector later
+    private String embedding;  // pgvector literal text, e.g. "[0.1,0.2,...]" -- see EmbeddingService
 
     private int importance = 1;
     private int accessCount = 0;
