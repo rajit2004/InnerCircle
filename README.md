@@ -65,8 +65,8 @@ Built using **Flutter** for mobile, **Spring Boot** for backend services, **Post
 
 * 💎 **Freemium Subscription Model**
 
-    * **Free Tier:** 2 personas + 50 messages/day
-    * **Premium Tier:** Unlimited messaging + access to all personas
+  * **Free Tier:** 2 personas + 50 messages/day
+  * **Premium Tier:** Unlimited messaging + access to all personas
 
 * 🎛️ **Admin Dashboard**
   Manage personas, moderate content, and monitor platform usage.
@@ -542,6 +542,6 @@ Distributed under the **MIT License**.
 **Ranesh Rajit**
 B.Tech Computer Science Student • India
 
-![GitHub](https://img.shields.io/badge/GitHub-rajit2004-black?style=flat\&logo=github)
+[![GitHub](https://img.shields.io/badge/GitHub-rajit2004-black?style=flat&logo=github)](https://github.com/rajit2004)
 
-![LinkedIn](https://img.shields.io/badge/LinkedIn-ranesh--kun-blue?style=flat\&logo=linkedin)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-ranesh--kun-blue?style=flat&logo=linkedin)](https://linkedin.com/in/ranesh-kun)
