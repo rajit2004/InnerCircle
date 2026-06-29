@@ -18,8 +18,15 @@ spring:
     # "HHH90000025: PostgreSQLDialect does not need to be specified explicitly"
 
 groq:
-  api-key: my-api-key
-  model: llama-3.1-8b-instant
+  # BUG: this was hardcoded to the literal string "my-api-key", which silently
+  # ignored any $GROQ_API_KEY you set in the shell -- every Groq call would
+  # have failed with an auth error regardless of your env var. Fixed back to
+  # reading from the environment.
+  api-key: ${GROQ_API_KEY:your-groq-key}
+  # llama-3.1-8b-instant was announced for deprecation by Groq on 2026-06-17 --
+  # it may already be unstable or removed. openai/gpt-oss-120b is Groq's
+  # current recommended replacement model as of this fix.
+  model: openai/gpt-oss-120b
   url: https://api.groq.com/openai/v1/chat/completions
 
 jwt:
