@@ -1,10 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.2</version>
+        <!-- BUG FIX: 3.4.2 reached OSS end-of-life on 2025-12-31, so none of its
+             transitive deps (Spring Framework 6.2.2, Spring Security 6.4.2,
+             Tomcat 10.1.34, Netty 4.1.117, logback 1.5.16, etc.) get patched -
+             this is the direct cause of the long CVE list from the dependency
+             scan. 4.1.0 is the current actively-supported release and pulls in
+             fixed versions of nearly all of them. -->
+        <version>4.1.0</version>
         <relativePath/>
     </parent>
     <groupId>com.innercircle</groupId>
@@ -48,6 +55,9 @@
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
+            <!-- BUG FIX: pinned explicitly - 42.7.4 through 42.7.6 have
+                 CVE-2025-49146 (MITM bypass of channelBinding=require). -->
+            <version>42.7.7</version>
             <scope>runtime</scope>
         </dependency>
         <!--  Push notifications (FCM v1 API - the old legacy server-key API
