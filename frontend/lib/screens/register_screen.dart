@@ -19,10 +19,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
     setState(() => _loading = true);
     try {
       await AuthService.register(_emailController.text, _passwordController.text);
+      // BUG FIX (frontend, 2026-06-30): same mounted-check fix as
+      // login_screen.dart -- see bugs.md Bug 2.
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+    if (!mounted) return;
     setState(() => _loading = false);
   }
 
