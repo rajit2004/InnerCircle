@@ -19,10 +19,18 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _loading = true);
     try {
       await AuthService.login(_emailController.text, _passwordController.text);
+      // BUG FIX (frontend, 2026-06-30): added !mounted check before using
+      // context after the await. If the widget got disposed while the login
+      // request was in flight (e.g. user backed out, hot reload, etc.), this
+      // would otherwise throw "setState() called after dispose()". See
+      // bugs.md Bug 2.
+      if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
     }
+    if (!mounted) return;
     setState(() => _loading = false);
   }
 
