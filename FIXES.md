@@ -124,8 +124,39 @@ This is a fundamental stack mismatch: SSE with Spring Security requires the **re
 
 ---
 
+# Round 5 — Two runtime bugs from real test logs
+
+I ran the app end to end against a real Postgres instance and real requests — this caught two genuine bugs that no amount of static review would've found, since they only showed up at runtime against the actual DB and the actual Jackson engine in use.
+
+## `embedding` column INSERT failure
+
+Every chat message was logging `Memory extraction failed: ... column "embedding" is of type vector but expression is of type character varying`. I traced the cause to `@Column(columnDefinition = "vector(1536)")` on `Memory.embedding` — that annotation only controls DDL (schema generation) and does nothing to change what JDBC type Hibernate actually binds on INSERT. So Hibernate was sending a plain varchar parameter and Postgres rejected it outright. This meant memory storage — the actual point of pgvector in this app — had been silently no-oping on every message until now.
+
+**Fix:** I added `@ColumnTransformer(write = "?::vector", read = "embedding::text")` from Hibernate, which injects an explicit cast into the generated SQL on both write and read, while the Java field stays an ordinary `String`. No extra pgvector-specific Hibernate type library needed.
+
+## `POST /api/notifications/schedule` crashing with a 500
+
+My test sent `daysOfWeek` as a JSON array, but `NotificationScheduleRequest.daysOfWeek` only accepted a plain `String` — Jackson threw `MismatchedInputException: Cannot deserialize value of type java.lang.String from Array value` before the request ever reached the controller.
+
+**Fix:** I added a custom `JsonDeserialize` that accepts either a JSON array of day numbers (`[1,2,3,4,5]`) or a CSV string (`"1,2,3,4,5"`), normalizing both to the CSV format the rest of the app (the DB column, `NotificationService`'s cron-matching logic) expects internally.
+
+## Important catch I made while writing that fix: this app is on Jackson 3, not Jackson 2
+
+The crash stack trace showed `tools.jackson.databind.exc.MismatchedInputException`, not `com.fasterxml.jackson.*`. Spring Boot 4.1 (from Round 3's upgrade) ships **Jackson 3** by default, which renamed almost every package from `com.fasterxml.jackson.*` to `tools.jackson.*` — including in-package annotations like `@JsonDeserialize`, which are *not* covered by Jackson's "shared annotations stay on the old package" exception (only things like `@JsonProperty` get that treatment).
+
+I wrote the custom deserializer with the old package names first, caught it by reading the stack trace closely, and rewrote it using `tools.jackson.*` imports before finalizing. Shipping the `com.fasterxml` version would have compiled fine but done nothing — Spring's actual Jackson 3 engine would silently ignore an annotation from a different package as if it weren't there, and this bug would have looked identically broken even after the "fix."
+
+I deliberately left `ChatService.java` and `MemoryService.java` alone — they instantiate their own private `com.fasterxml.jackson.databind.ObjectMapper` to parse Groq's chat-completion JSON, entirely separate from Spring's request-body deserialization pipeline. That's Jackson 2, coexisting on the classpath alongside Jackson 3 (which Spring Boot 4 explicitly supports, and which `pom.xml` already pulls in via its explicit `com.fasterxml.jackson.core:jackson-databind` dependency). It isn't broken, so I didn't touch it. Consolidating onto one Jackson major version everywhere is worth doing later, deliberately — not as a side effect of chasing this bug.
+
+### Files I changed
+- `src/main/java/com/innercircle/model/Memory.java`
+- `src/main/java/com/innercircle/dto/NotificationScheduleRequest.java`
+
+---
+
 ## What's still pending
 
 - No test files added yet — happy to add them if needed
 - Firebase push notifications require a real service-account JSON at `FCM_CREDENTIALS_PATH`. Without it the service degrades gracefully (logs only)
 - `test.html` and `body.json` are scratch files left unchanged
+- Worth confirming on the next test run: do memory facts now persist with a real `[0.1,0.2,...]`-shaped embedding instead of failing silently, and does `/api/notifications/schedule` now accept an array for `daysOfWeek`?
