@@ -31,3 +31,11 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Frontend ###
+.dart_tool/
+.flutter-plugins-dependencies
+.idea/
+.metadata
+*.cache.dill
+*.dill
