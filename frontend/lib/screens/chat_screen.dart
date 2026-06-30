@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../models/persona.dart';
 import '../models/chat_message.dart';
@@ -18,6 +17,13 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _isTyping = false;
   String? _conversationId;
 
+  // BUG FIX (frontend, 2026-06-30): This whole method used to treat the
+  // chat response as an SSE stream (await for chunk in stream, looking for
+  // {"content": ..., "done": ...} per line). The backend doesn't send SSE
+  // on this endpoint anymore -- it returns one plain JSON object in a
+  // single response: {"reply": "...", "conversationId": "..."}. Rewritten
+  // to match: one request, one response, one message bubble added once
+  // the reply comes back. See bugs.md Bug 1 for the full story.
   void _sendMessage() async {
     final content = _controller.text.trim();
     if (content.isEmpty) return;
@@ -28,45 +34,27 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      final stream = await ChatService.sendMessage(
+      final response = await ChatService.sendMessage(
         widget.persona.id,
         content,
         conversationId: _conversationId,
       );
 
-      String fullReply = '';
-      bool firstChunk = true;
-
-      await for (String chunk in stream) {
-        try {
-          final json = Map<String, dynamic>.from(jsonDecode(chunk));
-          if (json['content'] != null) {
-            fullReply += json['content'];
-            if (firstChunk) {
-              setState(() {
-                _messages.add(ChatMessage(role: 'assistant', content: ''));
-                firstChunk = false;
-              });
-            }
-            setState(() {
-              _messages.last = ChatMessage(role: 'assistant', content: fullReply);
-            });
-          }
-          if (json['done'] == true) {
-            if (json['conversationId'] != null) {
-              _conversationId = json['conversationId'];
-            }
-            setState(() => _isTyping = false);
-            break;
-          }
-        } catch (e) {
-          // ignore parse errors
-        }
+      final reply = response['reply'] as String? ?? '';
+      if (response['conversationId'] != null) {
+        _conversationId = response['conversationId'] as String;
       }
+
+      if (!mounted) return;
+      setState(() {
+        _messages.add(ChatMessage(role: 'assistant', content: reply));
+        _isTyping = false;
+      });
     } catch (e) {
+      if (!mounted) return;
+      setState(() => _isTyping = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
-    setState(() => _isTyping = false);
   }
 
   @override
