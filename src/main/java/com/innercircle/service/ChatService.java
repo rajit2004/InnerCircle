@@ -3,6 +3,7 @@ package com.innercircle.service;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.innercircle.dto.ChatRequest;
+import com.innercircle.dto.ChatResponse;
 import com.innercircle.exception.DailyLimitExceededException;
 import com.innercircle.exception.ForbiddenException;
 import com.innercircle.exception.ResourceNotFoundException;
@@ -18,7 +19,6 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 
@@ -52,13 +52,16 @@ public class ChatService {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     * Non-streaming chat — sends a regular JSON request to Groq (no SSE).
-     * This is the correct approach when running on Tomcat (servlet stack).
-     * SSE streaming requires the reactive Netty stack to work properly with
-     * Spring Security; on Tomcat, the SSE reconnect drops the Authorization
-     * header, causing a 403 on the follow-up request.
+     * BUG FIX (Round 6): Replaces the old streamChat()-based /sync endpoint, which
+     * worked by accident — .block() on a Flux<String> built for SSE token deltas
+     * does drain to a usable string, but the method was never named or shaped to
+     * be a normal request/response call, and ChatController was returning the
+     * raw string instead of wrapping it in ChatResponse. This is the real,
+     * intentional non-streaming implementation: regular JSON request to Groq
+     * (no "stream": true), regular JSON response back to the client.
      */
-    public String chatDirect(ChatRequest request, User user) {
+    @Transactional
+    public ChatResponse chatDirect(ChatRequest request, User user) {
         if (!personaService.isPersonaAccessible(user, request.getPersonaId())) {
             throw new ForbiddenException("Upgrade to premium to chat with this persona");
         }
@@ -111,11 +114,11 @@ public class ChatService {
         body.put("model", groqModel);
         body.put("messages", messages);
         body.put("max_tokens", 300);
-        // NOTE: stream is intentionally omitted (defaults to false) — we use
-        // regular JSON response instead of SSE to avoid the Tomcat/Security issue.
+        // Intentionally no "stream": true — see method doc above.
 
+        String response;
         try {
-            String response = webClient.post()
+            response = webClient.post()
                     .uri(groqUrl)
                     .header("Authorization", "Bearer " + groqApiKey)
                     .bodyValue(body)
@@ -129,122 +132,50 @@ public class ChatService {
                     )
                     .bodyToMono(String.class)
                     .block();
-
-            JsonNode root = objectMapper.readTree(response);
-            String reply = root.path("choices").get(0).path("message").path("content").asText("");
-
-            if (!reply.isEmpty()) {
-                Message assistantMsg = new Message();
-                assistantMsg.setConversation(conversation);
-                assistantMsg.setRole("assistant");
-                assistantMsg.setContent(reply);
-                messageRepository.save(assistantMsg);
-
-                // Extract memories asynchronously so it doesn't block the response
-                Mono.fromRunnable(() -> {
-                    try {
-                        memoryService.extractAndStoreMemory(
-                                user,
-                                request.getPersonaId().toString(),
-                                request.getContent(),
-                                reply
-                        );
-                    } catch (Exception e) {
-                        log.warn("Memory extraction failed: {}", e.getMessage());
-                    }
-                }).subscribeOn(Schedulers.boundedElastic()).subscribe();
-            }
-
-            return reply;
-
         } catch (Exception e) {
-            log.error("Chat error: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to get response from AI: " + e.getMessage());
+            log.error("Groq request failed: {}", e.getMessage(), e);
+            throw new RuntimeException("Failed to reach AI service: " + e.getMessage());
         }
-    }
 
-    /**
-     * Kept for internal use (memory extraction, etc.) but NOT exposed via HTTP
-     * on Tomcat due to the SSE/Security 403 issue described above.
-     */
-    public Flux<String> streamChat(ChatRequest request, User user) {
+        String reply;
         try {
-            if (!personaService.isPersonaAccessible(user, request.getPersonaId())) {
-                return Flux.error(new ForbiddenException("Upgrade to premium to chat with this persona"));
+            JsonNode root = objectMapper.readTree(response);
+            JsonNode choices = root.path("choices");
+            if (choices.isEmpty()) {
+                log.error("Groq returned no choices: {}", response);
+                throw new RuntimeException("AI service returned an empty response");
             }
-
-            enforceDailyMessageLimit(user);
-
-            Persona persona = personaRepository.findById(request.getPersonaId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
-
-            final Conversation conversation = new Conversation();
-            conversation.setUser(user);
-            conversation.setPersona(persona);
-            conversationRepository.save(conversation);
-
-            Message userMsg = new Message();
-            userMsg.setConversation(conversation);
-            userMsg.setRole("user");
-            userMsg.setContent(request.getContent());
-            messageRepository.save(userMsg);
-
-            List<Map<String, String>> messages = new ArrayList<>();
-            messages.add(Map.of("role", "system", "content", persona.getSystemPrompt()));
-            messages.add(Map.of("role", "user", "content", request.getContent()));
-
-            Map<String, Object> body = new HashMap<>();
-            body.put("model", groqModel);
-            body.put("messages", messages);
-            body.put("stream", true);
-            body.put("max_tokens", 300);
-
-            final List<String> tokenAccumulator = Collections.synchronizedList(new ArrayList<>());
-
-            return webClient.post()
-                    .uri(groqUrl)
-                    .header("Authorization", "Bearer " + groqApiKey)
-                    .bodyValue(body)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::isError, response ->
-                            response.bodyToMono(String.class)
-                                    .flatMap(errorBody -> {
-                                        log.error("Groq API error: {}", errorBody);
-                                        return Mono.error(new RuntimeException("Groq API error: " + errorBody));
-                                    })
-                    )
-                    .bodyToFlux(String.class)
-                    .flatMap(chunk -> {
-                        if (!chunk.startsWith("data: ")) return Flux.empty();
-                        String json = chunk.substring(6).trim();
-                        if ("[DONE]".equals(json)) return Flux.empty();
-                        try {
-                            JsonNode node = objectMapper.readTree(json);
-                            JsonNode choices = node.path("choices");
-                            if (choices.isEmpty()) return Flux.empty();
-                            String token = choices.get(0).path("delta").path("content").asText("");
-                            if (token.isEmpty()) return Flux.empty();
-                            tokenAccumulator.add(token);
-                            return Flux.just(token);
-                        } catch (Exception e) {
-                            return Flux.empty();
-                        }
-                    })
-                    .doOnComplete(() -> {
-                        String fullReply = String.join("", tokenAccumulator);
-                        if (fullReply.isEmpty()) return;
-                        Message assistantMsg = new Message();
-                        assistantMsg.setConversation(conversation);
-                        assistantMsg.setRole("assistant");
-                        assistantMsg.setContent(fullReply);
-                        messageRepository.save(assistantMsg);
-                    })
-                    .doOnError(e -> log.error("Chat stream error: {}", e.getMessage(), e));
-
+            reply = choices.get(0).path("message").path("content").asText("");
         } catch (Exception e) {
-            log.error("Exception in ChatService.streamChat(): {}", e.getMessage(), e);
-            return Flux.error(e);
+            log.error("Failed to parse Groq response: {} — raw body: {}", e.getMessage(), response);
+            throw new RuntimeException("Failed to parse AI response: " + e.getMessage());
         }
+
+        if (reply.isBlank()) {
+            log.warn("Groq returned a blank reply for persona {}", persona.getName());
+        } else {
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(conversation);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(reply);
+            messageRepository.save(assistantMsg);
+
+            String finalReply = reply;
+            Mono.fromRunnable(() -> {
+                try {
+                    memoryService.extractAndStoreMemory(
+                            user,
+                            request.getPersonaId().toString(),
+                            request.getContent(),
+                            finalReply
+                    );
+                } catch (Exception e) {
+                    log.warn("Memory extraction failed: {}", e.getMessage());
+                }
+            }).subscribeOn(Schedulers.boundedElastic()).subscribe();
+        }
+
+        return new ChatResponse(reply, conversation.getId());
     }
 
     @Transactional
