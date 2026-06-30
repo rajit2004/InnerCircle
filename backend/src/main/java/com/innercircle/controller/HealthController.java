@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.controller;
+package com.innercircle.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;

@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.service;
+package com.innercircle.service;
 
 import com.innercircle.dto.AuthRequest;
 import com.innercircle.dto.AuthResponse;

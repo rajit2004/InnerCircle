@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.controller;
+package com.innercircle.controller;
 
 import com.innercircle.dto.NotificationRegisterRequest;
 import com.innercircle.dto.NotificationScheduleRequest;

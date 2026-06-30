@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.service;
+package com.innercircle.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

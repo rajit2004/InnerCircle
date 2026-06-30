@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.config;
+package com.innercircle.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;

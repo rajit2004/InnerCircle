@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.repository;
+package com.innercircle.repository;
 
 import com.innercircle.model.Persona;
 import com.innercircle.model.SubscriptionTier;

@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.model;
+package com.innercircle.model;
 
 public enum SubscriptionTier {
     free,

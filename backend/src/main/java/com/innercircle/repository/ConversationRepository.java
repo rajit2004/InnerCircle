@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.repository;
+package com.innercircle.repository;
 
 import com.innercircle.model.Conversation;
 import com.innercircle.model.User;

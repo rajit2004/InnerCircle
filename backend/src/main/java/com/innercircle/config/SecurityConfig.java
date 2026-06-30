@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.config;
+package com.innercircle.config;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;

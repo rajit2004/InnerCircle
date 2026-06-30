@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.controller;
+package com.innercircle.controller;
 
 import com.innercircle.dto.ChatRequest;
 import com.innercircle.dto.ChatResponse;

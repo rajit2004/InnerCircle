@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.service;
+package com.innercircle.service;
 
 import org.springframework.stereotype.Service;
 

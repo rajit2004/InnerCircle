@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.dto;
+package com.innercircle.dto;
 
 import tools.jackson.databind.annotation.JsonDeserialize;
 import tools.jackson.databind.ValueDeserializer;

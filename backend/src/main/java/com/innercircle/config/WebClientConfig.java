@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.config;
+package com.innercircle.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

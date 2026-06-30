@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.service;
+package com.innercircle.service;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.google.firebase.FirebaseApp;

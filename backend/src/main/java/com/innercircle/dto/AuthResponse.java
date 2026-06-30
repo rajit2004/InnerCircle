@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.dto;
+package com.innercircle.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

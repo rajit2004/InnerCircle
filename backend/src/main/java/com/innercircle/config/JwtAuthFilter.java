@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.config;
+package com.innercircle.config;
 
 import com.innercircle.model.User;
 import com.innercircle.repository.UserRepository;

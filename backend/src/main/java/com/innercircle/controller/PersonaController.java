@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.controller;
+package com.innercircle.controller;
 
 import com.innercircle.model.Persona;
 import com.innercircle.model.User;

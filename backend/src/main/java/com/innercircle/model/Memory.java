@@ -1,4 +1,4 @@
-package src.main.java.com.innercircle.model;
+package com.innercircle.model;
 
 import jakarta.persistence.*;
 import lombok.Data;
