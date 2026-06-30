@@ -1,0 +1,7 @@
+package src.main.java.com.innercircle.exception;
+
+public class UnauthorizedException extends RuntimeException {
+    public UnauthorizedException(String message) {
+        super(message);
+    }
+}

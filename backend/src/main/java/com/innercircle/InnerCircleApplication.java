@@ -1,0 +1,14 @@
+package src.main.java.com.innercircle;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+@SpringBootApplication
+@EnableScheduling
+public class InnerCircleApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(InnerCircleApplication.class, args);
+    }
+}
