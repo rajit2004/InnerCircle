@@ -5,7 +5,15 @@ spring:
   application:
     name: innercircle-backend
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/innercircle}
+    # BUG FIX (Round 6): Added ?characterEncoding=UTF-8&useUnicode=true to the JDBC
+    # URL. Without an explicit encoding, the PostgreSQL JDBC driver negotiates
+    # client_encoding based on locale/OS defaults, which on some Windows setups
+    # silently falls back to something other than UTF-8. This is the actual root
+    # cause of the persona avatar_emoji mojibake (e.g. "ð  ©â  ð  §" instead of
+    # "👩‍👧") seen in test output — multi-byte emoji characters were being
+    # mis-decoded on the wire between the app and Postgres. Forcing UTF-8 here
+    # prevents this from recurring even if schema.sql is reapplied later.
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/innercircle?characterEncoding=UTF-8&useUnicode=true}
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
