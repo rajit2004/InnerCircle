@@ -48,6 +48,11 @@ CREATE TABLE IF NOT EXISTS messages (
 );
 
 -- Memories
+-- FEATURE (shared memory, 2026-07-02): added the `shared` column so a memory
+-- can be marked visible to every persona regardless of which one it was
+-- extracted under -- see MemoryService.extractAndStoreMemory() and
+-- add_shared_memory_column.sql for the migration if this schema was already
+-- applied before this column existed.
 CREATE TABLE IF NOT EXISTS memories (
                                         id UUID PRIMARY KEY,
                                         user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -57,6 +62,7 @@ CREATE TABLE IF NOT EXISTS memories (
                                         importance INT DEFAULT 1,
                                         access_count INT DEFAULT 0,
                                         last_accessed TIMESTAMPTZ,
+                                        shared BOOLEAN NOT NULL DEFAULT FALSE,
                                         created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
