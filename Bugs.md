@@ -97,10 +97,37 @@ I went and checked every call site of `AuthService.login()` and `AuthService.reg
 **What I saw:**
 ```dart
 bottomNavigationBar: BottomNavigationBar(
-  items: const [...],
-  onTap: (index) { ... },
+items: const [...],
+onTap: (index) { ... },
 ),
 ```
 No `currentIndex` is set. Depending on the exact Flutter SDK version, this can either default silently to index 0 or throw an assertion error in debug mode (`There should be exactly one item with a matching currentIndex`). Since tapping "Memories" navigates away via `Navigator.pushNamed` rather than actually switching the bottom nav state, the missing `currentIndex` hasn't caused a visible problem in testing, but it's a latent SDK-version landmine.
 
 **Why I'm not touching it:** This is cosmetic/structural, not something currently breaking functionality, and I didn't want to bundle a "fix" for something that isn't actually causing an error in the SDK version this project is pinned to (`sdk: ^3.12.2` in `pubspec.yaml`). Flagging it so it's not a surprise later if the Flutter SDK gets upgraded.
+---
+
+## [2026-07-02 03:40 UTC] Bug 4 — Chats don't survive closing the screen, and in-chat style requests silently "reset"
+
+**Where:** `lib/screens/chat_screen.dart`
+
+**What I saw (from testing on my phone):**
+
+Two things I reported that turned out to be the same bug: (1) closing a chat and reopening it shows zero history, just the persona's greeting again, and (2) I asked the Girlfriend persona to "reply short and humanly," she did for one message, and then the moment I reopened the chat later she was back to long AI-sounding paragraphs like nothing happened.
+
+**Why it was happening:**
+
+`_messages` and `_conversationId` were plain `StatefulWidget` fields. `initState()` only ever did one thing: add the persona's greeting to `_messages`. There was no fetch of anything from the backend on screen open. So every single time `ChatScreen` gets created — which includes navigating away and back, not just force-closing the app — both fields reset to empty/null.
+
+That second part is the actual reason the "reply shorter" instruction seemed to get forgotten. It wasn't actually forgotten — it was sitting as a real message in a real conversation in the database. But since `_conversationId` reset to `null` on reopen, the very next message sent a request with no `conversationId`, and the backend's `ChatService.chatDirect()` does exactly what it's supposed to when that happens: it creates a **brand new** `Conversation` row. That new conversation has zero messages in it, so when it builds the context sent to Groq, there's nothing in there telling the model to keep replies short. The old conversation with that instruction still exists in the DB, just orphaned — nothing was pointing at it anymore.
+
+I also checked the backend directly: there was no endpoint to fetch past messages at all. `ChatController` only had `POST /api/chat` and `GET /api/chat/test`. So even if the frontend had wanted to load history, there was nowhere to load it from.
+
+**How I'm fixing it:** This needed a matching change on both sides, logged here and in `BackendFIXES.md`:
+
+- **Backend:** new `GET /api/chat/history?personaId=X` endpoint that finds the most recent conversation for that user+persona pair and returns its full message list plus the `conversationId`.
+- **Frontend:** `initState()` now calls this endpoint first. If a conversation exists, it loads all the past messages into `_messages` and restores `_conversationId` so the *next* message sent continues the same conversation instead of starting a new one. Only falls back to greeting-only if there's genuinely no prior conversation (or the fetch fails for some reason — I didn't want a flaky history fetch to block the chat from being usable at all).
+
+Once `_conversationId` is correctly restored on reopen, style instructions like "reply shorter" stop appearing to reset, because the conversation they're part of is the one still being continued, not orphaned in favor of a fresh one.
+
+**Files changed (frontend):** `lib/screens/chat_screen.dart`, `lib/services/chat_service.dart`
+**Files changed (backend):** see `BackendFIXES.md` — `ChatController.java`, `ChatService.java`, `ConversationRepository.java`, new `ChatHistoryResponse.java`
