@@ -17,15 +17,70 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isTyping = false;
+  bool _loadingHistory = true;
   String? _conversationId;
 
   @override
   void initState() {
     super.initState();
-    final greeting = widget.persona.greeting?.trim();
-    if (greeting != null && greeting.isNotEmpty) {
-      _messages.add(ChatMessage(role: 'assistant', content: greeting));
+    // BUG FIX (chat history, 2026-07-02): initState used to just add the
+    // persona's greeting and stop there -- every screen open/close cycle
+    // started completely fresh with no memory of past messages, and no
+    // conversationId either, which meant the backend created a brand new
+    // Conversation on the very next message. That's also why in-chat style
+    // instructions (e.g. "reply shorter") appeared to reset on reopen: they
+    // weren't forgotten, they were sitting in an orphaned conversation this
+    // new session never loaded. See bugs.md and ChatService.getHistory() for
+    // the full story. Now we fetch the most recent conversation for this
+    // persona first, and only fall back to greeting-only if there isn't one.
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    try {
+      final history = await ChatService.getHistory(widget.persona.id);
+      final conversationId = history['conversationId'] as String?;
+      final rawMessages = (history['messages'] as List<dynamic>? ?? []);
+
+      if (!mounted) return;
+
+      if (conversationId == null || rawMessages.isEmpty) {
+        _showGreetingOnly();
+        return;
+      }
+
+      setState(() {
+        _conversationId = conversationId;
+        _messages.addAll(
+          rawMessages.map(
+                (m) => ChatMessage(
+              role: m['role'] as String,
+              content: m['content'] as String,
+            ),
+          ),
+        );
+        _loadingHistory = false;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      // History fetch failing shouldn't block the chat from being usable --
+      // fall back to a fresh conversation with just the greeting, same as
+      // the old behavior.
+      if (!mounted) return;
+      _showGreetingOnly();
     }
+  }
+
+  void _showGreetingOnly() {
+    final greeting = widget.persona.greeting?.trim();
+    setState(() {
+      _messages.clear();
+      if (greeting != null && greeting.isNotEmpty) {
+        _messages.add(ChatMessage(role: 'assistant', content: greeting));
+      }
+      _conversationId = null;
+      _loadingHistory = false;
+    });
   }
 
   @override
@@ -129,7 +184,9 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
+        child: _loadingHistory
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
           children: [
             Expanded(
               child: ListView.builder(
