@@ -52,3 +52,23 @@ If testing ever moves to iOS simulator or a physical device, this one line needs
 
 - Haven't run this through `flutter analyze` or `flutter build` myself in this environment — no Flutter SDK access here, same limitation as the backend's Maven situation. Worth running `flutter pub get && flutter analyze` before trusting this compiles clean, though the changes here are small and don't touch anything structurally unusual (no new dependencies, no new imports beyond what was already there).
 - Haven't touched the `User.fromJson` mismatch or the `BottomNavigationBar` `currentIndex` issue — both are written up in bugs.md as deliberate non-fixes, not oversights.
+---
+
+## Fix 4 — Made chat history actually persist across screen reopens (Bug 4)
+
+This was reported two ways that turned out to be one bug: "no older chats after reopening" and "asking Girlfriend to reply shorter stopped working after I reopened the chat." Both came from the same root cause — the frontend had no way to load past messages, and no way to tell the backend "continue the conversation I already had," so every reopen silently started a brand new one.
+
+**`lib/services/chat_service.dart`** — Added `getHistory(personaId)`, which calls the new `GET /api/chat/history?personaId=X` backend endpoint (see `BackendFIXES.md`) and returns the most recent conversation's `conversationId` plus its full message list.
+
+**`lib/screens/chat_screen.dart`** — `initState()` no longer just adds the greeting and stops. It now calls `_loadHistory()` first: fetch whatever conversation already exists for this persona, populate `_messages` from it, and restore `_conversationId` so the next message sent continues that conversation instead of orphaning it in favor of a new one. Added a brief loading spinner while this fetch is in flight, and a fallback to greeting-only if there's no prior conversation or the fetch fails for any reason — didn't want a flaky history load to ever block someone from being able to chat.
+
+This is also what fixes the "style instruction resets" symptom — it was never actually forgotten by the AI, it was just living in a conversation the app had stopped pointing at. Once `_conversationId` correctly survives a reopen, the conversation (and everything said in it) keeps being the one that's continued.
+
+---
+
+## Files changed in this pass
+
+- `lib/services/chat_service.dart`
+- `lib/screens/chat_screen.dart`
+
+(Backend changes for this fix are logged separately in `BackendFIXES.md` — `ChatController.java`, `ChatService.java`, `ConversationRepository.java`, new `ChatHistoryResponse.java`.)
