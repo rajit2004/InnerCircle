@@ -5,7 +5,7 @@ class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  State<LoginScreen> createState() => _LoginScreenState();
 }
 
 class _LoginScreenState extends State<LoginScreen> {
@@ -13,6 +13,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _loading = false;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   void _login() async {
     if (!_formKey.currentState!.validate()) return;
@@ -28,7 +35,9 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
     if (!mounted) return;
     setState(() => _loading = false);
@@ -60,9 +69,9 @@ class _LoginScreenState extends State<LoginScreen> {
               _loading
                   ? const CircularProgressIndicator()
                   : ElevatedButton(
-                onPressed: _login,
-                child: const Text('Login'),
-              ),
+                      onPressed: _login,
+                      child: const Text('Login'),
+                    ),
               TextButton(
                 onPressed: () => Navigator.pushNamed(context, '/register'),
                 child: const Text('Don\'t have an account? Register'),
