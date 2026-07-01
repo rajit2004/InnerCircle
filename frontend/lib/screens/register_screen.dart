@@ -5,7 +5,7 @@ class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
   @override
-  _RegisterScreenState createState() => _RegisterScreenState();
+  State<RegisterScreen> createState() => _RegisterScreenState();
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
@@ -14,18 +14,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   bool _loading = false;
 
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
     try {
-      await AuthService.register(_emailController.text, _passwordController.text);
+      await AuthService.register(
+        _emailController.text,
+        _passwordController.text,
+      );
       // BUG FIX (frontend, 2026-06-30): same mounted-check fix as
       // login_screen.dart -- see bugs.md Bug 2.
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.toString())));
     }
     if (!mounted) return;
     setState(() => _loading = false);
@@ -57,9 +69,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               _loading
                   ? const CircularProgressIndicator()
                   : ElevatedButton(
-                onPressed: _register,
-                child: const Text('Register'),
-              ),
+                      onPressed: _register,
+                      child: const Text('Register'),
+                    ),
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Already have an account? Login'),
