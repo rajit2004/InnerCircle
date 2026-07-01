@@ -26,13 +26,22 @@ public class MemoryController {
     private final PersonaRepository personaRepository;
     private final EmbeddingService embeddingService;
 
+    // FEATURE (shared memory, 2026-07-02): Switched from
+    // findByUserAndPersonaOrderByImportanceDesc to
+    // findByUserAndPersonaOrSharedOrderByImportanceDesc so that memories
+    // marked shared = true from OTHER personas now show up here too, not
+    // just facts extracted directly under this persona. This means the
+    // Memories tab, when filtered to e.g. Mom, will now actually show
+    // "User wants a hamburger" if that fact was shared from a Big Sister
+    // conversation -- previously it was invisible unless you queried with
+    // no personaId filter at all.
     @GetMapping
     public List<Memory> getMemories(@AuthenticationPrincipal User user,
                                     @RequestParam(required = false) UUID personaId) {
         if (personaId != null) {
             Persona persona = personaRepository.findById(personaId)
                     .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
-            return memoryRepository.findByUserAndPersonaOrderByImportanceDesc(user, persona);
+            return memoryRepository.findByUserAndPersonaOrSharedOrderByImportanceDesc(user, persona);
         }
         return memoryRepository.findByUserOrderByImportanceDesc(user);
     }
@@ -50,15 +59,12 @@ public class MemoryController {
         memory.setUser(user);
         memory.setPersona(persona);
         memory.setFact(request.getFact());
+        memory.setShared(request.isShared());
         memory.setEmbedding(embeddingService.toPgVectorLiteral(embeddingService.embed(request.getFact())));
         memory.setImportance(1);
         return memoryRepository.save(memory);
     }
 
-    // BUG FIX: There was no DELETE endpoint for memories, but the Memory model
-    // has a full lifecycle. Without this, users have no way to remove memories
-    // via the API. Also added an ownership check to prevent users from deleting
-    // other users' memories (IDOR vulnerability).
     @DeleteMapping("/{id}")
     public void deleteMemory(@AuthenticationPrincipal User user, @PathVariable UUID id) {
         Memory memory = memoryRepository.findById(id)
