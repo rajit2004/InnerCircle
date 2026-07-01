@@ -3,7 +3,9 @@ import '../models/memory.dart';
 
 class MemoryService {
   static Future<List<Memory>> getMemories({String? personaId}) async {
-    final endpoint = personaId != null ? '/api/memories?personaId=$personaId' : '/api/memories';
+    final endpoint = personaId != null
+        ? '/api/memories?personaId=$personaId'
+        : '/api/memories';
     final data = await ApiClient.get(endpoint);
     if (data == null) return [];
     return (data as List).map((json) => Memory.fromJson(json)).toList();
