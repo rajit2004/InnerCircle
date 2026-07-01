@@ -1,5 +1,6 @@
 package com.innercircle.controller;
 
+import com.innercircle.dto.ChatHistoryResponse;
 import com.innercircle.dto.ChatRequest;
 import com.innercircle.dto.ChatResponse;
 import com.innercircle.model.User;
@@ -10,6 +11,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/chat")
 @RequiredArgsConstructor
@@ -17,18 +20,22 @@ public class ChatController {
 
     private final ChatService chatService;
 
-    // BUG FIX (Round 6): Removed the SSE streaming endpoint entirely. As documented
-    // in BackendFIXES.md Round 4, SSE on Tomcat (servlet stack) causes Spring Security to
-    // 403 the client's automatic reconnect request, since the reconnect doesn't carry
-    // the Authorization header. POST /api/chat now returns a proper JSON object
-    // ({"reply": "..."}) via ChatResponse instead of either a raw SSE stream or a
-    // bare string — the latter was the cause of `$chat.reply` resolving to $null in
-    // PowerShell tests: Invoke-RestMethod was receiving a plain string body, which
-    // has no .reply property, not an object.
     @PostMapping
     public ResponseEntity<ChatResponse> chat(@AuthenticationPrincipal User user,
                                              @Valid @RequestBody ChatRequest request) {
         return ResponseEntity.ok(chatService.chatDirect(request, user));
+    }
+
+    // FEATURE (chat history, 2026-07-02): new endpoint so the frontend can
+    // restore the most recent conversation with a persona when the chat
+    // screen is reopened, instead of always starting fresh. See
+    // ChatService.getHistory() for the full explanation and bugs.md for how
+    // this was discovered (reported as "chats aren't retained" and a style
+    // instruction like "reply shorter" appearing to reset -- same root cause).
+    @GetMapping("/history")
+    public ResponseEntity<ChatHistoryResponse> history(@AuthenticationPrincipal User user,
+                                                       @RequestParam UUID personaId) {
+        return ResponseEntity.ok(chatService.getHistory(personaId, user));
     }
 
     @GetMapping("/test")
