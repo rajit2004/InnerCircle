@@ -160,3 +160,27 @@ I deliberately left `ChatService.java` and `MemoryService.java` alone — they i
 - Firebase push notifications require a real service-account JSON at `FCM_CREDENTIALS_PATH`. Without it the service degrades gracefully (logs only)
 - `test.html` and `body.json` are scratch files left unchanged
 - Worth confirming on the next test run: do memory facts now persist with a real `[0.1,0.2,...]`-shaped embedding instead of failing silently, and does `/api/notifications/schedule` now accept an array for `daysOfWeek`?
+---
+
+## Round 7 — Added conversation history retrieval (chat history wasn't persisting on the frontend)
+
+This came from testing on a real phone: closing and reopening a chat showed no prior messages, and an in-chat style request ("reply shorter") to the Girlfriend persona appeared to reset after reopening. I traced it back here on the backend side first before realizing the actual fix needed both ends.
+
+**What was missing:** there was no way to fetch a persona's conversation history at all. `ChatController` only exposed `POST /api/chat` (send a message) and `GET /api/chat/test`. Every message-send that didn't include a `conversationId` correctly created a new `Conversation` — that part of `ChatService.chatDirect()` was never wrong — but the frontend had no endpoint to ask "what's the most recent conversation I had with this persona, and what did we say?" so it never had a `conversationId` to send back after a screen reopen. New conversation every time, with zero history in it for Groq to see.
+
+**Fix:**
+
+- **`ConversationRepository.java`** — added `findFirstByUserAndPersonaOrderByUpdatedAtDesc(User, Persona)` to look up the most recent conversation for a given persona.
+- **`ChatHistoryResponse.java`** (new) — response DTO: `conversationId` (nullable, if there's no prior conversation) plus a list of `{role, content, createdAt}` message DTOs.
+- **`ChatService.java`** — added `getHistory(UUID personaId, User user)`: looks up the persona, finds the most recent conversation (if any), and returns its full message list via `ChatHistoryResponse`.
+- **`ChatController.java`** — new `GET /api/chat/history?personaId=X` endpoint wiring the above up.
+
+No changes needed to `chatDirect()` itself — it already handled `conversationId` being present or absent correctly. The gap was purely "there was no way to retrieve one to send back."
+
+### Files changed
+- `src/main/java/com/innercircle/repository/ConversationRepository.java`
+- `src/main/java/com/innercircle/dto/ChatHistoryResponse.java` (new)
+- `src/main/java/com/innercircle/service/ChatService.java`
+- `src/main/java/com/innercircle/controller/ChatController.java`
+
+(Frontend changes for this fix are logged in the frontend's `Bugs.md` / `FrontendFixes.md` — `chat_screen.dart`, `chat_service.dart`.)
