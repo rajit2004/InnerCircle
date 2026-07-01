@@ -2,6 +2,7 @@ package com.innercircle.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.innercircle.dto.ChatHistoryResponse;
 import com.innercircle.dto.ChatRequest;
 import com.innercircle.dto.ChatResponse;
 import com.innercircle.exception.DailyLimitExceededException;
@@ -176,6 +177,42 @@ public class ChatService {
         }
 
         return new ChatResponse(reply, conversation.getId());
+    }
+
+    // FEATURE (chat history, 2026-07-02): There was previously no way to fetch
+    // past messages for a persona at all -- the frontend's ChatScreen kept
+    // messages and conversationId purely in local widget state, which meant
+    // every time the screen was closed and reopened, it started completely
+    // fresh: no history shown, AND a brand new Conversation created server-side
+    // with zero prior messages. That second part is why in-chat style requests
+    // like "reply shorter" or "be more casual" appeared to reset on reopen --
+    // they weren't actually forgotten, they were just sitting in an orphaned
+    // conversation that the new session never loaded, so Groq never saw them
+    // again in the message history sent as context.
+    //
+    // This returns the most recent conversation for the given persona (if
+    // any) and its full message list, so the frontend can restore both the
+    // visible chat history AND the conversationId to continue from, instead
+    // of silently starting a new conversation every time.
+    public ChatHistoryResponse getHistory(UUID personaId, User user) {
+        Persona persona = personaRepository.findById(personaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
+
+        Optional<Conversation> conversationOpt =
+                conversationRepository.findFirstByUserAndPersonaOrderByUpdatedAtDesc(user, persona);
+
+        if (conversationOpt.isEmpty()) {
+            return new ChatHistoryResponse(null, List.of());
+        }
+
+        Conversation conversation = conversationOpt.get();
+        List<ChatHistoryResponse.MessageDto> messages = messageRepository
+                .findByConversationOrderByCreatedAtAsc(conversation)
+                .stream()
+                .map(m -> new ChatHistoryResponse.MessageDto(m.getRole(), m.getContent(), m.getCreatedAt()))
+                .toList();
+
+        return new ChatHistoryResponse(conversation.getId(), messages);
     }
 
     @Transactional
