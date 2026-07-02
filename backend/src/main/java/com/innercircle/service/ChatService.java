@@ -25,6 +25,7 @@ import reactor.core.scheduler.Schedulers;
 
 import java.time.LocalDate;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 @RequiredArgsConstructor
@@ -114,7 +115,22 @@ public class ChatService {
         Map<String, Object> body = new HashMap<>();
         body.put("model", groqModel);
         body.put("messages", messages);
-        body.put("max_tokens", 300);
+        // BUG FIX (persona voice, 2026-07-02): max_tokens was 300, which is
+        // generous enough that the model would happily write full essay-length
+        // replies -- e.g. asking Mom for steak got back a structured recipe
+        // instead of a text-length reaction. 150 tokens is roughly 3-5 sentences,
+        // which comfortably fits the "reply like a real text message" instruction
+        // now baked into every persona's system prompt (see schema.sql /
+        // update_persona_prompts.sql) while still leaving room for a slightly
+        // longer reply when the user actually asks for detail. This is a hard
+        // backstop -- even if the model ignores the prompt's length guidance,
+        // the response physically can't run on.
+        body.put("max_tokens", 150);
+        // Slightly higher temperature makes replies feel less formulaic/robotic
+        // and more like natural conversation -- the previous unset value fell
+        // back to Groq's model default, which trended toward safe, repetitive
+        // phrasing.
+        body.put("temperature", 0.9);
         // Intentionally no "stream": true — see method doc above.
 
         String response;
@@ -151,6 +167,18 @@ public class ChatService {
             log.error("Failed to parse Groq response: {} — raw body: {}", e.getMessage(), response);
             throw new RuntimeException("Failed to parse AI response: " + e.getMessage());
         }
+
+        // BUG FIX (persona voice, 2026-07-02): hard backstop for markdown
+        // leaking through despite the system prompt explicitly banning it.
+        // Prompt instructions are advisory, not guaranteed -- the model can
+        // still slip into **bold**, ## headers, or - bullet lists, especially
+        // on longer or more "advice-shaped" replies. The frontend renders
+        // message content in a plain Text widget with no markdown parsing, so
+        // any of that shows up as literal asterisks/hashes in the chat bubble,
+        // which is exactly what made replies look AI-generated instead of
+        // human. Stripping it server-side means the fix holds even when the
+        // model doesn't fully comply with the prompt.
+        reply = stripMarkdown(reply);
 
         if (reply.isBlank()) {
             log.warn("Groq returned a blank reply for persona {}", persona.getName());
@@ -213,6 +241,36 @@ public class ChatService {
                 .toList();
 
         return new ChatHistoryResponse(conversation.getId(), messages);
+    }
+
+    // BUG FIX (persona voice, 2026-07-02): strips common markdown artifacts
+    // from a reply before it's saved/returned. Handles the cases the model
+    // actually produced in testing: **bold**, __bold__, *italic*, # / ## / ###
+    // headers, and "- " or "* " bullet-list markers at the start of a line.
+    // Deliberately does NOT touch numbers inside normal sentences (e.g. "I
+    // have 2 dogs") -- only strips a numbered-list marker like "1. " when it's
+    // at the very start of a line, immediately followed by a real list item.
+    // Collapses the extra blank lines markdown lists tend to leave behind so
+    // the result reads like a normal paragraph of text, not a gappy list with
+    // the bullets removed.
+    private static final Pattern MD_BOLD = Pattern.compile("\*\*(.+?)\*\*|__(.+?)__");
+    private static final Pattern MD_ITALIC = Pattern.compile("(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)");
+    private static final Pattern MD_HEADER = Pattern.compile("(?m)^#{1,6}\s*");
+    private static final Pattern MD_BULLET = Pattern.compile("(?m)^\s*[-*]\s+");
+    private static final Pattern MD_NUMBERED = Pattern.compile("(?m)^\s*\d+\.\s+");
+    private static final Pattern EXTRA_BLANK_LINES = Pattern.compile("\n{3,}");
+
+    private static String stripMarkdown(String text) {
+        if (text == null || text.isBlank()) return text;
+        String result = text;
+        result = MD_BOLD.matcher(result).replaceAll(m ->
+                m.group(1) != null ? m.group(1) : m.group(2));
+        result = MD_ITALIC.matcher(result).replaceAll("$1");
+        result = MD_HEADER.matcher(result).replaceAll("");
+        result = MD_BULLET.matcher(result).replaceAll("");
+        result = MD_NUMBERED.matcher(result).replaceAll("");
+        result = EXTRA_BLANK_LINES.matcher(result).replaceAll("\n\n");
+        return result.trim();
     }
 
     @Transactional
