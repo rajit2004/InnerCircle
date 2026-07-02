@@ -253,11 +253,11 @@ public class ChatService {
     // Collapses the extra blank lines markdown lists tend to leave behind so
     // the result reads like a normal paragraph of text, not a gappy list with
     // the bullets removed.
-    private static final Pattern MD_BOLD = Pattern.compile("\*\*(.+?)\*\*|__(.+?)__");
-    private static final Pattern MD_ITALIC = Pattern.compile("(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)");
-    private static final Pattern MD_HEADER = Pattern.compile("(?m)^#{1,6}\s*");
-    private static final Pattern MD_BULLET = Pattern.compile("(?m)^\s*[-*]\s+");
-    private static final Pattern MD_NUMBERED = Pattern.compile("(?m)^\s*\d+\.\s+");
+    private static final Pattern MD_BOLD = Pattern.compile("\\*\\*(.+?)\\*\\*|__(.+?)__");
+    private static final Pattern MD_ITALIC = Pattern.compile("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)");
+    private static final Pattern MD_HEADER = Pattern.compile("(?m)^#{1,6}\\s*");
+    private static final Pattern MD_BULLET = Pattern.compile("(?m)^\\s*[-*]\\s+");
+    private static final Pattern MD_NUMBERED = Pattern.compile("(?m)^\\s*\\d+\\.\\s+");
     private static final Pattern EXTRA_BLANK_LINES = Pattern.compile("\n{3,}");
 
     private static String stripMarkdown(String text) {
