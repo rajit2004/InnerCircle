@@ -184,3 +184,40 @@ No changes needed to `chatDirect()` itself — it already handled `conversationI
 - `src/main/java/com/innercircle/controller/ChatController.java`
 
 (Frontend changes for this fix are logged in the frontend's `Bugs.md` / `FrontendFixes.md` — `chat_screen.dart`, `chat_service.dart`.)
+
+---
+
+## Round 8 — Personas sounded like an AI assistant, not a person
+
+Got feedback after using the app for real: asking Mom for steak got back a full recipe with headers and bold text, replies were long and structured like ChatGPT answers, and emojis were inconsistent -- sometimes not rendering at all. Went through this as a proper prompt-engineering + backend pass since it needed changes in three places, not one.
+
+### Root cause
+
+The original system prompts described a *role* ("provide thoughtful life advice", "be encouraging") but never told the model *how* to actually talk. Left to its own defaults, Groq's model reached for its trained-in "helpful assistant" voice -- markdown headers, **bold**, numbered steps, long structured answers -- the same way it would answer a question on a help forum. Nothing in the prompt said "you're texting a person," so it never behaved like it. On top of that, `max_tokens` was 300 with no `temperature` set, which gave the model plenty of room to write an essay and no push toward sounding more natural/less formulaic.
+
+### Fix — three layers, so it holds even if one layer doesn't fully work
+
+**1. Rewrote all four persona system prompts** (`update_persona_prompts.sql`, and `schema.sql` for fresh installs). Each one now explicitly:
+- Frames the persona as texting a specific person (child / best friend / younger sibling / partner), not "assisting a user"
+- Bans markdown formatting outright (no headers, no bold/italic asterisks, no bullet or numbered lists)
+- Caps expected reply length at 1-3 sentences unless the user clearly asks for more detail
+- Gives each persona the actual distinct voice asked for: Mom stays kind and warm but conversational, not a lecture; Best Friend is brutally honest and casual; Big Sister is protective and pampering with teasing warmth; Girlfriend is flirty and playful, PG-13
+- Instructs the model to react to what the user *actually said* instead of defaulting to generic advice-column material (this is the direct fix for the steak-recipe problem)
+- Constrains emoji use to at most one simple, common, single-codepoint emoji per message (😊 💕 😂 etc.), explicitly avoiding combo/family-style emoji -- partly for a more natural texting feel, partly because those compound emoji are the ones most likely to render inconsistently across Android devices and fonts (same root class of issue as the mojibake avatar emoji fixed back in Round 6)
+
+**2. Tightened the Groq request parameters** in `ChatService.chatDirect()`:
+- `max_tokens` dropped from 300 to 150 -- a hard backstop that physically caps reply length regardless of whether the model fully follows the prompt's length guidance
+- Added `temperature: 0.9` (previously unset, falling back to the model's default) to push replies away from safe, repetitive phrasing toward something that reads more like natural conversation
+
+**3. Added a server-side markdown sanitizer** (`stripMarkdown()`) that runs on every reply before it's saved or returned. Strips `**bold**`, `__bold__`, `*italic*`, `#`/`##`/`###` headers, and `-`/`*` bullet or numbered-list markers at the start of a line, then collapses the extra blank lines that kind of formatting tends to leave behind. This is the belt-and-suspenders layer -- prompt instructions are advisory, and the model can still slip into markdown on a longer or more "advice-shaped" reply. Since the frontend renders replies in a plain `Text` widget with no markdown parsing, any leaked formatting was showing up as literal asterisks and hash symbols in the chat bubble, which is exactly what made replies look AI-generated instead of human. Stripping it server-side means the fix holds even when the model doesn't fully comply with the prompt.
+
+### Files changed
+- `database/update_persona_prompts.sql` (new, migration for existing DBs)
+- `database/schema.sql` (persona seed prompts updated for fresh installs)
+- `src/main/java/com/innercircle/service/ChatService.java`
+
+### What to expect after this
+"Mom, I want a steak" should get something like *"Ooh nice, want me to make it tonight? 😊"* -- not a recipe. Replies across all four personas should read like real text messages: short, no formatting artifacts, and a voice that actually matches Mom-vs-Best-Friend-vs-Big-Sister-vs-Girlfriend instead of all four sounding like the same generic assistant with a different name on top.
+
+### What I couldn't verify
+Emoji *rendering* on your specific device font is outside backend control entirely -- restricting the model to simple single-codepoint emoji reduces the odds of hitting an unsupported glyph, but if a specific emoji still doesn't render, that's an Android/font issue, not something this fix touches. Also haven't run this against a real Groq call in this environment (same Maven/network access limitation as always) -- worth testing a few messages per persona after deploying to confirm the tone lands the way it's meant to; prompt tuning sometimes needs a second pass once you see real replies.
