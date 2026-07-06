@@ -32,7 +32,11 @@ import java.util.regex.Pattern;
 @Slf4j
 public class ChatService {
 
-    private static final int FREE_TIER_DAILY_MESSAGE_LIMIT = 50;
+    // BUG-PREVENTION (2026-07-03): made public so UserController can report the
+    // same limit back to the client for the profile screen's usage display,
+    // instead of hardcoding "50" a second time somewhere else and risking the
+    // two numbers drifting apart if this one is ever tuned.
+    public static final int FREE_TIER_DAILY_MESSAGE_LIMIT = 50;
 
     private final WebClient webClient;
     private final PersonaRepository personaRepository;
