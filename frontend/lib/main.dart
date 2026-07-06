@@ -5,6 +5,8 @@ import 'screens/home_screen.dart';
 import 'screens/memories_screen.dart';
 import 'screens/profile_screen.dart';
 import 'services/auth_service.dart';
+import 'theme/app_theme.dart';
+import 'widgets/splash_screen.dart';
 
 void main() {
   runApp(const InnerCircleApp());
@@ -17,22 +19,25 @@ class InnerCircleApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'InnerCircle',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF5E7C61),
-          secondary: const Color(0xFF8B5E83),
-        ),
-        useMaterial3: true,
-      ),
+      // DESIGN FIX (2026-07-03): replaced the ColorScheme.fromSeed() theme
+      // with AppTheme.light -- a hand-built design system with a warm,
+      // deliberate color and type language instead of Material3's
+      // auto-generated one. See lib/theme/app_theme.dart for the full
+      // rationale and DESIGN.md for the system overview.
+      theme: AppTheme.light,
       initialRoute: '/',
       routes: {
         '/': (context) => FutureBuilder(
           future: AuthService.isLoggedIn(),
           builder: (context, snapshot) {
+            // DESIGN FIX (2026-07-03): this branch used to be a bare
+            // CircularProgressIndicator on a blank Scaffold -- the very
+            // first thing anyone sees when opening the app. Swapped in the
+            // branded SplashScreen (see widgets/splash_screen.dart) for
+            // the same wait, at zero extra cost -- the wait was already
+            // happening, this just gives it a face.
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(child: CircularProgressIndicator()),
-              );
+              return const SplashScreen();
             }
             if (snapshot.data == true) {
               return const HomeScreen();
