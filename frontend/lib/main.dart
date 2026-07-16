@@ -4,6 +4,7 @@ import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/memories_screen.dart';
 import 'screens/profile_screen.dart';
+import 'screens/notifications_screen.dart';
 import 'services/auth_service.dart';
 import 'theme/app_theme.dart';
 import 'widgets/splash_screen.dart';
@@ -51,6 +52,7 @@ class InnerCircleApp extends StatelessWidget {
         '/home': (context) => const HomeScreen(),
         '/memories': (context) => const MemoriesScreen(),
         '/profile': (context) => const ProfileScreen(),
+        '/notifications': (context) => const NotificationsScreen(),
       },
     );
   }
