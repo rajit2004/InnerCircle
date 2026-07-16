@@ -1,5 +1,7 @@
 package com.innercircle.service;
 
+import com.innercircle.dto.ScheduledMessageResponse;
+import com.innercircle.exception.ForbiddenException;
 import com.innercircle.exception.ResourceNotFoundException;
 import com.innercircle.model.*;
 import com.innercircle.repository.PersonaRepository;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -54,6 +57,54 @@ public class NotificationService {
         return scheduledMessageRepository.save(scheduled);
     }
 
+    // FEATURE (notification management, 2026-07-04): previously there was no
+    // way to see what check-ins were even scheduled, cancel one, or pause it
+    // without deleting it outright -- POST /schedule was write-only. These
+    // three methods back the new GET/DELETE/toggle endpoints on
+    // NotificationController.
+
+    public List<ScheduledMessageResponse> listForUser(User user) {
+        return scheduledMessageRepository.findByUserOrderByScheduledAtAsc(user).stream()
+                .map(this::toResponse)
+                .toList();
+    }
+
+    @Transactional
+    public void cancel(UUID scheduledMessageId, User user) {
+        ScheduledMessage scheduled = findOwned(scheduledMessageId, user);
+        scheduledMessageRepository.delete(scheduled);
+    }
+
+    @Transactional
+    public ScheduledMessageResponse setActive(UUID scheduledMessageId, User user, boolean active) {
+        ScheduledMessage scheduled = findOwned(scheduledMessageId, user);
+        scheduled.setActive(active);
+        return toResponse(scheduledMessageRepository.save(scheduled));
+    }
+
+    private ScheduledMessage findOwned(UUID scheduledMessageId, User user) {
+        ScheduledMessage scheduled = scheduledMessageRepository.findById(scheduledMessageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Scheduled check-in not found"));
+        if (!scheduled.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You do not have permission to modify this scheduled check-in");
+        }
+        return scheduled;
+    }
+
+    private ScheduledMessageResponse toResponse(ScheduledMessage sm) {
+        return new ScheduledMessageResponse(
+                sm.getId(),
+                sm.getPersona().getId(),
+                sm.getPersona().getName(),
+                sm.getPersona().getAvatarEmoji(),
+                sm.getScheduledAt(),
+                sm.getDaysOfWeek(),
+                sm.getMessageType(),
+                sm.isActive(),
+                sm.getLastSentAt()
+        );
+    }
+
     /**
      * Runs every minute, checks for scheduled check-ins due "now" (matched to
      * the current minute, on a day this schedule applies to), and sends a
@@ -92,7 +143,7 @@ public class NotificationService {
         User user = sm.getUser();
         Persona persona = sm.getPersona();
         String title = persona.getName();
-        String body = persona.getGreeting() != null ? persona.getGreeting() : "Checking in on you 💭";
+        String body = persona.getGreeting() != null ? persona.getGreeting() : "Checking in on you \uD83D\uDCAD";
 
         List<PushToken> tokens = pushTokenRepository.findByUser(user);
         if (tokens.isEmpty()) {
