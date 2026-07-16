@@ -234,3 +234,65 @@ The frontend's profile screen was inferring the user's subscription tier by chec
 **Changed:** `ChatService.FREE_TIER_DAILY_MESSAGE_LIMIT` — was `private static final`, now `public static final`, so `UserController` can report the exact same limit the backend actually enforces rather than hardcoding `50` a second time somewhere else and risking the two numbers drifting apart if the limit's ever tuned.
 
 **Files changed:** `dto/UserProfileResponse.java` (new), `controller/UserController.java` (new), `service/ChatService.java`
+
+---
+
+## Round 9 — Fixed a broken commit + a real "clear chat doesn't actually clear" bug
+
+### Part 1: the markdown-stripper regex from Round 8 never actually compiled
+
+Pulled the latest zip down and IntelliJ was flagging `ChatService.java` with "Illegal escape character in string literal" on the `MD_BOLD`/`MD_ITALIC`/etc. patterns from the last session. Turned out the file that got committed had the backslashes doubled up wrong -- somewhere between writing the regex and it landing in the file, `\\*` (which Java needs for "match a literal asterisk") had become `\\\\*` in some places, which Java's string literal parser rejects outright as an illegal escape. This was a genuine tooling mishap on my end during the previous session, not something introduced by hand-editing. Rebuilt the whole regex block byte-by-byte and verified the exact backslash count in the actual file bytes (not just what a terminal happens to display, which adds its own layer of escaping and can make correct code look wrong at a glance). Confirmed it now compiles cleanly.
+
+### Part 2: "clear chat" button was lying to you
+
+While reading through `chat_screen.dart` I noticed the trash-can icon's `_clearConversation()` only ever touched local widget state (`_messages.clear()`, `_conversationId = null`) -- it never told the backend anything happened. The problem: a new `Conversation` row only gets created in `ChatService.chatDirect()` the moment you actually send a message. So if you hit "clear," the old conversation just sits there in the DB completely untouched. If you then reopened the chat screen *before* typing anything new, `getHistory()` would go find that same old conversation (it's still the most recent one that exists) and load all the "cleared" messages right back. The clear button was cosmetic -- it worked until you left the screen, then quietly undid itself.
+
+**Fix:**
+- `ChatService.deleteConversation(UUID personaId, User user)` -- finds the most recent conversation for that persona and deletes it. Messages cascade-delete at the DB level (`schema.sql` already has `ON DELETE CASCADE` on `messages.conversation_id`), so no manual message cleanup needed.
+- `ChatController` -- new `DELETE /api/chat?personaId=X` endpoint.
+- Frontend: `chat_service.dart` gets `deleteConversation()`, and `chat_screen.dart`'s clear button now shows a confirmation dialog first (since this is genuinely destructive and irreversible) and awaits the real delete before touching local state.
+
+### Files changed
+- `src/main/java/com/innercircle/service/ChatService.java`
+- `src/main/java/com/innercircle/controller/ChatController.java`
+- (frontend changes logged in `FrontendFixes.md`)
+
+---
+
+## Round 10 — Subscription upgrade flow + full notification management
+
+Two real feature gaps closed, both requested together: there was no way to change your own subscription tier, and notification scheduling was write-only (you could POST a schedule but never see, pause, or cancel one).
+
+### Part 1: Subscription upgrade/downgrade
+
+There's no payment gateway anywhere in this project (no Stripe, no Play Billing), so this is built to be exactly what it honestly is: a direct tier toggle, not a checkout flow pretending to charge a card that was never going to be charged.
+
+- **`SubscriptionUpdateRequest.java`** (new) -- `{ tier: "premium" | "free" }`
+- **`UserService.java`** (new) -- `updateSubscriptionTier(User, SubscriptionTier)`, saves directly
+- **`UserController.java`** -- new `POST /api/users/subscription`, returns the updated profile in one round trip
+
+No changes needed to `ChatService` or `PersonaService` -- both already check `user.getSubscriptionTier()` live off the entity on every request, so a tier change takes effect on the very next message/persona-list fetch with nothing else to wire up.
+
+### Part 2: Notification (scheduled check-in) management
+
+`NotificationController` previously only had `POST /register` and `POST /schedule` -- there was no way to list what you'd scheduled, cancel one, or pause it without deleting it outright.
+
+- **`ScheduledMessageRepository.java`** -- added `findByUserOrderByScheduledAtAsc(User)`
+- **`ScheduledMessageResponse.java`** (new) -- includes `personaName`/`personaAvatarEmoji` directly so the frontend doesn't need a second lookup per row
+- **`NotificationService.java`** -- added `listForUser()`, `cancel()`, `setActive()` (pause/resume without deleting), each with an ownership check (`ForbiddenException` if the scheduled message belongs to someone else, matching the pattern already used in `MemoryController`)
+- **`NotificationController.java`** -- new `GET /api/notifications/scheduled`, `DELETE /api/notifications/scheduled/{id}`, `POST /api/notifications/scheduled/{id}/toggle`
+
+### Scope boundary worth being explicit about
+
+This closes the *scheduling management* gap completely -- you can now see, create, pause, resume, and cancel check-ins, all backed by real persisted data and enforced server-side by the existing cron job in `NotificationService`. What this does **not** do is wire up actual push delivery to a phone: that requires the frontend to have the `firebase_messaging` package, request notification permission, obtain a real FCM token, and call the already-existing (and already-working) `POST /api/notifications/register`. None of that exists in the Flutter app yet -- it's a separate, scoped follow-up if push notifications actually arriving on-device is the next priority. Right now, a scheduled check-in still fires correctly on time server-side; without a registered token, `NotificationService.sendPush()` just logs it instead of pretending to have delivered something it didn't.
+
+### Files changed
+- `src/main/java/com/innercircle/dto/SubscriptionUpdateRequest.java` (new)
+- `src/main/java/com/innercircle/service/UserService.java` (new)
+- `src/main/java/com/innercircle/controller/UserController.java`
+- `src/main/java/com/innercircle/dto/ScheduledMessageResponse.java` (new)
+- `src/main/java/com/innercircle/repository/ScheduledMessageRepository.java`
+- `src/main/java/com/innercircle/service/NotificationService.java`
+- `src/main/java/com/innercircle/controller/NotificationController.java`
+
+(Frontend changes logged in `FrontendFixes.md`.)
