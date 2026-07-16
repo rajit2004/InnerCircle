@@ -108,3 +108,56 @@ This was a different kind of pass than the bug fixes above — I was asked to ac
 - Haven't run `flutter pub get && flutter analyze` or `flutter build` myself — no Flutter SDK in this environment, same limitation noted in every prior round. I did a manual brace/paren balance check and cross-checked every model/service method this redesign calls against what actually exists in the project, but that's not a substitute for a real compile. Run `flutter pub get` first (new dependency) then `flutter analyze` before trusting this compiles clean.
 - Didn't touch `BottomNavigationBar`/`currentIndex` — not used in the redesigned `HomeScreen` (it uses `NavigationBar`, which was already the pattern here), so this is moot for the touched files, but I didn't go looking for it elsewhere either.
 - The splash screen animation is a fixed ~900ms regardless of how long the actual auth check takes — if `AuthService.isLoggedIn()` resolves faster than that on a fast device, the screen still holds for the animation to finish rather than cutting it short. Deliberate (a flash-then-gone splash feels broken), but worth knowing if you ever want it to feel snappier.
+
+---
+
+## Fix 5 — "Clear chat" now actually clears it (Bug 5, see Bugs.md)
+
+Found this one myself while reading through `chat_screen.dart` for the persona-voice work: the trash-can icon in the chat app bar called `_clearConversation()`, which only ever reset local widget state. It never called the backend. Since a conversation only gets created server-side the moment you send a message, hitting "clear" and then leaving the screen without typing anything meant the old conversation was still sitting there untouched -- reopening the chat would silently bring all the "cleared" messages right back via the history-loading fix from a few rounds ago. The button looked like it worked because you don't usually reopen a chat screen within the same second you cleared it.
+
+**`lib/services/chat_service.dart`** -- added `deleteConversation(personaId)`, calling the new `DELETE /api/chat?personaId=X` backend endpoint (see `BackendFIXES.md` Round 9).
+
+**`lib/screens/chat_screen.dart`** -- `_clearConversation()` is now `async`, shows a confirmation dialog first (this is a real, irreversible delete now, not a cosmetic reset -- didn't want a misclick to wipe a conversation with no way back), awaits the actual backend delete, and only then resets local state to show the greeting again.
+
+---
+
+## Files changed in this pass
+
+- `lib/services/chat_service.dart`
+- `lib/screens/chat_screen.dart`
+
+(Backend changes logged in `BackendFIXES.md` Round 9 -- `ChatService.java`, `ChatController.java`.)
+
+---
+
+## Fix 6 — Subscription upgrade + check-in reminder management (new features, not bug fixes)
+
+Two feature gaps, both requested together: no way to change your own plan, and no way to manage scheduled check-ins beyond creating them blind and hoping.
+
+**`lib/models/scheduled_message.dart`** (new) -- mirrors the backend's `ScheduledMessageResponse`. Deliberately keeps `daysOfWeek` as the same 1=Sunday..7=Saturday CSV convention the backend uses (matching Postgres `EXTRACT(DOW)`) rather than converting to Dart's own weekday numbering anywhere -- one less place for an off-by-one to sneak in between two systems that don't agree on what day 1 means.
+
+**`lib/services/notification_service.dart`** (new) -- wraps the four notification endpoints (schedule/list/cancel/toggle).
+
+**`lib/services/user_service.dart`** -- added `updateSubscription(tier)`.
+
+**`lib/screens/notifications_screen.dart`** (new) -- lists scheduled check-ins with the persona's avatar (via the existing `PersonaAvatar` widget, not raw emoji -- consistent with why that widget exists at all, see its own doc comment), a switch to pause/resume without deleting, and swipe-free delete with confirmation. Adding a new one opens a bottom sheet: pick a persona from a horizontal avatar row, pick a time via the native time picker, pick days via filter chips. Empty state matches the app's existing pattern (icon + explanation + retry via pull-to-refresh) rather than inventing a new one.
+
+**`lib/screens/profile_screen.dart`** -- added a `_SubscriptionCard` above the existing usage card. Deliberately worded to say plainly that there's no real payment involved, since there's genuinely no billing integration in this app -- didn't want a "Switch to Premium" button that visually implies a checkout is about to happen when it's actually just flipping a database column. Also added a "Check-in reminders" list tile that opens the new notifications screen.
+
+**`lib/main.dart`** -- added the `/notifications` named route for consistency with how the other screens are registered, even though the primary entry point is the Profile screen tile (`Navigator.push`), not the named route.
+
+### What this doesn't do yet
+The notifications screen manages *scheduling* only. Actually receiving a check-in as a push notification on the phone needs the `firebase_messaging` package added to `pubspec.yaml`, a permission-request flow, and wiring the resulting token to the already-working `POST /api/notifications/register` -- none of which exists in the app yet. A scheduled check-in still fires correctly on the backend at the right time; it just has nowhere to deliver to until that piece exists. Flagged clearly in the new screen's own doc comment so this isn't a surprise later.
+
+---
+
+## Files changed in this pass
+
+- `lib/models/scheduled_message.dart` (new)
+- `lib/services/notification_service.dart` (new)
+- `lib/services/user_service.dart`
+- `lib/screens/notifications_screen.dart` (new)
+- `lib/screens/profile_screen.dart`
+- `lib/main.dart`
+
+(Backend changes logged in `BackendFIXES.md` Round 10.)
