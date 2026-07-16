@@ -4,6 +4,7 @@ import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_theme.dart';
+import 'notifications_screen.dart';
 
 /// UX reasoning for this redesign vs. the previous profile screen:
 ///
@@ -21,6 +22,12 @@ import '../theme/app_theme.dart';
 ///    usage bar for that, using the same 50/day limit as ChatService's
 ///    actual enforcement -- so what this screen shows and what the backend
 ///    actually enforces can't drift apart into showing wrong information.
+/// 3. FEATURE (subscription upgrade, 2026-07-04): added a real way to
+///    change tier. There's no payment gateway in this project, so this is
+///    presented as exactly what it is -- a direct toggle -- rather than
+///    dressed up to look like a checkout flow that doesn't exist.
+/// 4. FEATURE (notification management, 2026-07-04): added an entry point
+///    to the new check-in reminders screen.
 class ProfileScreen extends StatefulWidget {
   final bool showAppBar;
 
@@ -33,6 +40,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   UserProfile? _profile;
   bool _loading = true;
+  bool _updatingTier = false;
   String? _error;
 
   @override
@@ -59,6 +67,58 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _loading = false;
         _error = e.toString().replaceFirst('Exception: ', '');
       });
+    }
+  }
+
+  Future<void> _toggleSubscription() async {
+    final profile = _profile;
+    if (profile == null || _updatingTier) return;
+
+    final goingPremium = !profile.isPremium;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: Text(goingPremium ? 'Switch to Premium?' : 'Switch to Free?'),
+        content: Text(
+          goingPremium
+              ? "This unlocks Girlfriend and Big Sister, and removes your daily message limit. There's no payment involved -- this app doesn't have billing set up, so this just flips the switch directly."
+              : "You'll lose access to premium-only personas and go back to a 50 messages/day limit.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(goingPremium ? 'Switch to Premium' : 'Switch to Free'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _updatingTier = true);
+    try {
+      final updated = await UserService.updateSubscription(
+        goingPremium ? 'premium' : 'free',
+      );
+      if (!mounted) return;
+      setState(() {
+        _profile = updated;
+        _updatingTier = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _updatingTier = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to update subscription: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
+        ),
+      );
     }
   }
 
@@ -185,6 +245,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
             _UsageCard(profile: profile),
             const SizedBox(height: 16),
           ],
+          _SubscriptionCard(
+            isPremium: profile.isPremium,
+            updating: _updatingTier,
+            onToggle: _toggleSubscription,
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 6,
+              ),
+              leading: const Icon(
+                Icons.notifications_outlined,
+                color: AppColors.primary,
+              ),
+              title: const Text('Check-in reminders'),
+              subtitle: const Text('Manage scheduled persona check-ins'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
           Card(
             child: Column(
               children: [
@@ -254,8 +342,8 @@ class _TierBadge extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: isPremium
             ? const LinearGradient(
-                colors: [AppColors.bestFriendDark, AppColors.momDark],
-              )
+          colors: [AppColors.bestFriendDark, AppColors.momDark],
+        )
             : null,
         color: isPremium ? null : AppColors.surfaceAlt,
         borderRadius: BorderRadius.circular(20),
@@ -339,6 +427,117 @@ class _UsageCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// FEATURE (subscription upgrade, 2026-07-04): honest about what this is --
+/// a direct toggle, not a checkout flow. No payment gateway exists in this
+/// project, so this card doesn't pretend otherwise.
+class _SubscriptionCard extends StatelessWidget {
+  final bool isPremium;
+  final bool updating;
+  final VoidCallback onToggle;
+
+  const _SubscriptionCard({
+    required this.isPremium,
+    required this.updating,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isPremium
+                      ? Icons.workspace_premium_rounded
+                      : Icons.lock_open_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isPremium ? "You're on Premium" : 'Free plan',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            if (!isPremium) ...[
+              const _BenefitRow(text: 'Unlimited daily messages'),
+              const _BenefitRow(text: 'Unlocks Girlfriend & Big Sister'),
+              const SizedBox(height: 6),
+              Text(
+                "This app doesn't have real billing set up -- switching plans "
+                    "just flips the setting directly, no payment involved.",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ] else
+              Text(
+                'Unlimited messages and every persona is unlocked.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: isPremium
+                  ? OutlinedButton(
+                onPressed: updating ? null : onToggle,
+                child: updating
+                    ? const _ButtonSpinner()
+                    : const Text('Switch back to Free'),
+              )
+                  : FilledButton(
+                onPressed: updating ? null : onToggle,
+                child: updating
+                    ? const _ButtonSpinner()
+                    : const Text('Switch to Premium'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _BenefitRow extends StatelessWidget {
+  final String text;
+  const _BenefitRow({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.check_rounded, size: 16, color: AppColors.success),
+          const SizedBox(width: 6),
+          Text(text, style: Theme.of(context).textTheme.bodyMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _ButtonSpinner extends StatelessWidget {
+  const _ButtonSpinner();
+
+  @override
+  Widget build(BuildContext context) {
+    return const SizedBox(
+      width: 18,
+      height: 18,
+      child: CircularProgressIndicator(strokeWidth: 2),
     );
   }
 }
