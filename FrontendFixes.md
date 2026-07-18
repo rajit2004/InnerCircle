@@ -161,3 +161,40 @@ The notifications screen manages *scheduling* only. Actually receiving a check-i
 - `lib/main.dart`
 
 (Backend changes logged in `BackendFIXES.md` Round 10.)
+
+---
+
+## Fix 7 — Real push notification delivery (the follow-up flagged in Fix 6)
+
+Fix 6 was upfront that scheduling management didn't mean actual push delivery -- this closes that gap. Everything code-side is done; the one thing that genuinely can't be done from here is creating a real Firebase project, which needs your Google account. See `PUSH_NOTIFICATIONS_SETUP.md` for that one manual step.
+
+**`pubspec.yaml`** -- added `firebase_core`, `firebase_messaging`, and `flutter_local_notifications`. The last one matters specifically because FCM does not auto-display a system notification when the app is in the foreground on Android -- only background/terminated states get that for free. Without it, the feature would work perfectly except for the exact moment you're actually looking at the app.
+
+**`android/settings.gradle.kts`** / **`android/app/build.gradle.kts`** -- added and applied the `com.google.gms.google-services` Gradle plugin, which is what reads `google-services.json` at build time and wires the app to a Firebase project.
+
+**`android/app/src/main/AndroidManifest.xml`** -- added the `POST_NOTIFICATIONS` permission (required at runtime on Android 13+, without it there's nothing for the permission request to actually grant) and default notification channel/icon metadata for background messages.
+
+**`lib/firebase_options.dart`** (new, placeholder) -- every value in here is a fake placeholder on purpose. This gets fully overwritten by running `flutterfire configure` against a real Firebase project -- see the setup doc. Kept as a placeholder rather than leaving the file missing so the project stays compilable while that setup happens.
+
+**`lib/services/push_notification_service.dart`** (new) -- the actual wiring: creates a notification channel, requests permission, gets a real FCM token and registers it with the backend, re-registers automatically if the token ever rotates, and shows a local notification manually for foreground messages (closing the gap `flutter_local_notifications` exists for). Deliberately swallows every error internally -- a missing Firebase config or a denied permission should never be able to block the rest of the app from working, it should just mean push notifications are quietly inactive.
+
+**`lib/services/notification_service.dart`** -- added `registerToken()`, wrapping the backend's already-working `POST /api/notifications/register` (which existed since Round 6 with nothing calling it).
+
+**`lib/main.dart`** -- `main()` is now `async`; initializes Firebase and registers the background message handler before `runApp()`. Wrapped in try/catch so placeholder Firebase config doesn't prevent the app from starting -- it just means push notifications stay off until the real setup is done.
+
+**`lib/screens/home_screen.dart`** -- calls `PushNotificationService.initialize()` in `initState()`. This screen is reached both right after login and on every cold start where the user's already signed in, which is exactly when a Bearer-token-authenticated call like "register this device's push token" needs to happen.
+
+---
+
+## Files changed in this pass
+
+- `pubspec.yaml`
+- `android/settings.gradle.kts`
+- `android/app/build.gradle.kts`
+- `android/app/src/main/AndroidManifest.xml`
+- `lib/firebase_options.dart` (new, placeholder -- run `flutterfire configure`)
+- `lib/services/push_notification_service.dart` (new)
+- `lib/services/notification_service.dart`
+- `lib/main.dart`
+- `lib/screens/home_screen.dart`
+- `PUSH_NOTIFICATIONS_SETUP.md` (new -- the one manual step, walked through in full)
