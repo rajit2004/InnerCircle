@@ -5,6 +5,7 @@ import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/exit_confirmation_wrapper.dart';
+import '../services/push_notification_service.dart';
 import '../widgets/persona_avatar.dart';
 import 'chat_screen.dart';
 import 'memories_screen.dart';
@@ -27,6 +28,15 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _fetchPersonas();
+    // FEATURE (push notifications, 2026-07-05): HomeScreen is reached both
+    // right after a fresh login and on every cold start where the user is
+    // already signed in (see main.dart's '/' route) -- making it the one
+    // natural place to request notification permission and register a
+    // real FCM token, since both need the user to already be authenticated.
+    // Fire-and-forget: PushNotificationService swallows its own errors, so
+    // a denied permission or missing Firebase config can never block this
+    // screen from loading normally.
+    PushNotificationService.initialize();
   }
 
   Future<void> _fetchPersonas() async {
@@ -39,7 +49,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final data = await ApiClient.get('/api/personas');
       final list = (data as List).map((p) => Persona.fromJson(p)).toList();
       final inferredTier =
-          list.any((p) => p.subscriptionTier.toLowerCase() == 'premium')
+      list.any((p) => p.subscriptionTier.toLowerCase() == 'premium')
           ? 'premium'
           : 'free';
       await AuthService.updateSubscriptionTier(inferredTier);
