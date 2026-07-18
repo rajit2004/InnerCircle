@@ -38,6 +38,19 @@ dependencies:
   # headings, Inter for body text). Downloads and caches fonts at first
   # run -- normal for this package, no bundled font assets needed.
   google_fonts: ^6.2.1
+  # FEATURE (push notifications, 2026-07-05): actual FCM wiring so scheduled
+  # check-ins (see notifications_screen.dart) arrive as real device
+  # notifications instead of only firing server-side with nowhere to land.
+  # See PUSH_NOTIFICATIONS_SETUP.md for the one-time Firebase console setup
+  # this still needs from you -- the code side is complete, but a real
+  # Firebase project + google-services.json can't be generated from here.
+  firebase_core: ^3.8.0
+  firebase_messaging: ^15.1.5
+  # Needed because FCM does NOT auto-display a system notification when the
+  # app is in the foreground on Android -- only background/terminated states
+  # get that for free. This shows one manually in that case so behavior is
+  # consistent regardless of whether the app happens to be open.
+  flutter_local_notifications: ^18.0.1
 
 dev_dependencies:
   flutter_test:
