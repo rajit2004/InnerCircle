@@ -1,5 +1,11 @@
 plugins {
     id("com.android.application")
+    // FEATURE (push notifications, 2026-07-05): applies the plugin declared
+    // in settings.gradle.kts -- this is what actually reads
+    // android/app/google-services.json at build time. Build will fail with
+    // a clear "File google-services.json is missing" error until that file
+    // is added -- see PUSH_NOTIFICATIONS_SETUP.md.
+    id("com.google.gms.google-services")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
