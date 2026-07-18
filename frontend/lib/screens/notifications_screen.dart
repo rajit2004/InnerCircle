@@ -232,7 +232,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 90),
         itemCount: _scheduled.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 10),
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
           final sm = _scheduled[index];
           return _ScheduleCard(
@@ -393,7 +393,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
               child: ListView.separated(
                 scrollDirection: Axis.horizontal,
                 itemCount: widget.personas.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 10),
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
                 itemBuilder: (context, index) {
                   final persona = widget.personas[index];
                   final selected = persona.id == _selectedPersona.id;
