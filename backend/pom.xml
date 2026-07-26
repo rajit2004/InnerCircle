@@ -67,6 +67,14 @@
             <artifactId>firebase-admin</artifactId>
             <version>9.9.0</version>
         </dependency>
+        <!--  Email (forgot-password reset codes). EmailService uses
+              ObjectProvider<JavaMailSender> so a missing spring.mail.host
+              env var degrades to logging the reset code instead of failing
+              startup - see EmailService.java and application.yml.  -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
         <!--  Jackson for JSON parsing  -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
