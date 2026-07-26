@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_theme.dart';
 import 'notifications_screen.dart';
+import 'settings_screen.dart';
 
 /// UX reasoning for this redesign vs. the previous profile screen:
 ///
@@ -177,10 +178,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              // FEATURE (dark mode, 2026-07-06): dropped `const` -- Theme.of(context)
+              // is a runtime lookup, not a compile-time constant.
+              Icon(
                 Icons.cloud_off_outlined,
                 size: 40,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(height: 12),
               Text(_error!, textAlign: TextAlign.center),
@@ -273,6 +276,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ),
           const SizedBox(height: 16),
+          // FEATURE (dark mode, 2026-07-06): entry point to the new
+          // Settings screen (dark mode toggle + about info).
+          Card(
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 6,
+              ),
+              leading: const Icon(
+                Icons.settings_outlined,
+                color: AppColors.primary,
+              ),
+              title: const Text('Settings'),
+              subtitle: const Text('Appearance and app info'),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 16),
           Card(
             child: Column(
               children: [
@@ -345,7 +372,7 @@ class _TierBadge extends StatelessWidget {
           colors: [AppColors.bestFriendDark, AppColors.momDark],
         )
             : null,
-        color: isPremium ? null : AppColors.surfaceAlt,
+        color: isPremium ? null : Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -356,7 +383,7 @@ class _TierBadge extends StatelessWidget {
                 ? Icons.workspace_premium_rounded
                 : Icons.lock_open_rounded,
             size: 15,
-            color: isPremium ? Colors.white : AppColors.textSecondary,
+            color: isPremium ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 6),
           Text(
@@ -364,7 +391,7 @@ class _TierBadge extends StatelessWidget {
             style: TextStyle(
               fontSize: 12.5,
               fontWeight: FontWeight.w600,
-              color: isPremium ? Colors.white : AppColors.textSecondary,
+              color: isPremium ? Colors.white : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
@@ -411,7 +438,7 @@ class _UsageCard extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: ratio,
                 minHeight: 8,
-                backgroundColor: AppColors.surfaceAlt,
+                backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                 valueColor: AlwaysStoppedAnimation(
                   ratio > 0.85 ? AppColors.error : AppColors.primary,
                 ),
@@ -478,7 +505,7 @@ class _SubscriptionCard extends StatelessWidget {
                 "This app doesn't have real billing set up -- switching plans "
                     "just flips the setting directly, no payment involved.",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ] else
@@ -556,7 +583,7 @@ class _ProfileTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: AppColors.textSecondary),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant),
       title: Text(label, style: Theme.of(context).textTheme.bodyMedium),
       subtitle: Text(
         value,
