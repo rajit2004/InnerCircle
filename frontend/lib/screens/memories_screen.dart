@@ -121,7 +121,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
             Icon(
               Icons.auto_awesome_outlined,
               size: 48,
-              color: AppColors.textSecondary.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Center(
@@ -157,9 +157,9 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
           return Container(
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.divider),
+              border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -189,9 +189,13 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                 ),
                 IconButton(
                   tooltip: 'Delete memory',
-                  icon: const Icon(
+                  // FEATURE (dark mode, 2026-07-06): dropped `const` -- see
+                  // app_theme.dart's comment on why neutral colors need to
+                  // read live from Theme.of(context) instead of the static
+                  // (light-only) AppColors constant.
+                  icon: Icon(
                     Icons.delete_outline_rounded,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   onPressed: () => _confirmDelete(memory),
                 ),
