@@ -198,3 +198,55 @@ Fix 6 was upfront that scheduling management didn't mean actual push delivery --
 - `lib/main.dart`
 - `lib/screens/home_screen.dart`
 - `PUSH_NOTIFICATIONS_SETUP.md` (new -- the one manual step, walked through in full)
+
+---
+
+## Round 11 -- Dark mode + forgot password + custom personas
+
+### Part 1: Dark mode
+
+Went with Flutter's native `theme`/`darkTheme` mechanism rather than a "dynamic color getter" architecture -- a couple of attempts at scripting detection of every hardcoded `AppColors` reference turned out unreliable without a real Dart compiler to lean on, so the more honest scope was to build it the standard Flutter way and fix the actual usage sites by hand.
+
+- **`lib/theme/theme_controller.dart`** (new) -- a `ValueNotifier<ThemeMode>`, two states only (Light/Dark). Deliberately no "System" option -- scoping that out kept this a same-sized change instead of also having to handle platform-brightness-change listening.
+- **`lib/theme/app_theme.dart`** -- added `AppColorsDark` (neutral tokens only: background/surface/surfaceAlt/textPrimary/textSecondary/divider) and an `AppTheme.dark` getter mirroring `AppTheme.light`. Persona/brand/error/success colors intentionally stay constant across both themes -- that's standard dark-mode practice, and it also usefully shrank how many places actually needed touching. Added explicit `onSurfaceVariant`/`dividerColor` mappings so screens have one reliable way to reach the themed secondary-text and divider colors.
+- Fixed every hardcoded neutral-color usage across `home_screen.dart`, `profile_screen.dart`, `chat_screen.dart`, `memories_screen.dart`, `notifications_screen.dart`, and `exit_confirmation_wrapper.dart` -- swapped static `AppColors.*` references for `Theme.of(context).colorScheme.*` equivalents (dropping `const` anywhere that required it, since a theme lookup is a runtime value). `persona_avatar.dart` and `splash_screen.dart` needed no changes -- they only reference persona/brand colors, which don't change between themes.
+- **`lib/screens/settings_screen.dart`** (new) -- a `SwitchListTile` bound to `ThemeController`, plus a basic About card.
+- **`lib/main.dart`** -- loads the saved theme mode before Firebase init, wraps `MaterialApp` in a `ValueListenableBuilder<ThemeMode>` picking `AppTheme.light`/`AppTheme.dark`.
+- **`lib/screens/profile_screen.dart`** -- added a "Settings" entry point.
+
+### Part 2: Forgot password
+
+Reset flow is "paste in a code," not a clickable email link -- this is a mobile app with no deep-linking configured, so an emailed link would have nowhere to actually open to.
+
+- **`lib/services/auth_service.dart`** -- added `forgotPassword(email)` / `resetPassword(token, newPassword)`
+- **`lib/screens/forgot_password_screen.dart`** (new) -- email form, always moves forward to the next screen regardless of whether the email matched anything (mirrors the backend's deliberate non-enumeration behavior)
+- **`lib/screens/reset_password_screen.dart`** (new) -- reset-code + new-password + confirm fields
+- **`lib/screens/login_screen.dart`** -- added a "Forgot password?" link below the password field
+
+### Part 3: Custom personas
+
+- **`lib/models/persona.dart`** -- added `owned` bool (mirrors the backend's `PersonaResponse.owned`)
+- **`lib/services/persona_service.dart`** (new) -- `createPersona(...)`, `deletePersona(id)`
+- **`lib/screens/create_persona_screen.dart`** (new) -- name field, relationship-type chips (Parent/Sibling/Friend/Partner/Mentor/Other), a short personality-description field, and a fixed grid of 12 preset single-codepoint emoji for the avatar rather than free-text emoji entry -- compound/ZWJ emoji sequences are exactly the ones most likely to render inconsistently across Android devices, so keeping this to a known-safe set avoids reintroducing the mojibake issue fixed back in the early backend rounds.
+- **`lib/screens/home_screen.dart`** -- added a "+" FAB (visible only on the Chat tab) that opens `CreatePersonaScreen` and refreshes the list on a successful create; `_PersonaCard` now takes an optional `onDelete` callback, only wired up when `persona.owned` is true, so the built-in Mom/Best Friend/Girlfriend/Big Sister personas never show a delete option.
+
+### Files changed
+- `lib/theme/theme_controller.dart` (new)
+- `lib/theme/app_theme.dart`
+- `lib/screens/settings_screen.dart` (new)
+- `lib/main.dart`
+- `lib/screens/home_screen.dart`
+- `lib/screens/profile_screen.dart`
+- `lib/screens/chat_screen.dart`
+- `lib/screens/memories_screen.dart`
+- `lib/screens/notifications_screen.dart`
+- `lib/widgets/exit_confirmation_wrapper.dart`
+- `lib/services/auth_service.dart`
+- `lib/screens/forgot_password_screen.dart` (new)
+- `lib/screens/reset_password_screen.dart` (new)
+- `lib/screens/login_screen.dart`
+- `lib/models/persona.dart`
+- `lib/services/persona_service.dart` (new)
+- `lib/screens/create_persona_screen.dart` (new)
+
+(Backend changes logged in `BackendFIXES.md`.)
