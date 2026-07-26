@@ -81,7 +81,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       prefixIcon: Icon(Icons.mail_outline_rounded),
                     ),
                     validator: (v) =>
-                        (v != null && v.contains('@')) ? null : 'Enter a valid email',
+                    (v != null && v.contains('@')) ? null : 'Enter a valid email',
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -101,21 +101,30 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     validator: (v) =>
-                        (v != null && v.length >= 6) ? null : 'At least 6 characters',
+                    (v != null && v.length >= 6) ? null : 'At least 6 characters',
                     onFieldSubmitted: (_) => _login(),
                   ),
-                  const SizedBox(height: 26),
+                  // FEATURE (forgot password, 2026-07-06)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () =>
+                          Navigator.pushNamed(context, '/forgot-password'),
+                      child: const Text('Forgot password?'),
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   FilledButton(
                     onPressed: _loading ? null : _login,
                     child: _loading
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2.2,
-                              color: Colors.white,
-                            ),
-                          )
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2.2,
+                        color: Colors.white,
+                      ),
+                    )
                         : const Text('Log in'),
                   ),
                   const SizedBox(height: 14),
