@@ -296,3 +296,58 @@ This closes the *scheduling management* gap completely -- you can now see, creat
 - `src/main/java/com/innercircle/controller/NotificationController.java`
 
 (Frontend changes logged in `FrontendFixes.md`.)
+
+---
+
+## Round 11 -- Forgot password + custom personas
+
+Two backend features requested together this round (dark mode was frontend-only and is logged in FrontendFixes.md).
+
+### Part 1: Forgot password
+
+Reset token+expiry live directly on `User` (`resetToken`, `resetTokenExpiresAt`) rather than a separate table -- there's exactly one active reset per account, so a join table would be overhead with no payoff.
+
+- **`User.java`** -- added `resetToken`/`resetTokenExpiresAt` fields
+- **`UserRepository.java`** -- added `findByResetToken`
+- **`ForgotPasswordRequest.java`** / **`ResetPasswordRequest.java`** (new)
+- **`EmailService.java`** (new) -- uses `ObjectProvider<JavaMailSender>` so a missing SMTP config degrades honestly (logs the reset code server-side) instead of throwing, same pattern as Firebase's placeholder config in Round 9
+- **`AuthService.java`** -- `forgotPassword()` deliberately returns the identical response whether or not the email matches an account, so the endpoint can't be used to enumerate registered emails; `resetPassword()` checks token match + expiry before allowing the change
+- **`AuthController.java`** -- new `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, both under the existing `permitAll` `/api/auth/**` rule -- no `SecurityConfig` changes needed
+- **`pom.xml`** -- added `spring-boot-starter-mail`
+
+One thing worth being explicit about in `application.yml`: I deliberately did *not* add a `spring.mail.host` key with an empty default. Spring Boot's `@ConditionalOnProperty` treats an empty-string-present property as "present," so a `JavaMailSender` bean would get created anyway even with nothing actually configured -- silently breaking the honest-fallback path above. Real SMTP config has to go through actual OS env vars (`SPRING_MAIL_HOST` etc.), which is documented inline in `application.yml`.
+
+### Part 2: Custom personas
+
+`Persona` gets an `owner` field (`ManyToOne User`, `@JsonIgnore`'d so the entity's JSON never risks leaking a password hash through it). Built-in personas keep `owner = null`.
+
+- **`Persona.java`** -- added `owner`
+- **`PersonaRepository.java`** -- new `findVisibleTo(user, tiers)`: built-in personas gated by tier (as before) plus the user's own custom personas regardless of tier. Also fixed a latent bug in the old query, which never filtered on `active = true` at all.
+- **`CreatePersonaRequest.java`** -- takes `relationshipType` (`PARENT`/`SIBLING`/`FRIEND`/`PARTNER`/`MENTOR`/`OTHER`) and a short `personalityDescription`, not a raw system prompt. A free-text prompt field would let a "custom persona" bypass every voice/safety constraint the built-in personas follow (Round 8's texting-length replies, no markdown, PG-13 boundary for the romantic persona) -- so `PersonaService.buildSystemPrompt()` builds the actual prompt from safe per-relationship-type templates instead, folding the user's description in as flavor rather than as instructions.
+- **`PersonaResponse.java`** (new) -- replaces raw entity exposure, adds a computed `owned` boolean the frontend uses to decide whether to show a delete option
+- **`BadRequestException.java`** (new) + handler in `GlobalExceptionHandler.java` -- for an invalid `relationshipType`
+- **`PersonaService.java`** -- rewritten: `getPersonasForUser`, `createCustomPersona`, `deleteCustomPersona` (checks ownership, throws `ForbiddenException` otherwise), `buildSystemPrompt()`, `buildGreeting()`, `defaultEmojiFor()`
+- **`PersonaController.java`** -- `GET /api/personas` now returns `PersonaResponse` instead of the raw entity; added `POST /api/personas` and `DELETE /api/personas/{id}`
+- **`migration_round11.sql`** (new) -- adds `profiles.reset_token`, `profiles.reset_token_expires_at`, `personas.owner_user_id` (FK to `profiles`, `ON DELETE CASCADE` so deleting an account cleans up its custom personas). Needs to be run against any existing database -- `database/schema.sql` is already updated for fresh installs.
+
+### Files changed
+- `src/main/java/com/innercircle/model/User.java`
+- `src/main/java/com/innercircle/repository/UserRepository.java`
+- `src/main/java/com/innercircle/dto/ForgotPasswordRequest.java` (new)
+- `src/main/java/com/innercircle/dto/ResetPasswordRequest.java` (new)
+- `src/main/java/com/innercircle/service/EmailService.java` (new)
+- `src/main/java/com/innercircle/service/AuthService.java`
+- `src/main/java/com/innercircle/controller/AuthController.java`
+- `pom.xml`
+- `src/main/java/com/innercircle/model/Persona.java`
+- `src/main/java/com/innercircle/repository/PersonaRepository.java`
+- `src/main/java/com/innercircle/dto/CreatePersonaRequest.java` (new)
+- `src/main/java/com/innercircle/dto/PersonaResponse.java` (new)
+- `src/main/java/com/innercircle/exception/BadRequestException.java` (new)
+- `src/main/java/com/innercircle/exception/GlobalExceptionHandler.java`
+- `src/main/java/com/innercircle/service/PersonaService.java`
+- `src/main/java/com/innercircle/controller/PersonaController.java`
+- `database/migration_round11.sql` (new -- run this against any existing DB)
+- `database/schema.sql` (updated for fresh installs)
+
+(Frontend changes logged in `FrontendFixes.md`.)
