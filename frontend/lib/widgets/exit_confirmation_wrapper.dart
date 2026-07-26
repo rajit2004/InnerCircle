@@ -87,8 +87,11 @@ class ExitConfirmationWrapper extends StatelessWidget {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        side: const BorderSide(color: AppColors.divider),
-                        foregroundColor: AppColors.textPrimary,
+                        // FEATURE (dark mode, 2026-07-06): dropped `const`
+                        // on this BorderSide -- Theme.of(context) is a
+                        // runtime lookup, not a compile-time constant.
+                        side: BorderSide(color: Theme.of(context).dividerColor),
+                        foregroundColor: Theme.of(context).colorScheme.onSurface,
                       ),
                       onPressed: () => Navigator.of(dialogContext).pop(false),
                       child: const Text('Stay'),
