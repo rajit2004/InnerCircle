@@ -231,10 +231,16 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
               ),
             ),
+            // FEATURE (dark mode, 2026-07-06): dropped `const` here -- both
+            // colors now come from Theme.of(context), a runtime lookup, not a
+            // compile-time constant. Without this the input bar would stay a
+            // light-mode white strip even with dark mode on.
             Container(
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.divider)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                border: Border(
+                  top: BorderSide(color: Theme.of(context).dividerColor),
+                ),
               ),
               padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
               child: Row(
@@ -243,9 +249,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                        color: AppColors.background,
+                        color: Theme.of(context).scaffoldBackgroundColor,
                         borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: AppColors.divider),
+                        border: Border.all(color: Theme.of(context).dividerColor),
                       ),
                       child: TextField(
                         controller: _controller,
@@ -276,7 +282,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           : null,
                       color: (_hasText && !_isTyping)
                           ? null
-                          : AppColors.surfaceAlt,
+                          : Theme.of(context).colorScheme.surfaceContainerHighest,
                     ),
                     child: IconButton(
                       tooltip: 'Send',
@@ -284,7 +290,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         Icons.arrow_upward_rounded,
                         color: (_hasText && !_isTyping)
                             ? Colors.white
-                            : AppColors.textSecondary,
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       onPressed: _isTyping ? null : _sendMessage,
                     ),
@@ -327,8 +333,8 @@ class _MessageBubble extends StatelessWidget {
             // to.
             gradient: isUser
                 ? const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryDark],
-                  )
+              colors: [AppColors.primary, AppColors.primaryDark],
+            )
                 : null,
             color: isUser ? null : gradient.first.withValues(alpha: 0.16),
             borderRadius: BorderRadius.only(
@@ -341,7 +347,7 @@ class _MessageBubble extends StatelessWidget {
           child: Text(
             message.content,
             style: TextStyle(
-              color: isUser ? Colors.white : AppColors.textPrimary,
+              color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
               fontSize: 15,
               height: 1.4,
             ),
