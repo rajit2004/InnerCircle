@@ -44,7 +44,11 @@ class AppColors {
   static const success = Color(0xFF3F8F6D);
 
   // Persona accents. Each is a {light, dark} pair so avatars/chips can use
-  // a subtle gradient instead of a single flat tone.
+  // a subtle gradient instead of a single flat tone. FEATURE (dark mode,
+  // 2026-07-06): these stay identical in dark mode on purpose -- brand/
+  // accent colors that stay constant while only the neutral surfaces invert
+  // is a standard, deliberate dark-mode pattern (keeps persona identity
+  // consistent regardless of theme), not an oversight.
   static const momLight = Color(0xFFF0A98C);
   static const momDark = Color(0xFFD97F5C);
 
@@ -84,89 +88,148 @@ class AppColors {
   }
 }
 
+/// FEATURE (dark mode, 2026-07-06): dark counterpart to AppColors' neutral
+/// surface tokens. Only the tokens that actually need to invert for a dark
+/// theme are duplicated here (background/surface/surfaceAlt/text/divider) --
+/// primary/persona accents/error/success are intentionally reused as-is
+/// from AppColors (see the comment on the persona accent block above).
+class AppColorsDark {
+  AppColorsDark._();
+
+  static const background = Color(0xFF1C1A1F);
+  static const surface = Color(0xFF262329);
+  static const surfaceAlt = Color(0xFF322D36);
+  static const textPrimary = Color(0xFFF1EDF0);
+  static const textSecondary = Color(0xFFB6AFBC);
+  static const divider = Color(0xFF3D3843);
+}
+
 class AppTheme {
   AppTheme._();
 
-  static ThemeData get light {
-    final base = ThemeData(useMaterial3: true, brightness: Brightness.light);
+  static ThemeData get light => _build(
+    brightness: Brightness.light,
+    background: AppColors.background,
+    surface: AppColors.surface,
+    surfaceAlt: AppColors.surfaceAlt,
+    textPrimary: AppColors.textPrimary,
+    textSecondary: AppColors.textSecondary,
+    divider: AppColors.divider,
+    snackBarText: Colors.white,
+  );
+
+  // FEATURE (dark mode, 2026-07-06): mirrors `light` exactly, just built
+  // from AppColorsDark's neutral tokens plus the same brand/persona/error/
+  // success colors reused unchanged from AppColors. This is what
+  // ThemeController + main.dart's ValueListenableBuilder switch to when
+  // dark mode is on.
+  static ThemeData get dark => _build(
+    brightness: Brightness.dark,
+    background: AppColorsDark.background,
+    surface: AppColorsDark.surface,
+    surfaceAlt: AppColorsDark.surfaceAlt,
+    textPrimary: AppColorsDark.textPrimary,
+    textSecondary: AppColorsDark.textSecondary,
+    divider: AppColorsDark.divider,
+    snackBarText: AppColorsDark.background,
+  );
+
+  static ThemeData _build({
+    required Brightness brightness,
+    required Color background,
+    required Color surface,
+    required Color surfaceAlt,
+    required Color textPrimary,
+    required Color textSecondary,
+    required Color divider,
+    required Color snackBarText,
+  }) {
+    final base = ThemeData(useMaterial3: true, brightness: brightness);
 
     final textTheme = base.textTheme.copyWith(
       headlineSmall: GoogleFonts.poppins(
         fontWeight: FontWeight.w600,
         fontSize: 24,
-        color: AppColors.textPrimary,
+        color: textPrimary,
         height: 1.25,
       ),
       titleLarge: GoogleFonts.poppins(
         fontWeight: FontWeight.w600,
         fontSize: 19,
-        color: AppColors.textPrimary,
+        color: textPrimary,
       ),
       titleMedium: GoogleFonts.poppins(
         fontWeight: FontWeight.w600,
         fontSize: 16,
-        color: AppColors.textPrimary,
+        color: textPrimary,
       ),
       bodyLarge: GoogleFonts.inter(
         fontSize: 15.5,
-        color: AppColors.textPrimary,
+        color: textPrimary,
         height: 1.4,
       ),
       bodyMedium: GoogleFonts.inter(
         fontSize: 14,
-        color: AppColors.textSecondary,
+        color: textSecondary,
         height: 1.4,
       ),
       labelLarge: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 14),
     );
 
     return base.copyWith(
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: background,
+      // Explicit mapping so screens can read AppColors.divider's live
+      // equivalent via Theme.of(context).dividerColor.
+      dividerColor: divider,
       textTheme: textTheme,
       colorScheme: base.colorScheme.copyWith(
         primary: AppColors.primary,
         onPrimary: AppColors.onPrimary,
         secondary: AppColors.bestFriendDark,
-        surface: AppColors.surface,
-        onSurface: AppColors.textPrimary,
+        surface: surface,
+        onSurface: textPrimary,
         error: AppColors.error,
         primaryContainer: AppColors.primary.withValues(alpha: 0.12),
         onPrimaryContainer: AppColors.primaryDark,
-        secondaryContainer: AppColors.surfaceAlt,
-        onSecondaryContainer: AppColors.textPrimary,
-        surfaceContainerHighest: AppColors.surfaceAlt,
+        secondaryContainer: surfaceAlt,
+        onSecondaryContainer: textPrimary,
+        surfaceContainerHighest: surfaceAlt,
+        // Explicit mapping so screens can read AppColors.textSecondary's
+        // live equivalent via Theme.of(context).colorScheme.onSurfaceVariant
+        // instead of the static (light-only) AppColors constant.
+        onSurfaceVariant: textSecondary,
       ),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.textPrimary,
+        backgroundColor: background,
+        foregroundColor: textPrimary,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: textTheme.titleLarge,
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(
-        color: AppColors.surface,
+        color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),
-          side: const BorderSide(color: AppColors.divider, width: 1),
+          side: BorderSide(color: divider, width: 1),
         ),
         margin: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: AppColors.surface,
+        fillColor: surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 18,
           vertical: 16,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: BorderSide(color: divider),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.divider),
+          borderSide: BorderSide(color: divider),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -207,7 +270,7 @@ class AppTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: AppColors.surface,
+        backgroundColor: surface,
         indicatorColor: AppColors.primary.withValues(alpha: 0.14),
         surfaceTintColor: Colors.transparent,
         elevation: 0,
@@ -217,26 +280,26 @@ class AppTheme {
             fontFamily: 'Inter',
             fontSize: 12,
             fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-            color: selected ? AppColors.primary : AppColors.textSecondary,
+            color: selected ? AppColors.primary : textSecondary,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? AppColors.primary : AppColors.textSecondary,
+            color: selected ? AppColors.primary : textSecondary,
           );
         }),
       ),
-      dividerTheme: const DividerThemeData(
-        color: AppColors.divider,
+      dividerTheme: DividerThemeData(
+        color: divider,
         thickness: 1,
         space: 1,
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: AppColors.textPrimary,
-        contentTextStyle: const TextStyle(
+        backgroundColor: textPrimary,
+        contentTextStyle: TextStyle(
           fontFamily: 'Inter',
-          color: Colors.white,
+          color: snackBarText,
           fontSize: 14,
         ),
         behavior: SnackBarBehavior.floating,
