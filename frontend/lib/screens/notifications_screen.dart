@@ -177,10 +177,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              // FEATURE (dark mode, 2026-07-06): dropped `const` -- see
+              // app_theme.dart's note on why neutral colors must read live
+              // from Theme.of(context).
+              Icon(
                 Icons.cloud_off_outlined,
                 size: 42,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(height: 12),
               Text(_error!, textAlign: TextAlign.center),
@@ -205,7 +208,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Icon(
               Icons.notifications_none_rounded,
               size: 48,
-              color: AppColors.textSecondary.withValues(alpha: 0.5),
+              color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Center(
@@ -262,9 +265,9 @@ class _ScheduleCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.divider),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -362,9 +365,12 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
       ),
+      // FEATURE (dark mode, 2026-07-06): dropped `const` on this
+      // decoration -- Theme.of(context).colorScheme.surface is a runtime
+      // lookup, not a compile-time constant.
       child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -378,7 +384,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
                 height: 4,
                 margin: const EdgeInsets.only(bottom: 16),
                 decoration: BoxDecoration(
-                  color: AppColors.divider,
+                  color: Theme.of(context).dividerColor,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
