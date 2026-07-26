@@ -36,4 +36,19 @@ public class Persona {
     // so the DB column mapping stays correct while the getter becomes `isActive()`.
     @Column(name = "is_active")
     private boolean active = true;
+
+    // FEATURE (custom personas, 2026-07-06): null = one of the original 4
+    // built-in personas, visible to everyone (subject to subscriptionTier
+    // gating as before). Non-null = a persona a specific user created for
+    // themselves via POST /api/personas -- only that user can see, chat
+    // with, or delete it. Deliberately NOT exposed directly over JSON
+    // (@JsonIgnore) -- returning the full owning User object, including its
+    // password hash, to any client that fetches personas would be a real
+    // data leak. PersonaController maps to PersonaResponse instead, which
+    // exposes only a computed `owned` boolean relative to the requesting
+    // user -- see PersonaService.toResponse().
+    @ManyToOne
+    @JoinColumn(name = "owner_user_id")
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    private User owner;
 }
