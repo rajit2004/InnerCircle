@@ -8,6 +8,13 @@ class Persona {
   final bool active;
   final String subscriptionTier;
 
+  // FEATURE (custom personas, 2026-07-06): mirrors the backend's
+  // PersonaResponse.owned -- true only for a persona this specific user
+  // created themselves (see PersonaService.toResponse on the backend).
+  // Built-in personas and other users' custom personas always come back
+  // false. Drives whether HomeScreen shows a delete option for this card.
+  final bool owned;
+
   Persona({
     required this.id,
     required this.name,
@@ -17,6 +24,7 @@ class Persona {
     this.systemPrompt,
     required this.active,
     required this.subscriptionTier,
+    this.owned = false,
   });
 
   factory Persona.fromJson(Map<String, dynamic> json) {
@@ -29,6 +37,7 @@ class Persona {
       systemPrompt: json['systemPrompt'],
       active: json['active'] ?? true,
       subscriptionTier: json['subscriptionTier'] ?? 'free',
+      owned: json['owned'] ?? false,
     );
   }
 }
