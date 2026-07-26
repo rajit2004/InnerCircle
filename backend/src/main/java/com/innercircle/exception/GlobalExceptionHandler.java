@@ -54,6 +54,20 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", ex.getMessage()));
     }
 
+    // FEATURE (custom personas, 2026-07-06): relationshipType is a string,
+    // not an enum in the request DTO, so an invalid value (a typo, an old
+    // client sending something that isn't PARENT/SIBLING/FRIEND/PARTNER/
+    // MENTOR/OTHER) reaches PersonaService as a plain string. That method
+    // throws BadRequestException instead of silently falling back to a
+    // default template, and this maps it to a proper 400 instead of
+    // falling through to the generic 500 handler below.
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Map<String, String>> handleBadRequest(BadRequestException ex) {
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", ex.getMessage()));
+    }
+
     // Generic catch-all — keep last so specific handlers take priority
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGeneric(Exception ex) {
