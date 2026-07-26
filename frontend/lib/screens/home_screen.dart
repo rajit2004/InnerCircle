@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import '../models/persona.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/persona_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/exit_confirmation_wrapper.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/persona_avatar.dart';
 import 'chat_screen.dart';
+import 'create_persona_screen.dart';
 import 'memories_screen.dart';
 import 'profile_screen.dart';
 
@@ -77,6 +79,61 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushReplacementNamed(context, '/login');
   }
 
+  // FEATURE (custom personas, 2026-07-06): opens CreatePersonaScreen and
+  // refreshes the persona list on a successful create so the new one shows
+  // up immediately without a manual pull-to-refresh.
+  Future<void> _openCreatePersona() async {
+    final created = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const CreatePersonaScreen()),
+    );
+    if (created == true) _fetchPersonas();
+  }
+
+  // FEATURE (custom personas, 2026-07-06): only ever called for a persona
+  // where persona.owned is true -- see _PersonaCard, which only shows the
+  // delete affordance in that case to begin with. Backend enforces the same
+  // ownership check independently (PersonaService.deleteCustomPersona), so
+  // this isn't the only thing standing between "delete" and someone else's
+  // persona, just the UI-level gate.
+  Future<void> _deletePersona(Persona persona) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete this persona?'),
+        content: Text(
+          '${persona.name} and your entire conversation history with them will be deleted. This can\'t be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await PersonaService.deletePersona(persona.id);
+      if (!mounted) return;
+      _fetchPersonas();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to delete: ${e.toString().replaceFirst('Exception: ', '')}',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final titles = ['InnerCircle', 'Memories', 'Profile'];
@@ -99,6 +156,17 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         body: _buildCurrentTab(),
+        // FEATURE (custom personas, 2026-07-06): only shown on the Chat tab
+        // (index 0) -- a "create persona" FAB on the Memories or Profile tab
+        // would be a non-sequitur, so it's gated on _selectedIndex rather
+        // than always present.
+        floatingActionButton: _selectedIndex == 0
+            ? FloatingActionButton(
+          onPressed: _openCreatePersona,
+          tooltip: 'Create a persona',
+          child: const Icon(Icons.add_rounded),
+        )
+            : null,
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,
           onDestinationSelected: (index) =>
@@ -142,16 +210,22 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_error != null) {
+      // FEATURE (dark mode, 2026-07-06): this Icon used to be `const` with a
+      // hardcoded AppColors.textSecondary (light-only) color -- switched to
+      // Theme.of(context).colorScheme.onSurfaceVariant (which app_theme.dart
+      // maps to the correct light/dark neutral text color) so it actually
+      // adapts. Dropping `const` is required here: Theme.of(context) is a
+      // runtime lookup, not a compile-time constant.
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(
+              Icon(
                 Icons.cloud_off_outlined,
                 size: 42,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
               const SizedBox(height: 12),
               Text(
@@ -185,7 +259,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               Icons.people_outline_rounded,
               size: 48,
-              color: AppColors.textSecondary.withValues(alpha: 0.5),
+              // FEATURE (dark mode, 2026-07-06): see note above -- same swap.
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Center(
@@ -222,6 +299,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 MaterialPageRoute(builder: (_) => ChatScreen(persona: persona)),
               );
             },
+            // FEATURE (custom personas, 2026-07-06): only a persona the
+            // user created themselves (persona.owned) gets a delete
+            // affordance -- the built-in Mom/Best Friend/Girlfriend/Big
+            // Sister personas aren't deletable.
+            onDelete: persona.owned ? () => _deletePersona(persona) : null,
           );
         },
       ),
@@ -238,13 +320,22 @@ class _HomeScreenState extends State<HomeScreen> {
 class _PersonaCard extends StatelessWidget {
   final Persona persona;
   final VoidCallback onTap;
+  final VoidCallback? onDelete;
 
-  const _PersonaCard({required this.persona, required this.onTap});
+  const _PersonaCard({
+    required this.persona,
+    required this.onTap,
+    this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // FEATURE (dark mode, 2026-07-06): surface/divider swapped from static
+    // AppColors to Theme.of(context) equivalents so this card actually
+    // re-colors in dark mode instead of staying a light-mode white card
+    // floating on a dark background.
     return Material(
-      color: AppColors.surface,
+      color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
@@ -253,7 +344,7 @@ class _PersonaCard extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.divider),
+            border: Border.all(color: Theme.of(context).dividerColor),
           ),
           child: Row(
             children: [
@@ -290,9 +381,18 @@ class _PersonaCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Icon(
+              if (onDelete != null)
+                IconButton(
+                  tooltip: 'Delete persona',
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  onPressed: onDelete,
+                ),
+              Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ],
           ),
@@ -316,13 +416,17 @@ class _TierChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPremium = tier.toLowerCase() == 'premium';
-
+    // FEATURE (dark mode, 2026-07-06): surfaceAlt/textSecondary swapped to
+    // Theme.of(context) equivalents; AppColors.bestFriendDark (a persona/
+    // brand accent, not a neutral surface color) is intentionally left
+    // untouched -- see app_theme.dart's comment on why accent colors stay
+    // constant across light/dark.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: isPremium
             ? AppColors.bestFriendDark.withValues(alpha: 0.14)
-            : AppColors.surfaceAlt,
+            : Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -333,7 +437,9 @@ class _TierChip extends StatelessWidget {
                 ? Icons.workspace_premium_rounded
                 : Icons.lock_open_rounded,
             size: 11,
-            color: isPremium ? AppColors.bestFriendDark : AppColors.textSecondary,
+            color: isPremium
+                ? AppColors.bestFriendDark
+                : Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 3),
           Text(
@@ -341,7 +447,9 @@ class _TierChip extends StatelessWidget {
             style: TextStyle(
               fontSize: 10.5,
               fontWeight: FontWeight.w600,
-              color: isPremium ? AppColors.bestFriendDark : AppColors.textSecondary,
+              color: isPremium
+                  ? AppColors.bestFriendDark
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ],
