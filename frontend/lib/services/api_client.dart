@@ -13,7 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Android emulator:        http://10.0.2.2:8080
 // iOS simulator / macOS:   http://localhost:8080
 // Physical device:         http://<your_computer_ip>:8080
-const String baseUrl = 'http://10.79.214.34:8080';
+const String baseUrl = 'http://10.61.29.34:8080';
 
 class ApiClient {
   static const String _tokenKey = 'auth_token';
