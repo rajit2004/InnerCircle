@@ -37,6 +37,12 @@ public class User {
     // incrementing -- without this the daily free-tier cap can never reset.
     private LocalDate lastMessageDate;
 
+    // FEATURE (forgot password, 2026-07-06): a pending reset token + its
+    // expiry, both cleared once the reset completes or expires. See
+    // AuthService.forgotPassword() / resetPassword() for the actual flow.
+    private String resetToken;
+    private Instant resetTokenExpiresAt;
+
     @CreationTimestamp
     private Instant createdAt;
 }
