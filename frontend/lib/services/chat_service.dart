@@ -26,4 +26,15 @@ class ChatService {
     return await ApiClient.get('/api/chat/history?personaId=$personaId')
     as Map<String, dynamic>;
   }
+
+  // FEATURE (message reactions, round 12): sets or clears (reaction == null)
+  // the reaction on a single message. Fire-and-forget from the UI's
+  // perspective -- the caller updates local state optimistically and this
+  // just persists it server-side.
+  static Future<void> setReaction(String messageId, String? reaction) async {
+    await ApiClient.put(
+      '/api/chat/messages/$messageId/reaction',
+      body: {'reaction': reaction},
+    );
+  }
 }
