@@ -61,8 +61,10 @@ class _ChatScreenState extends State<ChatScreen> {
         _messages.addAll(
           rawMessages.map(
                 (m) => ChatMessage(
+              id: m['id'] as String?,
               role: m['role'] as String,
               content: m['content'] as String,
+              reaction: m['reaction'] as String?,
             ),
           ),
         );
@@ -120,6 +122,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
       final reply = (response['reply'] as String? ?? '').trim();
       final conversationId = response['conversationId'] as String?;
+      final messageId = response['messageId'] as String?;
 
       if (!mounted) return;
       setState(() {
@@ -127,7 +130,9 @@ class _ChatScreenState extends State<ChatScreen> {
           _conversationId = conversationId;
         }
         if (reply.isNotEmpty) {
-          _messages.add(ChatMessage(role: 'assistant', content: reply));
+          _messages.add(
+            ChatMessage(id: messageId, role: 'assistant', content: reply),
+          );
         }
         _isTyping = false;
       });
@@ -151,6 +156,61 @@ class _ChatScreenState extends State<ChatScreen> {
       _conversationId = null;
       _isTyping = false;
     });
+  }
+
+  // FEATURE (message reactions, round 12): shows a small picker of preset
+  // emoji on long-press. message.id is null for a greeting-only message
+  // that was never actually persisted (see _showGreetingOnly) -- there's
+  // nothing to attach a server-side reaction to in that case, so the picker
+  // doesn't open.
+  static const List<String> _reactionOptions = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
+
+  Future<void> _showReactionPicker(ChatMessage message) async {
+    if (message.id == null) return;
+
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) => Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+        decoration: BoxDecoration(
+          color: Theme.of(sheetContext).colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: _reactionOptions.map((emoji) {
+            return GestureDetector(
+              onTap: () => Navigator.pop(sheetContext, emoji),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Text(emoji, style: const TextStyle(fontSize: 26)),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+
+    if (selected == null) return;
+
+    // Tapping the reaction that's already set again clears it, rather than
+    // needing a separate "remove reaction" affordance.
+    final newReaction = (message.reaction == selected) ? null : selected;
+    final previousReaction = message.reaction;
+
+    setState(() => message.reaction = newReaction);
+
+    try {
+      await ChatService.setReaction(message.id!, newReaction);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => message.reaction = previousReaction);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save reaction')),
+      );
+    }
   }
 
   void _scrollToBottom() {
@@ -224,9 +284,11 @@ class _ChatScreenState extends State<ChatScreen> {
                     return _TypingBubble(gradient: gradient);
                   }
 
+                  final message = _messages[index];
                   return _MessageBubble(
-                    message: _messages[index],
+                    message: message,
                     gradient: gradient,
+                    onLongPress: () => _showReactionPicker(message),
                   );
                 },
               ),
@@ -308,8 +370,13 @@ class _ChatScreenState extends State<ChatScreen> {
 class _MessageBubble extends StatelessWidget {
   final ChatMessage message;
   final List<Color> gradient;
+  final VoidCallback? onLongPress;
 
-  const _MessageBubble({required this.message, required this.gradient});
+  const _MessageBubble({
+    required this.message,
+    required this.gradient,
+    this.onLongPress,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -320,37 +387,67 @@ class _MessageBubble extends StatelessWidget {
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxWidth: maxWidth),
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 5),
-          padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
-          decoration: BoxDecoration(
-            // UX FIX (2026-07-03): assistant bubbles now use the persona's
-            // own accent color (softened) instead of a neutral gray -- the
-            // same color continuity as the avatar/appbar, reinforced on
-            // every single message instead of just at the top of the
-            // screen. User bubbles use the brand primary so they read as
-            // distinctly "you" regardless of which persona you're talking
-            // to.
-            gradient: isUser
-                ? const LinearGradient(
-              colors: [AppColors.primary, AppColors.primaryDark],
-            )
-                : null,
-            color: isUser ? null : gradient.first.withValues(alpha: 0.16),
-            borderRadius: BorderRadius.only(
-              topLeft: const Radius.circular(18),
-              topRight: const Radius.circular(18),
-              bottomLeft: Radius.circular(isUser ? 18 : 4),
-              bottomRight: Radius.circular(isUser ? 4 : 18),
-            ),
-          ),
-          child: Text(
-            message.content,
-            style: TextStyle(
-              color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
-              fontSize: 15,
-              height: 1.4,
-            ),
+        // FEATURE (message reactions, round 12): wrapped the original bubble
+        // in a GestureDetector + Stack -- the Container/decoration/Text below
+        // is unchanged, this only adds long-press-to-react and a small badge
+        // showing the current reaction (if any) overlapping the bubble's
+        // outer bottom corner.
+        child: GestureDetector(
+          onLongPress: onLongPress,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 5),
+                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
+                decoration: BoxDecoration(
+                  // UX FIX (2026-07-03): assistant bubbles now use the persona's
+                  // own accent color (softened) instead of a neutral gray -- the
+                  // same color continuity as the avatar/appbar, reinforced on
+                  // every single message instead of just at the top of the
+                  // screen. User bubbles use the brand primary so they read as
+                  // distinctly "you" regardless of which persona you're talking
+                  // to.
+                  gradient: isUser
+                      ? const LinearGradient(
+                    colors: [AppColors.primary, AppColors.primaryDark],
+                  )
+                      : null,
+                  color: isUser ? null : gradient.first.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(18),
+                    topRight: const Radius.circular(18),
+                    bottomLeft: Radius.circular(isUser ? 18 : 4),
+                    bottomRight: Radius.circular(isUser ? 4 : 18),
+                  ),
+                ),
+                child: Text(
+                  message.content,
+                  style: TextStyle(
+                    color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
+                    fontSize: 15,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+              if (message.reaction != null)
+                Positioned(
+                  bottom: -6,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                    ),
+                    child: Text(
+                      message.reaction!,
+                      style: const TextStyle(fontSize: 12),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
