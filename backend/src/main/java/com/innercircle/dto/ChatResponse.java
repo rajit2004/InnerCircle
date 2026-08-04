@@ -22,4 +22,10 @@ import java.util.UUID;
 public class ChatResponse {
     private String reply;
     private UUID conversationId;
+    // FEATURE (message reactions, round 12): the id of the just-saved
+    // assistant message, so the frontend can react to a reply immediately
+    // without waiting for the next history fetch. Null on the rare path
+    // where Groq returned a blank reply and no Message row was created --
+    // see ChatService.chatDirect().
+    private UUID messageId;
 }
