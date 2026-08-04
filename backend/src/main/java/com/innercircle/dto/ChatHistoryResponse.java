@@ -23,8 +23,12 @@ public class ChatHistoryResponse {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class MessageDto {
+        private UUID id;
         private String role;
         private String content;
         private Instant createdAt;
+        // FEATURE (message reactions, round 12): null when the message has
+        // no reaction set.
+        private String reaction;
     }
 }
