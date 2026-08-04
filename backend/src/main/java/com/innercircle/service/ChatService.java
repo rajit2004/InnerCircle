@@ -184,6 +184,8 @@ public class ChatService {
         // model doesn't fully comply with the prompt.
         reply = stripMarkdown(reply);
 
+        java.util.UUID assistantMessageId = null;
+
         if (reply.isBlank()) {
             log.warn("Groq returned a blank reply for persona {}", persona.getName());
         } else {
@@ -192,6 +194,10 @@ public class ChatService {
             assistantMsg.setRole("assistant");
             assistantMsg.setContent(reply);
             messageRepository.save(assistantMsg);
+            // FEATURE (message reactions, round 12): id is client-generated
+            // (GenerationType.UUID), so it's populated on the entity right
+            // after save() -- no need for a re-fetch.
+            assistantMessageId = assistantMsg.getId();
 
             String finalReply = reply;
             Mono.fromRunnable(() -> {
@@ -208,7 +214,7 @@ public class ChatService {
             }).subscribeOn(Schedulers.boundedElastic()).subscribe();
         }
 
-        return new ChatResponse(reply, conversation.getId());
+        return new ChatResponse(reply, conversation.getId(), assistantMessageId);
     }
 
     // FEATURE (chat history, 2026-07-02): There was previously no way to fetch
@@ -241,10 +247,31 @@ public class ChatService {
         List<ChatHistoryResponse.MessageDto> messages = messageRepository
                 .findByConversationOrderByCreatedAtAsc(conversation)
                 .stream()
-                .map(m -> new ChatHistoryResponse.MessageDto(m.getRole(), m.getContent(), m.getCreatedAt()))
+                .map(m -> new ChatHistoryResponse.MessageDto(m.getId(), m.getRole(), m.getContent(), m.getCreatedAt(), m.getReaction()))
                 .toList();
 
         return new ChatHistoryResponse(conversation.getId(), messages);
+    }
+
+    // FEATURE (message reactions, round 12): sets or clears (reaction ==
+    // null) the reaction on a single message. Ownership is checked through
+    // the message's conversation, not the message directly -- Message has
+    // no user field of its own, only Conversation does (see
+    // Conversation.user). A ForbiddenException here (rather than
+    // ResourceNotFoundException) is deliberate: the message genuinely
+    // exists, the caller just isn't allowed to touch it, which is a
+    // meaningfully different case for the frontend to handle/log.
+    @Transactional
+    public void setReaction(java.util.UUID messageId, String reaction, User user) {
+        Message message = messageRepository.findById(messageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+
+        if (!message.getConversation().getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("You don't have access to this message");
+        }
+
+        message.setReaction(reaction);
+        messageRepository.save(message);
     }
 
     // BUG FIX (persona voice, 2026-07-02): strips common markdown artifacts
