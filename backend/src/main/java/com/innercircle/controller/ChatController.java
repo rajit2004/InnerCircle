@@ -38,6 +38,17 @@ public class ChatController {
         return ResponseEntity.ok(chatService.getHistory(personaId, user));
     }
 
+    // FEATURE (message reactions, round 12): sets or clears the reaction on
+    // a single message. Body reaction == null clears it -- used when the
+    // frontend detects the user tapped the same emoji that's already set.
+    @PutMapping("/messages/{messageId}/reaction")
+    public ResponseEntity<Void> setReaction(@AuthenticationPrincipal User user,
+                                            @PathVariable UUID messageId,
+                                            @RequestBody com.innercircle.dto.ReactionRequest request) {
+        chatService.setReaction(messageId, request.getReaction(), user);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/test")
     public String test() {
         return "ChatController is alive!";
