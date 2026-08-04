@@ -49,11 +49,12 @@ class DefaultFirebaseOptions {
 
   // PLACEHOLDER -- replace by running `flutterfire configure`, do not
   // hand-edit these strings.
+
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'REPLACE_ME_RUN_FLUTTERFIRE_CONFIGURE',
-    appId: 'REPLACE_ME_RUN_FLUTTERFIRE_CONFIGURE',
-    messagingSenderId: 'REPLACE_ME_RUN_FLUTTERFIRE_CONFIGURE',
-    projectId: 'REPLACE_ME_RUN_FLUTTERFIRE_CONFIGURE',
-    storageBucket: 'REPLACE_ME_RUN_FLUTTERFIRE_CONFIGURE',
+    apiKey: 'AIzaSyBzevBtrmk01HJTyIh_0NdJtLkmUfaeSpY',
+    appId: '1:608403460456:android:4f05afc053ba7c900406dd',
+    messagingSenderId: '608403460456',
+    projectId: 'ranesh-innercircle',
+    storageBucket: 'ranesh-innercircle.firebasestorage.app',
   );
 }
