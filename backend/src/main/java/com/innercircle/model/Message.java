@@ -30,6 +30,12 @@ public class Message {
 
     private int tokensUsed = 0;
 
+    // FEATURE (message reactions, round 12): a single emoji, or null for no
+    // reaction. One per message -- this is a 1:1 conversation, not a group
+    // chat, so there's no need to support multiple people reacting
+    // differently to the same message.
+    private String reaction;
+
     @CreationTimestamp
     private Instant createdAt;
 }
