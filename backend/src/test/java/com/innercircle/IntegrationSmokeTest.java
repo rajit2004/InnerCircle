@@ -128,7 +128,7 @@ class IntegrationSmokeTest {
 
         assertThat(client.delete().uri("/api/chat?personaId=" + mom)
                 .header("Authorization", auth)
-                .retrieve().toBodilessEntity().getStatusCode()).isEqualTo(HttpStatus.OK);
+                .retrieve().toBodilessEntity().getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 
     @TestConfiguration
