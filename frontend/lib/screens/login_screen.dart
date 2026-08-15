@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
@@ -26,14 +27,29 @@ class _LoginScreenState extends State<LoginScreen> {
   void _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
+    HapticFeedback.lightImpact();
     try {
       await AuthService.login(_emailController.text.trim(), _passwordController.text);
       if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          transitionDuration: const Duration(milliseconds: 300),
+          pageBuilder: (_, __, ___) => Container(color: Theme.of(context).scaffoldBackgroundColor),
+          transitionsBuilder: (_, animation, __, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+        ),
+      );
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       if (!mounted) return;
+      HapticFeedback.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.error,
+        ),
       );
     }
     if (!mounted) return;
@@ -62,6 +78,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       gradient: const LinearGradient(
                         colors: [AppColors.primary, AppColors.primaryDark],
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
                     ),
                     child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 28),
                   ),
@@ -76,6 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     controller: _emailController,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
                       labelText: 'Email',
                       prefixIcon: Icon(Icons.mail_outline_rounded),
@@ -87,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon: const Icon(Icons.lock_outline_rounded),
