@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/persona.dart';
 import '../services/api_client.dart';
@@ -8,6 +9,7 @@ import '../theme/app_theme.dart';
 import '../widgets/exit_confirmation_wrapper.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/persona_avatar.dart';
+import '../widgets/shared_widgets.dart';
 import 'chat_screen.dart';
 import 'create_persona_screen.dart';
 import 'memories_screen.dart';
@@ -74,15 +76,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _logout() async {
+    HapticFeedback.lightImpact();
     await AuthService.logout();
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/login');
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   // FEATURE (custom personas, 2026-07-06): opens CreatePersonaScreen and
   // refreshes the persona list on a successful create so the new one shows
   // up immediately without a manual pull-to-refresh.
   Future<void> _openCreatePersona() async {
+    HapticFeedback.lightImpact();
     final created = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => const CreatePersonaScreen()),
@@ -97,6 +101,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // this isn't the only thing standing between "delete" and someone else's
   // persona, just the UI-level gate.
   Future<void> _deletePersona(Persona persona) async {
+    HapticFeedback.lightImpact();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -162,10 +167,10 @@ class _HomeScreenState extends State<HomeScreen> {
         // than always present.
         floatingActionButton: _selectedIndex == 0
             ? FloatingActionButton(
-          onPressed: _openCreatePersona,
-          tooltip: 'Create a persona',
-          child: const Icon(Icons.add_rounded),
-        )
+              onPressed: _openCreatePersona,
+              tooltip: 'Create a persona',
+              child: const Icon(Icons.add_rounded),
+            )
             : null,
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,
@@ -206,7 +211,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildPersonaList() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator());
+      return const ShimmerList(itemCount: 4, height: 88);
     }
 
     if (_error != null) {
@@ -284,7 +289,10 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return RefreshIndicator(
-      onRefresh: _fetchPersonas,
+      onRefresh: () async {
+        HapticFeedback.lightImpact();
+        return _fetchPersonas();
+      },
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         itemCount: _personas.length,
@@ -294,6 +302,7 @@ class _HomeScreenState extends State<HomeScreen> {
           return _PersonaCard(
             persona: persona,
             onTap: () {
+              HapticFeedback.selectionClick();
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => ChatScreen(persona: persona)),
