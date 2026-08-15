@@ -22,25 +22,34 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   List<Persona> _personas = [];
   bool _loading = true;
   String? _error;
   int _selectedIndex = 0;
+  late AnimationController _fabController;
+  late Animation<double> _fabScale;
 
   @override
   void initState() {
     super.initState();
+    _fabController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fabScale = CurvedAnimation(
+      parent: _fabController,
+      curve: Curves.elasticOut,
+    );
+    _fabController.forward();
     _fetchPersonas();
-    // FEATURE (push notifications, 2026-07-05): HomeScreen is reached both
-    // right after a fresh login and on every cold start where the user is
-    // already signed in (see main.dart's '/' route) -- making it the one
-    // natural place to request notification permission and register a
-    // real FCM token, since both need the user to already be authenticated.
-    // Fire-and-forget: PushNotificationService swallows its own errors, so
-    // a denied permission or missing Firebase config can never block this
-    // screen from loading normally.
     PushNotificationService.initialize();
+  }
+
+  @override
+  void dispose() {
+    _fabController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchPersonas() async {
@@ -53,9 +62,9 @@ class _HomeScreenState extends State<HomeScreen> {
       final data = await ApiClient.get('/api/personas');
       final list = (data as List).map((p) => Persona.fromJson(p)).toList();
       final inferredTier =
-      list.any((p) => p.subscriptionTier.toLowerCase() == 'premium')
-          ? 'premium'
-          : 'free';
+          list.any((p) => p.subscriptionTier.toLowerCase() == 'premium')
+              ? 'premium'
+              : 'free';
       await AuthService.updateSubscriptionTier(inferredTier);
 
       if (!mounted) return;
@@ -82,9 +91,6 @@ class _HomeScreenState extends State<HomeScreen> {
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
-  // FEATURE (custom personas, 2026-07-06): opens CreatePersonaScreen and
-  // refreshes the persona list on a successful create so the new one shows
-  // up immediately without a manual pull-to-refresh.
   Future<void> _openCreatePersona() async {
     HapticFeedback.lightImpact();
     final created = await Navigator.push<bool>(
@@ -94,12 +100,6 @@ class _HomeScreenState extends State<HomeScreen> {
     if (created == true) _fetchPersonas();
   }
 
-  // FEATURE (custom personas, 2026-07-06): only ever called for a persona
-  // where persona.owned is true -- see _PersonaCard, which only shows the
-  // delete affordance in that case to begin with. Backend enforces the same
-  // ownership check independently (PersonaService.deleteCustomPersona), so
-  // this isn't the only thing standing between "delete" and someone else's
-  // persona, just the UI-level gate.
   Future<void> _deletePersona(Persona persona) async {
     HapticFeedback.lightImpact();
     final confirmed = await showDialog<bool>(
@@ -143,11 +143,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final titles = ['InnerCircle', 'Memories', 'Profile'];
 
-    // UX FIX (2026-07-03): wrapped the whole home screen in
-    // ExitConfirmationWrapper so the system back button from here (the
-    // bottom of the nav stack -- the only place where "back" would
-    // otherwise mean "quit the app") asks first instead of closing
-    // instantly. See exit_confirmation_wrapper.dart for the full reasoning.
     return ExitConfirmationWrapper(
       child: Scaffold(
         appBar: AppBar(
@@ -161,16 +156,15 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         body: _buildCurrentTab(),
-        // FEATURE (custom personas, 2026-07-06): only shown on the Chat tab
-        // (index 0) -- a "create persona" FAB on the Memories or Profile tab
-        // would be a non-sequitur, so it's gated on _selectedIndex rather
-        // than always present.
         floatingActionButton: _selectedIndex == 0
-            ? FloatingActionButton(
-              onPressed: _openCreatePersona,
-              tooltip: 'Create a persona',
-              child: const Icon(Icons.add_rounded),
-            )
+            ? ScaleTransition(
+                scale: _fabScale,
+                child: FloatingActionButton(
+                  onPressed: _openCreatePersona,
+                  tooltip: 'Create a persona',
+                  child: const Icon(Icons.add_rounded),
+                ),
+              )
             : null,
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,
@@ -215,12 +209,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_error != null) {
-      // FEATURE (dark mode, 2026-07-06): this Icon used to be `const` with a
-      // hardcoded AppColors.textSecondary (light-only) color -- switched to
-      // Theme.of(context).colorScheme.onSurfaceVariant (which app_theme.dart
-      // maps to the correct light/dark neutral text color) so it actually
-      // adapts. Dropping `const` is required here: Theme.of(context) is a
-      // runtime lookup, not a compile-time constant.
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -251,11 +239,6 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     if (_personas.isEmpty) {
-      // UX FIX (2026-07-03): previously just the text "No personas found"
-      // with no icon, no context, no retry action visible without scrolling.
-      // A blank-ish screen with three words is easy to mistake for the app
-      // being broken. Given a proper empty state with an icon and an
-      // explicit retry action.
       return RefreshIndicator(
         onRefresh: _fetchPersonas,
         child: ListView(
@@ -264,10 +247,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(
               Icons.people_outline_rounded,
               size: 48,
-              // FEATURE (dark mode, 2026-07-06): see note above -- same swap.
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurfaceVariant
+                  .withValues(alpha: 0.5),
             ),
             const SizedBox(height: 16),
             Center(
@@ -299,19 +282,18 @@ class _HomeScreenState extends State<HomeScreen> {
         separatorBuilder: (context, index) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final persona = _personas[index];
-          return _PersonaCard(
+          return _StaggeredPersonaCard(
             persona: persona,
+            index: index,
             onTap: () {
               HapticFeedback.selectionClick();
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => ChatScreen(persona: persona)),
+                MaterialPageRoute(
+                  builder: (_) => ChatScreen(persona: persona),
+                ),
               );
             },
-            // FEATURE (custom personas, 2026-07-06): only a persona the
-            // user created themselves (persona.owned) gets a delete
-            // affordance -- the built-in Mom/Best Friend/Girlfriend/Big
-            // Sister personas aren't deletable.
             onDelete: persona.owned ? () => _deletePersona(persona) : null,
           );
         },
@@ -320,12 +302,93 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// UX FIX (2026-07-03): replaced the plain ListTile row with a card that
-/// leads with the persona's colored gradient avatar (see PersonaAvatar) and
-/// shows the persona's actual greeting line as a preview -- so the list
-/// reads as "four different people you could talk to," each visually
-/// distinct at a glance, rather than four identical rows differentiated
-/// only by their text label.
+class _StaggeredPersonaCard extends StatefulWidget {
+  final Persona persona;
+  final int index;
+  final VoidCallback onTap;
+  final VoidCallback? onDelete;
+
+  const _StaggeredPersonaCard({
+    required this.persona,
+    required this.index,
+    required this.onTap,
+    this.onDelete,
+  });
+
+  @override
+  State<_StaggeredPersonaCard> createState() => _StaggeredPersonaCardState();
+}
+
+class _StaggeredPersonaCardState extends State<_StaggeredPersonaCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Offset> _slideAnimation;
+  late final Animation<double> _fadeAnimation;
+  late final Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
+    final delay = (widget.index * 0.1).clamp(0.0, 0.4);
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.15),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Interval(delay, (delay + 0.5).clamp(0.0, 1.0),
+          curve: Curves.easeOutCubic),
+    ));
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(delay, (delay + 0.4).clamp(0.0, 1.0),
+            curve: Curves.easeOut),
+      ),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(delay, (delay + 0.5).clamp(0.0, 1.0),
+            curve: Curves.easeOutCubic),
+      ),
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: _PersonaCard(
+            persona: widget.persona,
+            onTap: widget.onTap,
+            onDelete: widget.onDelete,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _PersonaCard extends StatelessWidget {
   final Persona persona;
   final VoidCallback onTap;
@@ -339,10 +402,6 @@ class _PersonaCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // FEATURE (dark mode, 2026-07-06): surface/divider swapped from static
-    // AppColors to Theme.of(context) equivalents so this card actually
-    // re-colors in dark mode instead of staying a light-mode white card
-    // floating on a dark background.
     return Material(
       color: Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(20),
@@ -425,11 +484,6 @@ class _TierChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPremium = tier.toLowerCase() == 'premium';
-    // FEATURE (dark mode, 2026-07-06): surfaceAlt/textSecondary swapped to
-    // Theme.of(context) equivalents; AppColors.bestFriendDark (a persona/
-    // brand accent, not a neutral surface color) is intentionally left
-    // untouched -- see app_theme.dart's comment on why accent colors stay
-    // constant across light/dark.
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
