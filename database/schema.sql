@@ -56,22 +56,23 @@ CREATE TABLE IF NOT EXISTS messages (
 -- explicit ones so chat-history / memory / push lookups don't sequential-scan.
 CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages (conversation_id);
 CREATE INDEX IF NOT EXISTS idx_conversations_user_persona ON conversations (user_id, persona_id);
-CREATE INDEX IF NOT EXISTS idx_memories_user_id ON memories (user_id);
-CREATE INDEX IF NOT EXISTS idx_memories_persona_id ON memories (persona_id);
 
 -- Memories
 CREATE TABLE IF NOT EXISTS memories (
-                                        id UUID PRIMARY KEY,
-                                        user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-                                        persona_id UUID REFERENCES personas(id) ON DELETE CASCADE,
-                                        fact TEXT NOT NULL,
-                                        embedding vector(1536),
-                                        importance INT DEFAULT 1,
-                                        access_count INT DEFAULT 0,
-                                        last_accessed TIMESTAMPTZ,
-                                        shared BOOLEAN DEFAULT FALSE,
-                                        created_at TIMESTAMPTZ DEFAULT NOW()
+    id UUID PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    persona_id UUID REFERENCES personas(id) ON DELETE CASCADE,
+    fact TEXT NOT NULL,
+    embedding vector(1536),
+    importance INT DEFAULT 1,
+    access_count INT DEFAULT 0,
+    last_accessed TIMESTAMPTZ,
+    shared BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+CREATE INDEX IF NOT EXISTS idx_memories_user_id ON memories (user_id);
+CREATE INDEX IF NOT EXISTS idx_memories_persona_id ON memories (persona_id);
 
 -- Push tokens (for FCM delivery)
 CREATE TABLE IF NOT EXISTS push_tokens (
