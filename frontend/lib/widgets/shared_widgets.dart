@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
+
+// ── Shimmer Loading ──────────────────────────────────────────────────────
 
 class ShimmerPlaceholder extends StatefulWidget {
   final double width;
   final double height;
   final BorderRadius? borderRadius;
-  final Axis direction;
 
   const ShimmerPlaceholder({
     super.key,
     required this.width,
     required this.height,
     this.borderRadius,
-    this.direction = Axis.horizontal,
   });
 
   @override
@@ -45,12 +46,10 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor =
-        isDark ? AppColorsDark.surfaceAlt : AppColors.surfaceAlt;
+    final baseColor = isDark ? AppColorsDark.surfaceAlt : AppColors.surfaceAlt;
     final highlightColor = isDark
         ? AppColorsDark.surface.withValues(alpha: 0.6)
         : AppColors.surface.withValues(alpha: 0.9);
-
     final borderRadius = widget.borderRadius ?? BorderRadius.circular(8);
 
     return AnimatedBuilder(
@@ -59,23 +58,20 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
         return ShaderMask(
           blendMode: BlendMode.srcATop,
           shaderCallback: (bounds) {
-            final progress = _animation.value;
-            final dx = (progress + 1) * bounds.width / 2;
+            final dx = (_animation.value + 1) * bounds.width / 2;
             return LinearGradient(
-              begin: Alignment(-1.0, 0.0),
-              end: Alignment(1.0, 0.0),
               colors: [baseColor, highlightColor, baseColor],
-              tileMode: TileMode.clamp,
               stops: const [0.0, 0.5, 1.0],
             ).createShader(
-              Rect.fromLTWH(dx - bounds.width / 2, 0, bounds.width, bounds.height),
+              Rect.fromLTWH(
+                  dx - bounds.width / 2, 0, bounds.width, bounds.height),
             );
           },
           child: Container(
             width: widget.width,
             height: widget.height,
             decoration: BoxDecoration(
-              color: isDark ? AppColorsDark.surfaceAlt : AppColors.surfaceAlt,
+              color: baseColor,
               borderRadius: borderRadius,
             ),
           ),
@@ -116,11 +112,45 @@ class ShimmerList extends StatelessWidget {
   }
 }
 
+/// Shimmer placeholder that mimics chat message bubbles — alternating
+/// left/right aligned rounded rectangles of varying widths.
+class ChatShimmer extends StatelessWidget {
+  const ChatShimmer({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        final isUser = index % 3 == 0;
+        final width = isUser
+            ? MediaQuery.sizeOf(context).width * 0.55
+            : MediaQuery.sizeOf(context).width * 0.4;
+        return Align(
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+          child: ShimmerPlaceholder(
+            width: width,
+            height: 48,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(18),
+              topRight: const Radius.circular(18),
+              bottomLeft: Radius.circular(isUser ? 18 : 4),
+              bottomRight: Radius.circular(isUser ? 4 : 18),
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+// ── Animated Button ──────────────────────────────────────────────────────
+
 class AnimatedPressButton extends StatefulWidget {
   final VoidCallback onPressed;
   final Widget child;
   final double scale;
-  final Duration duration;
   final bool enabled;
 
   const AnimatedPressButton({
@@ -128,7 +158,6 @@ class AnimatedPressButton extends StatefulWidget {
     required this.onPressed,
     required this.child,
     this.scale = 0.94,
-    this.duration = const Duration(milliseconds: 100),
     this.enabled = true,
   });
 
@@ -144,15 +173,10 @@ class _AnimatedPressButtonState extends State<AnimatedPressButton>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: widget.duration,
+    _controller = AnimationController(vsync: this, duration: AppMotion.micro);
+    _scaleAnim = Tween<double>(begin: 1.0, end: widget.scale).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
     );
-    _scaleAnim =
-        Tween<double>(begin: 1.0, end: widget.scale).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOut,
-    ));
   }
 
   @override
@@ -161,30 +185,23 @@ class _AnimatedPressButtonState extends State<AnimatedPressButton>
     super.dispose();
   }
 
-  void _onTapDown() => _controller.forward();
-  void _onTapUp() {
-    _controller.reverse();
-    if (widget.enabled) {
-      widget.onPressed();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTapDown: widget.enabled ? (_) => _onTapDown() : null,
+      onTapDown: widget.enabled ? (_) => _controller.forward() : null,
       onTapUp: widget.enabled
           ? (_) {
-              _onTapUp();
+              _controller.reverse();
+              widget.onPressed();
             }
           : null,
-      child: ScaleTransition(
-        scale: _scaleAnim,
-        child: widget.child,
-      ),
+      onTapCancel: widget.enabled ? () => _controller.reverse() : null,
+      child: ScaleTransition(scale: _scaleAnim, child: widget.child),
     );
   }
 }
+
+// ── Badge ────────────────────────────────────────────────────────────────
 
 class StatusBadge extends StatelessWidget {
   final int count;
@@ -203,19 +220,15 @@ class StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (!showZero && count <= 0) return const SizedBox.shrink();
-
     final badgeColor = color ?? AppColors.error;
     final displayCount = count > 99 ? '99+' : count.toString();
 
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+      duration: AppMotion.micro,
       curve: Curves.easeOut,
       width: count > 9 ? null : size,
       height: size,
-      padding: EdgeInsets.symmetric(
-        horizontal: count > 9 ? 6 : 0,
-        vertical: 2,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: count > 9 ? 6 : 0, vertical: 2),
       decoration: BoxDecoration(
         color: badgeColor,
         shape: count > 9 ? BoxShape.rectangle : BoxShape.circle,
@@ -240,15 +253,13 @@ class StatusBadge extends StatelessWidget {
   }
 }
 
+// ── Pulse Dot ────────────────────────────────────────────────────────────
+
 class PulseDot extends StatefulWidget {
   final Color color;
   final double size;
 
-  const PulseDot({
-    super.key,
-    required this.color,
-    this.size = 8,
-  });
+  const PulseDot({super.key, required this.color, this.size = 8});
 
   @override
   State<PulseDot> createState() => _PulseDotState();
@@ -270,13 +281,11 @@ class _PulseDotState extends State<PulseDot>
     _opacity = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 0.7, end: 1.0), weight: 1),
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 0.7), weight: 1),
-    ]).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
     _scale = TweenSequence<double>([
       TweenSequenceItem(tween: Tween(begin: 1.0, end: 1.3), weight: 1),
       TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 1),
-    ]).animate(
-        CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    ]).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -294,15 +303,14 @@ class _PulseDotState extends State<PulseDot>
         child: Container(
           width: widget.size,
           height: widget.size,
-          decoration: BoxDecoration(
-            color: widget.color,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
         ),
       ),
     );
   }
 }
+
+// ── Gradient Chip ────────────────────────────────────────────────────────
 
 class GradientChip extends StatelessWidget {
   final String label;
@@ -349,6 +357,8 @@ class GradientChip extends StatelessWidget {
   }
 }
 
+// ── Page Transition ──────────────────────────────────────────────────────
+
 class PageTransition extends StatelessWidget {
   final Widget child;
   final Duration duration;
@@ -387,7 +397,77 @@ class PageTransition extends StatelessWidget {
   }
 
   @override
+  Widget build(BuildContext context) => child;
+}
+
+// ── Staggered Animation Wrapper ──────────────────────────────────────────
+
+/// Wraps a child with a staggered slide-up + fade entrance animation.
+/// Use in ListView.builder itemBuilder to animate each item with increasing delay.
+class StaggeredEntrance extends StatefulWidget {
+  final Widget child;
+  final int index;
+  final Duration duration;
+  final Duration staggerDelay;
+
+  const StaggeredEntrance({
+    super.key,
+    required this.child,
+    required this.index,
+    this.duration = AppMotion.meso,
+    this.staggerDelay = AppMotion.staggerDelay,
+  });
+
+  @override
+  State<StaggeredEntrance> createState() => _StaggeredEntranceState();
+}
+
+class _StaggeredEntranceState extends State<StaggeredEntrance>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Offset> _slide;
+  late final Animation<double> _fade;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: widget.duration);
+
+    final delay =
+        (widget.index * widget.staggerDelay.inMilliseconds / 1000.0)
+            .clamp(0.0, 0.6);
+    final end = (delay + 0.5).clamp(0.0, 1.0);
+
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 0.12),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Interval(delay, end, curve: Curves.easeOutCubic),
+    ));
+
+    _fade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(delay, (delay + 0.4).clamp(0.0, 1.0),
+            curve: Curves.easeOut),
+      ),
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return child;
+    return SlideTransition(
+      position: _slide,
+      child: FadeTransition(opacity: _fade, child: widget.child),
+    );
   }
 }
