@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS profiles (
                                          created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS version BIGINT DEFAULT 0;
+
 -- Personas (AI Characters)
 CREATE TABLE IF NOT EXISTS personas (
                                         id UUID PRIMARY KEY,
