@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -26,6 +27,7 @@ public class User {
     private String avatarUrl;
 
     @Column(nullable = false)
+    @JsonIgnore
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
@@ -40,9 +42,18 @@ public class User {
     // FEATURE (forgot password, 2026-07-06): a pending reset token + its
     // expiry, both cleared once the reset completes or expires. See
     // AuthService.forgotPassword() / resetPassword() for the actual flow.
+    @JsonIgnore
     private String resetToken;
+    @JsonIgnore
     private Instant resetTokenExpiresAt;
 
     @CreationTimestamp
     private Instant createdAt;
+
+    // OPTIMISTIC LOCK: prevents two concurrent chat requests from both
+    // reading+incrementing messagesUsedToday and losing an update (soft-cap
+    // race). Hibernate checks this on save() and throws if the row changed
+    // underneath us.
+    @Version
+    private Long version;
 }
