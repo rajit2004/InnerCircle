@@ -23,20 +23,11 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _loadingHistory = true;
   String? _conversationId;
   bool _hasText = false;
+  int _animationKey = 0;
 
   @override
   void initState() {
     super.initState();
-    // BUG FIX (chat history, 2026-07-02): initState used to just add the
-    // persona's greeting and stop there -- every screen open/close cycle
-    // started completely fresh with no memory of past messages, and no
-    // conversationId either, which meant the backend created a brand new
-    // Conversation on the very next message. That's also why in-chat style
-    // instructions (e.g. "reply shorter") appeared to reset on reopen: they
-    // weren't forgotten, they were sitting in an orphaned conversation this
-    // new session never loaded. See bugs.md and ChatService.getHistory() for
-    // the full story. Now we fetch the most recent conversation for this
-    // persona first, and only fall back to greeting-only if there isn't one.
     _loadHistory();
     _controller.addListener(() {
       final hasText = _controller.text.trim().isNotEmpty;
@@ -61,7 +52,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _conversationId = conversationId;
         _messages.addAll(
           rawMessages.map(
-                (m) => ChatMessage(
+            (m) => ChatMessage(
               id: m['id'] as String?,
               role: m['role'] as String,
               content: m['content'] as String,
@@ -73,9 +64,6 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       _scrollToBottom();
     } catch (e) {
-      // History fetch failing shouldn't block the chat from being usable --
-      // fall back to a fresh conversation with just the greeting, same as
-      // the old behavior.
       if (!mounted) return;
       _showGreetingOnly();
     }
@@ -106,13 +94,13 @@ class _ChatScreenState extends State<ChatScreen> {
     final content = _controller.text.trim();
     if (content.isEmpty) return;
 
-    // Micro-interaction: haptic feedback on send
     HapticFeedback.lightImpact();
     _controller.clear();
     setState(() {
       _messages.add(ChatMessage(role: 'user', content: content));
       _isTyping = true;
       _hasText = false;
+      _animationKey++;
     });
     _scrollToBottom();
 
@@ -138,6 +126,7 @@ class _ChatScreenState extends State<ChatScreen> {
           );
         }
         _isTyping = false;
+        _animationKey++;
       });
       _scrollToBottom();
     } catch (e) {
@@ -204,11 +193,6 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  // FEATURE (message reactions, round 12): shows a small picker of preset
-  // emoji on long-press. message.id is null for a greeting-only message
-  // that was never actually persisted (see _showGreetingOnly) -- there's
-  // nothing to attach a server-side reaction to in that case, so the picker
-  // doesn't open.
   static const List<String> _reactionOptions = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
 
   Future<void> _showReactionPicker(ChatMessage message) async {
@@ -240,12 +224,7 @@ class _ChatScreenState extends State<ChatScreen> {
     );
 
     if (selected == null) return;
-
-    // Micro-interaction: haptic feedback on reaction selection
     HapticFeedback.selectionClick();
-
-    // Tapping the reaction that's already set again clears it, rather than
-    // needing a separate "remove reaction" affordance.
     final newReaction = (message.reaction == selected) ? null : selected;
     final previousReaction = message.reaction;
 
@@ -253,13 +232,13 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       await ChatService.setReaction(message.id!, newReaction);
-       } catch (e) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => message.reaction = previousReaction);
       HapticFeedback.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to save reaction'),
+          content: const Text('Failed to save reaction'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -272,8 +251,8 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!_scrollController.hasClients) return;
       _scrollController.animateTo(
         _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 220),
-        curve: Curves.easeOut,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeOutCubic,
       );
     });
   }
@@ -291,12 +270,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        // UX FIX (2026-07-03): appbar now carries the persona's own color +
-        // a small avatar instead of just their name as plain text -- makes
-        // it immediately obvious which companion you're talking to even at
-        // a glance, and the color continuity from the persona list card
-        // makes navigating in feel like a single continuous place rather
-        // than a context switch.
         titleSpacing: 8,
         title: Row(
           children: [
@@ -322,183 +295,276 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
       body: SafeArea(
         child: _loadingHistory
-            ? const Center(child: CircularProgressIndicator())
-            : Column(
-          children: [
-            Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                itemCount: _messages.length + (_isTyping ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (_isTyping && index == _messages.length) {
-                    return _TypingBubble(gradient: gradient);
-                  }
-
-                  final message = _messages[index];
-                  return _MessageBubble(
-                    message: message,
-                    gradient: gradient,
-                    onLongPress: () => _showReactionPicker(message),
-                  );
-                },
-              ),
-            ),
-            // FEATURE (dark mode, 2026-07-06): dropped `const` here -- both
-            // colors now come from Theme.of(context), a runtime lookup, not a
-            // compile-time constant. Without this the input bar would stay a
-            // light-mode white strip even with dark mode on.
-            Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                border: Border(
-                  top: BorderSide(color: Theme.of(context).dividerColor),
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: gradient.first,
                 ),
-              ),
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              )
+            : Column(
                 children: [
                   Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: BorderRadius.circular(22),
-                        border: Border.all(color: Theme.of(context).dividerColor),
-                      ),
-                      child: TextField(
-                        controller: _controller,
-                        minLines: 1,
-                        maxLines: 4,
-                        textInputAction: TextInputAction.send,
-                        decoration: const InputDecoration(
-                          hintText: 'Type a message...',
-                          border: InputBorder.none,
-                          isDense: true,
-                          filled: false,
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
-                          ),
-                        ),
-                        onSubmitted: (_) => _sendMessage(),
-                      ),
+                    child: ListView.builder(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      itemCount: _messages.length + (_isTyping ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (_isTyping && index == _messages.length) {
+                          return _TypingBubble(
+                            gradient: gradient,
+                            key: ValueKey('typing-$_animationKey'),
+                          );
+                        }
+
+                        final message = _messages[index];
+                        return _AnimatedMessageBubble(
+                          key: ValueKey('msg-${message.content.length}-$index'),
+                          message: message,
+                          gradient: gradient,
+                          onLongPress: () => _showReactionPicker(message),
+                          index: index,
+                        );
+                      },
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
+                  Container(
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: (_hasText && !_isTyping)
-                          ? LinearGradient(colors: gradient)
-                          : null,
-                      color: (_hasText && !_isTyping)
-                          ? null
-                          : Theme.of(context).colorScheme.surfaceContainerHighest,
-                    ),
-                    child: IconButton(
-                      tooltip: 'Send',
-                      icon: Icon(
-                        Icons.arrow_upward_rounded,
-                        color: (_hasText && !_isTyping)
-                            ? Colors.white
-                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      color: Theme.of(context).colorScheme.surface,
+                      border: Border(
+                        top: BorderSide(color: Theme.of(context).dividerColor),
                       ),
-                      onPressed: _isTyping ? null : _sendMessage,
+                    ),
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                              borderRadius: BorderRadius.circular(22),
+                              border: Border.all(
+                                color: Theme.of(context).dividerColor,
+                              ),
+                            ),
+                            child: TextField(
+                              controller: _controller,
+                              minLines: 1,
+                              maxLines: 4,
+                              textInputAction: TextInputAction.send,
+                              decoration: const InputDecoration(
+                                hintText: 'Type a message...',
+                                border: InputBorder.none,
+                                isDense: true,
+                                filled: false,
+                                contentPadding: EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                              ),
+                              onSubmitted: (_) => _sendMessage(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeOutCubic,
+                          width: 44,
+                          height: 44,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: (_hasText && !_isTyping)
+                                ? LinearGradient(colors: gradient)
+                                : null,
+                            color: (_hasText && !_isTyping)
+                                ? null
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .surfaceContainerHighest,
+                            boxShadow: (_hasText && !_isTyping)
+                                ? [
+                                    BoxShadow(
+                                      color: gradient.first
+                                          .withValues(alpha: 0.4),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : null,
+                          ),
+                          child: IconButton(
+                            tooltip: 'Send',
+                            icon: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 150),
+                              child: Icon(
+                                _isTyping
+                                    ? Icons.hourglass_top_rounded
+                                    : Icons.arrow_upward_rounded,
+                                key: ValueKey(_isTyping),
+                                color: (_hasText && !_isTyping)
+                                    ? Colors.white
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                              ),
+                            ),
+                            onPressed: (_hasText && !_isTyping)
+                                ? _sendMessage
+                                : null,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
 }
 
-class _MessageBubble extends StatelessWidget {
+class _AnimatedMessageBubble extends StatefulWidget {
   final ChatMessage message;
   final List<Color> gradient;
   final VoidCallback? onLongPress;
+  final int index;
 
-  const _MessageBubble({
+  const _AnimatedMessageBubble({
+    super.key,
     required this.message,
     required this.gradient,
     this.onLongPress,
+    required this.index,
   });
 
   @override
+  State<_AnimatedMessageBubble> createState() => _AnimatedMessageBubbleState();
+}
+
+class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Offset> _slideAnimation;
+  late final Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 350),
+    );
+
+    final isUser = widget.message.role == 'user';
+    final beginOffset = isUser
+        ? const Offset(0.3, 0.0)
+        : const Offset(-0.3, 0.0);
+
+    _slideAnimation = Tween<Offset>(
+      begin: beginOffset,
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    ));
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final isUser = message.role == 'user';
+    final isUser = widget.message.role == 'user';
     final maxWidth = MediaQuery.sizeOf(context).width * 0.78;
 
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: ConstrainedBox(
-        constraints: BoxConstraints(maxWidth: maxWidth),
-        // FEATURE (message reactions, round 12): wrapped the original bubble
-        // in a GestureDetector + Stack -- the Container/decoration/Text below
-        // is unchanged, this only adds long-press-to-react and a small badge
-        // showing the current reaction (if any) overlapping the bubble's
-        // outer bottom corner.
-        child: GestureDetector(
-          onLongPress: onLongPress,
-          child: Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                margin: const EdgeInsets.symmetric(vertical: 5),
-                padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 11),
-                decoration: BoxDecoration(
-                  // UX FIX (2026-07-03): assistant bubbles now use the persona's
-                  // own accent color (softened) instead of a neutral gray -- the
-                  // same color continuity as the avatar/appbar, reinforced on
-                  // every single message instead of just at the top of the
-                  // screen. User bubbles use the brand primary so they read as
-                  // distinctly "you" regardless of which persona you're talking
-                  // to.
-                  gradient: isUser
-                      ? const LinearGradient(
-                    colors: [AppColors.primary, AppColors.primaryDark],
-                  )
-                      : null,
-                  color: isUser ? null : gradient.first.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(18),
-                    topRight: const Radius.circular(18),
-                    bottomLeft: Radius.circular(isUser ? 18 : 4),
-                    bottomRight: Radius.circular(isUser ? 4 : 18),
-                  ),
-                ),
-                child: Text(
-                  message.content,
-                  style: TextStyle(
-                    color: isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
-                    fontSize: 15,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              if (message.reaction != null)
-                Positioned(
-                  bottom: -6,
-                  right: -2,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
+    return SlideTransition(
+      position: _slideAnimation,
+      child: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Align(
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: GestureDetector(
+              onLongPress: widget.onLongPress,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 15, vertical: 11),
                     decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Theme.of(context).colorScheme.surface,
-                      border: Border.all(color: Theme.of(context).dividerColor),
+                      gradient: isUser
+                          ? LinearGradient(
+                              colors: widget.gradient,
+                            )
+                          : null,
+                      color: isUser
+                          ? null
+                          : widget.gradient.first.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(18),
+                        topRight: const Radius.circular(18),
+                        bottomLeft: Radius.circular(isUser ? 18 : 4),
+                        bottomRight: Radius.circular(isUser ? 4 : 18),
+                      ),
+                      boxShadow: isUser
+                          ? [
+                              BoxShadow(
+                                color: widget.gradient.first.withValues(alpha: 0.25),
+                                blurRadius: 8,
+                                offset: const Offset(0, 2),
+                              ),
+                            ]
+                          : null,
                     ),
                     child: Text(
-                      message.reaction!,
-                      style: const TextStyle(fontSize: 12),
+                      widget.message.content,
+                      style: TextStyle(
+                        color: isUser
+                            ? Colors.white
+                            : Theme.of(context).colorScheme.onSurface,
+                        fontSize: 15,
+                        height: 1.4,
+                      ),
                     ),
                   ),
-                ),
-            ],
+                  if (widget.message.reaction != null)
+                    Positioned(
+                      bottom: -6,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(3),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Theme.of(context).colorScheme.surface,
+                          border: Border.all(
+                            color: Theme.of(context).dividerColor,
+                          ),
+                        ),
+                        child: Text(
+                          widget.message.reaction!,
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -509,18 +575,12 @@ class _MessageBubble extends StatelessWidget {
 class _TypingBubble extends StatefulWidget {
   final List<Color> gradient;
 
-  const _TypingBubble({required this.gradient});
+  const _TypingBubble({super.key, required this.gradient});
 
   @override
   State<_TypingBubble> createState() => _TypingBubbleState();
 }
 
-// UX FIX (2026-07-03): replaced the small CircularProgressIndicator spinner
-// with three dots that pulse in sequence -- the classic "someone is typing"
-// pattern people already recognize from every messaging app they've used.
-// A spinner reads as "the app is doing something," a typing indicator reads
-// as "a person is composing a reply" -- much closer to the actual feeling
-// this app is going for.
 class _TypingBubbleState extends State<_TypingBubble>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
@@ -530,7 +590,7 @@ class _TypingBubbleState extends State<_TypingBubble>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1100),
+      duration: const Duration(milliseconds: 1400),
     )..repeat();
   }
 
@@ -542,43 +602,86 @@ class _TypingBubbleState extends State<_TypingBubble>
 
   @override
   Widget build(BuildContext context) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 5),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: widget.gradient.first.withValues(alpha: 0.16),
-          borderRadius: BorderRadius.circular(18),
+    return SlideTransition(
+      position: Tween<Offset>(
+        begin: const Offset(-0.3, 0.0),
+        end: Offset.zero,
+      ).animate(CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOutCubic),
+      )),
+      child: FadeTransition(
+        opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+          ),
         ),
-        child: AnimatedBuilder(
-          animation: _controller,
-          builder: (context, _) {
-            return Row(
-              mainAxisSize: MainAxisSize.min,
-              children: List.generate(3, (i) {
-                final delay = i * 0.2;
-                final t = ((_controller.value - delay) % 1.0).clamp(0.0, 1.0);
-                final bounce = (t < 0.5)
-                    ? Curves.easeOut.transform(t * 2)
-                    : Curves.easeIn.transform((1 - t) * 2);
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 2),
-                  child: Transform.translate(
-                    offset: Offset(0, -4 * bounce),
-                    child: Container(
-                      width: 7,
-                      height: 7,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: widget.gradient.last,
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  widget.gradient.first.withValues(alpha: 0.2),
+                  widget.gradient.first.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: AnimatedBuilder(
+              animation: _controller,
+              builder: (context, _) {
+                return Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: List.generate(3, (i) {
+                    final delay = i * 0.15;
+                    final t = ((_controller.value - delay) % 1.0)
+                        .clamp(0.0, 1.0);
+                    final bounce = (t < 0.5)
+                        ? Curves.easeOut.transform(t * 2)
+                        : Curves.easeIn.transform((1 - t) * 2);
+                    final scale = 0.6 + 0.4 * bounce;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                      child: Transform.translate(
+                        offset: Offset(0, -5 * bounce),
+                        child: Transform.scale(
+                          scale: scale,
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: LinearGradient(
+                                colors: [
+                                  widget.gradient.first.withValues(
+                                    alpha: 0.4 + 0.6 * bounce,
+                                  ),
+                                  widget.gradient.last.withValues(
+                                    alpha: 0.4 + 0.6 * bounce,
+                                  ),
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: widget.gradient.last
+                                      .withValues(alpha: 0.3 * bounce),
+                                  blurRadius: 4 * bounce,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
+                    );
+                  }),
                 );
-              }),
-            );
-          },
+              },
+            ),
+          ),
         ),
       ),
     );
