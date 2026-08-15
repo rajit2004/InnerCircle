@@ -42,8 +42,12 @@ public class EmailService {
         JavaMailSender mailSender = mailSenderProvider.getIfAvailable();
 
         if (mailSender == null) {
-            log.warn("[Email not configured] Password reset requested for {} -- reset code: {}",
-                    toEmail, resetToken);
+            // SECURITY: never log the full reset code (it can end up in log
+            // aggregation in production). Only a short, non-replayable prefix
+            // hint is logged for local-dev convenience.
+            String hint = resetToken.length() <= 4 ? "****" : resetToken.substring(0, 4) + "...";
+            log.warn("[Email not configured] Password reset requested for {} -- code hint: {}",
+                    toEmail, hint);
             return;
         }
 
@@ -65,8 +69,8 @@ public class EmailService {
             // Same principle as FCM push failures elsewhere in this app: log
             // and move on rather than surfacing an internal mail-server error
             // to the person who just wanted to reset their password.
-            log.error("Failed to send password reset email to {}: {} -- reset code: {}",
-                    toEmail, e.getMessage(), resetToken);
+            log.error("Failed to send password reset email to {}: {} -- reset code not logged for security",
+                    toEmail, e.getMessage());
         }
     }
 }
