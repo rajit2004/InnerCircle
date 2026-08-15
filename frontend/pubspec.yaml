@@ -31,9 +31,7 @@ dependencies:
   flutter:
     sdk: flutter
   http: ^1.1.0
-  provider: ^6.0.5
   shared_preferences: ^2.2.2
-  flutter_secure_storage: ^9.0.0  # optional
   # DESIGN (2026-07-03): added for AppTheme's typography (Poppins for
   # headings, Inter for body text). Downloads and caches fonts at first
   # run -- normal for this package, no bundled font assets needed.
