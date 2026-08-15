@@ -2,14 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
+import '../theme/motion.dart';
+import '../services/sound_service.dart';
 
 /// FEATURE (dark mode, 2026-07-06): reachable from Profile -> Settings.
-/// Deliberately a simple two-state Light/Dark toggle rather than a
-/// three-way Light/Dark/System choice -- see theme_controller.dart's doc
-/// comment for why System support was scoped out (it needs a
-/// WidgetsBindingObserver tracking live platform-brightness changes, real
-/// added complexity for a feature whose core value is "let me pick dark
-/// mode," not "perfectly mirror my OS setting").
+/// Dark mode toggle with crossfade transition for a premium feel.
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
@@ -29,19 +26,30 @@ class SettingsScreen extends StatelessWidget {
                 final isDark = mode == ThemeMode.dark;
                 return SwitchListTile(
                   contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 4,
-                  ),
-                  secondary: Icon(
-                    isDark
-                        ? Icons.dark_mode_rounded
-                        : Icons.light_mode_rounded,
-                    color: AppColors.primary,
+                      horizontal: 16, vertical: 4),
+                  secondary: AnimatedSwitcher(
+                    duration: AppMotion.meso,
+                    child: Icon(
+                      isDark
+                          ? Icons.dark_mode_rounded
+                          : Icons.light_mode_rounded,
+                      key: ValueKey(isDark),
+                      color: AppColors.primary,
+                    ),
                   ),
                   title: const Text('Dark mode'),
-                  subtitle: Text(isDark ? 'On' : 'Off'),
+                  subtitle: AnimatedSwitcher(
+                    duration: AppMotion.micro,
+                    child: Text(
+                      isDark ? 'On' : 'Off',
+                      key: ValueKey(isDark),
+                    ),
+                  ),
                   value: isDark,
-                  onChanged: (value) => ThemeController.setDark(value),
+                  onChanged: (value) {
+                    AppSound.lightImpact();
+                    ThemeController.setDark(value);
+                  },
                 );
               },
             ),
