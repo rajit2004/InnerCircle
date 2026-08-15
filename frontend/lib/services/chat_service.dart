@@ -37,4 +37,11 @@ class ChatService {
       body: {'reaction': reaction},
     );
   }
+
+  // FEATURE (clear chat, 2026-07-06): deletes the most recent server-side
+  // conversation for this persona, so "clear chat" actually wipes history
+  // instead of only resetting local state.
+  static Future<void> deleteConversation(String personaId) async {
+    await ApiClient.delete('/api/chat?personaId=$personaId');
+  }
 }
