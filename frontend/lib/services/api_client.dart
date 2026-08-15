@@ -13,7 +13,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 // Android emulator:        http://10.0.2.2:8080
 // iOS simulator / macOS:   http://localhost:8080
 // Physical device:         http://<your_computer_ip>:8080
-const String baseUrl = 'http://10.61.29.34:8080';
+//
+// Configurable at build time via --dart-define=BASE_URL=... so the same binary
+// can target any of the above without editing source. Defaults to the Android
+// emulator alias (the host machine's localhost from inside the emulator).
+const String baseUrl = String.fromEnvironment(
+  'BASE_URL',
+  defaultValue: 'http://10.0.2.2:8080',
+);
 
 class ApiClient {
   static const String _tokenKey = 'auth_token';
@@ -130,8 +137,11 @@ class ApiClient {
 
   static dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
-      if (response.body.isEmpty) return null;
-      return jsonDecode(response.body);
+      if (response.bodyBytes.isEmpty) return null;
+      // BUG FIX: Dart's http falls back to Latin-1 when the server doesn't
+      // declare a charset, so emoji/non-ASCII (persona avatars, chat replies)
+      // came back as mojibake. Decode the raw bytes as UTF-8 explicitly.
+      return jsonDecode(utf8.decode(response.bodyBytes));
     } else {
       final message = _extractErrorMessage(response.body);
       throw Exception('Server error ${response.statusCode}: $message');
