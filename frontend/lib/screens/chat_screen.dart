@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../models/chat_message.dart';
 import '../models/persona.dart';
 import '../services/chat_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
+import '../services/sound_service.dart';
 import '../widgets/persona_avatar.dart';
+import '../widgets/shared_widgets.dart';
 
 class ChatScreen extends StatefulWidget {
   final Persona persona;
@@ -23,6 +25,7 @@ class _ChatScreenState extends State<ChatScreen> {
   bool _loadingHistory = true;
   String? _conversationId;
   bool _hasText = false;
+  bool _showScrollToBottom = false;
   int _animationKey = 0;
 
   @override
@@ -33,6 +36,16 @@ class _ChatScreenState extends State<ChatScreen> {
       final hasText = _controller.text.trim().isNotEmpty;
       if (hasText != _hasText) setState(() => _hasText = hasText);
     });
+    _scrollController.addListener(_onScroll);
+  }
+
+  void _onScroll() {
+    if (!_scrollController.hasClients) return;
+    final atBottom = _scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 80;
+    if (atBottom != _showScrollToBottom) {
+      setState(() => _showScrollToBottom = !atBottom);
+    }
   }
 
   Future<void> _loadHistory() async {
@@ -40,7 +53,6 @@ class _ChatScreenState extends State<ChatScreen> {
       final history = await ChatService.getHistory(widget.persona.id);
       final conversationId = history['conversationId'] as String?;
       final rawMessages = (history['messages'] as List<dynamic>? ?? []);
-
       if (!mounted) return;
 
       if (conversationId == null || rawMessages.isEmpty) {
@@ -50,16 +62,12 @@ class _ChatScreenState extends State<ChatScreen> {
 
       setState(() {
         _conversationId = conversationId;
-        _messages.addAll(
-          rawMessages.map(
-            (m) => ChatMessage(
+        _messages.addAll(rawMessages.map((m) => ChatMessage(
               id: m['id'] as String?,
               role: m['role'] as String,
               content: m['content'] as String,
               reaction: m['reaction'] as String?,
-            ),
-          ),
-        );
+            )));
         _loadingHistory = false;
       });
       _scrollToBottom();
@@ -90,11 +98,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Future<void> _sendMessage() async {
     if (_isTyping) return;
-
     final content = _controller.text.trim();
     if (content.isEmpty) return;
 
-    HapticFeedback.lightImpact();
+    AppSound.lightImpact();
     _controller.clear();
     setState(() {
       _messages.add(ChatMessage(role: 'user', content: content));
@@ -110,20 +117,18 @@ class _ChatScreenState extends State<ChatScreen> {
         content,
         conversationId: _conversationId,
       );
-
       final reply = (response['reply'] as String? ?? '').trim();
       final conversationId = response['conversationId'] as String?;
       final messageId = response['messageId'] as String?;
-
       if (!mounted) return;
+
       setState(() {
         if (conversationId != null && conversationId.isNotEmpty) {
           _conversationId = conversationId;
         }
         if (reply.isNotEmpty) {
           _messages.add(
-            ChatMessage(id: messageId, role: 'assistant', content: reply),
-          );
+              ChatMessage(id: messageId, role: 'assistant', content: reply));
         }
         _isTyping = false;
         _animationKey++;
@@ -131,7 +136,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      HapticFeedback.lightImpact();
+      AppSound.lightImpact();
       setState(() => _isTyping = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -146,21 +151,18 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _clearConversation() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
+      builder: (ctx) => AlertDialog(
         title: const Text('Clear chat?'),
         content: Text(
-          'This permanently deletes your conversation with '
-          '${widget.persona.name}. This cannot be undone.',
+          'This permanently deletes your conversation with ${widget.persona.name}. This cannot be undone.',
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Clear'),
-          ),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Clear')),
         ],
       ),
     );
@@ -170,10 +172,10 @@ class _ChatScreenState extends State<ChatScreen> {
       await ChatService.deleteConversation(widget.persona.id);
     } catch (e) {
       if (!mounted) return;
-      HapticFeedback.lightImpact();
+      AppSound.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to clear chat: ${e.toString()}'),
+          content: Text('Failed to clear chat: $e'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -193,7 +195,9 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
-  static const List<String> _reactionOptions = ['❤️', '😂', '😮', '😢', '👍', '🔥'];
+  static const List<String> _reactionOptions = [
+    '❤️', '😂', '😮', '😢', '👍', '🔥'
+  ];
 
   Future<void> _showReactionPicker(ChatMessage message) async {
     if (message.id == null) return;
@@ -201,33 +205,16 @@ class _ChatScreenState extends State<ChatScreen> {
     final selected = await showModalBottomSheet<String>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (sheetContext) => Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
-        decoration: BoxDecoration(
-          color: Theme.of(sheetContext).colorScheme.surface,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: _reactionOptions.map((emoji) {
-            return GestureDetector(
-              onTap: () => Navigator.pop(sheetContext, emoji),
-              child: Padding(
-                padding: const EdgeInsets.all(4),
-                child: Text(emoji, style: const TextStyle(fontSize: 26)),
-              ),
-            );
-          }).toList(),
-        ),
+      builder: (sheetContext) => _ReactionSheet(
+        options: _reactionOptions,
+        currentReaction: message.reaction,
       ),
     );
 
     if (selected == null) return;
-    HapticFeedback.selectionClick();
+    AppSound.mediumImpact();
     final newReaction = (message.reaction == selected) ? null : selected;
     final previousReaction = message.reaction;
-
     setState(() => message.reaction = newReaction);
 
     try {
@@ -235,14 +222,7 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => message.reaction = previousReaction);
-      HapticFeedback.lightImpact();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Failed to save reaction'),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      AppSound.lightImpact();
     }
   }
 
@@ -267,19 +247,20 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final gradient = AppColors.personaGradient(widget.persona.name);
+    final personaBg = gradient.first.withValues(alpha: 0.04);
 
     return Scaffold(
       appBar: AppBar(
         titleSpacing: 8,
         title: Row(
           children: [
-            PersonaAvatar(personaName: widget.persona.name, size: 36),
+            _BreathingAvatar(
+              personaName: widget.persona.name,
+              size: 36,
+            ),
             const SizedBox(width: 10),
             Flexible(
-              child: Text(
-                widget.persona.name,
-                overflow: TextOverflow.ellipsis,
-              ),
+              child: Text(widget.persona.name, overflow: TextOverflow.ellipsis),
             ),
           ],
         ),
@@ -287,194 +268,183 @@ class _ChatScreenState extends State<ChatScreen> {
           IconButton(
             tooltip: 'Clear chat',
             icon: const Icon(Icons.delete_outline_rounded),
-            onPressed: _messages.isEmpty && _conversationId == null
-                ? null
-                : _clearConversation,
+            onPressed:
+                _messages.isEmpty && _conversationId == null ? null : _clearConversation,
           ),
         ],
       ),
       body: SafeArea(
         child: _loadingHistory
-            ? Center(
-                child: CircularProgressIndicator(
-                  color: gradient.first,
-                ),
-              )
-            : Column(
-                children: [
-                  Expanded(
-                    child: ListView.builder(
-                      controller: _scrollController,
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                      itemCount: _messages.length + (_isTyping ? 1 : 0),
-                      itemBuilder: (context, index) {
-                        if (_isTyping && index == _messages.length) {
-                          return _TypingBubble(
-                            gradient: gradient,
-                            key: ValueKey('typing-$_animationKey'),
-                          );
-                        }
-
-                        final message = _messages[index];
-                        return _AnimatedMessageBubble(
-                          key: ValueKey('msg-${message.content.length}-$index'),
-                          message: message,
-                          gradient: gradient,
-                          onLongPress: () => _showReactionPicker(message),
-                          index: index,
-                        );
-                      },
-                    ),
-                  ),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      border: Border(
-                        top: BorderSide(color: Theme.of(context).dividerColor),
-                      ),
-                    ),
-                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+            ? const ChatShimmer()
+            : Container(
+                color: personaBg,
+                child: Stack(
+                  children: [
+                    Column(
                       children: [
                         Expanded(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).scaffoldBackgroundColor,
-                              borderRadius: BorderRadius.circular(22),
-                              border: Border.all(
-                                color: Theme.of(context).dividerColor,
-                              ),
-                            ),
-                            child: TextField(
-                              controller: _controller,
-                              minLines: 1,
-                              maxLines: 4,
-                              textInputAction: TextInputAction.send,
-                              decoration: const InputDecoration(
-                                hintText: 'Type a message...',
-                                border: InputBorder.none,
-                                isDense: true,
-                                filled: false,
-                                contentPadding: EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                              onSubmitted: (_) => _sendMessage(),
-                            ),
+                          child: ListView.builder(
+                            controller: _scrollController,
+                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                            itemCount:
+                                _messages.length + (_isTyping ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (_isTyping && index == _messages.length) {
+                                return _TypingBubble(
+                                  gradient: gradient,
+                                  key: ValueKey('typing-$_animationKey'),
+                                );
+                              }
+                              final message = _messages[index];
+                              return _AnimatedMessageBubble(
+                                key: ValueKey(
+                                    'msg-${message.content.hashCode}-$index'),
+                                message: message,
+                                gradient: gradient,
+                                onLongPress: () =>
+                                    _showReactionPicker(message),
+                              );
+                            },
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          curve: Curves.easeOutCubic,
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: (_hasText && !_isTyping)
-                                ? LinearGradient(colors: gradient)
-                                : null,
-                            color: (_hasText && !_isTyping)
-                                ? null
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
-                            boxShadow: (_hasText && !_isTyping)
-                                ? [
-                                    BoxShadow(
-                                      color: gradient.first
-                                          .withValues(alpha: 0.4),
-                                      blurRadius: 12,
-                                      offset: const Offset(0, 4),
-                                    ),
-                                  ]
-                                : null,
-                          ),
-                          child: IconButton(
-                            tooltip: 'Send',
-                            icon: AnimatedSwitcher(
-                              duration: const Duration(milliseconds: 150),
-                              child: Icon(
-                                _isTyping
-                                    ? Icons.hourglass_top_rounded
-                                    : Icons.arrow_upward_rounded,
-                                key: ValueKey(_isTyping),
-                                color: (_hasText && !_isTyping)
-                                    ? Colors.white
-                                    : Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                              ),
-                            ),
-                            onPressed: (_hasText && !_isTyping)
-                                ? _sendMessage
-                                : null,
-                          ),
+                        _ChatInputBar(
+                          controller: _controller,
+                          hasText: _hasText,
+                          isTyping: _isTyping,
+                          gradient: gradient,
+                          onSend: _sendMessage,
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    // Scroll-to-bottom FAB
+                    AnimatedOpacity(
+                      duration: AppMotion.micro,
+                      opacity: _showScrollToBottom ? 1.0 : 0.0,
+                      child: Positioned(
+                        bottom: 80,
+                        right: 16,
+                        child: FloatingActionButton.small(
+                          heroTag: 'scroll-to-bottom',
+                          onPressed: () {
+                            AppSound.selectionClick();
+                            _scrollToBottom();
+                          },
+                          backgroundColor: gradient.first,
+                          foregroundColor: Colors.white,
+                          child: const Icon(Icons.keyboard_arrow_down_rounded),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
       ),
     );
   }
 }
 
-class _AnimatedMessageBubble extends StatefulWidget {
-  final ChatMessage message;
-  final List<Color> gradient;
-  final VoidCallback? onLongPress;
-  final int index;
+// ── Breathing Avatar ─────────────────────────────────────────────────────
 
-  const _AnimatedMessageBubble({
-    super.key,
-    required this.message,
-    required this.gradient,
-    this.onLongPress,
-    required this.index,
-  });
+class _BreathingAvatar extends StatefulWidget {
+  final String personaName;
+  final double size;
+
+  const _BreathingAvatar({required this.personaName, this.size = 36});
 
   @override
-  State<_AnimatedMessageBubble> createState() => _AnimatedMessageBubbleState();
+  State<_BreathingAvatar> createState() => _BreathingAvatarState();
 }
 
-class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
+class _BreathingAvatarState extends State<_BreathingAvatar>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<Offset> _slideAnimation;
-  late final Animation<double> _fadeAnimation;
+  late final Animation<double> _scale;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 350),
+      duration: const Duration(milliseconds: 4000),
+    )..repeat(reverse: true);
+    _scale = Tween<double>(begin: 1.0, end: 1.04).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: PersonaAvatar(personaName: widget.personaName, size: widget.size),
+    );
+  }
+}
+
+// ── Animated Message Bubble ──────────────────────────────────────────────
+
+class _AnimatedMessageBubble extends StatefulWidget {
+  final ChatMessage message;
+  final List<Color> gradient;
+  final VoidCallback? onLongPress;
+
+  const _AnimatedMessageBubble({
+    super.key,
+    required this.message,
+    required this.gradient,
+    this.onLongPress,
+  });
+
+  @override
+  State<_AnimatedMessageBubble> createState() =>
+      _AnimatedMessageBubbleState();
+}
+
+class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<Offset> _slideAnim;
+  late final Animation<double> _fadeAnim;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
     );
 
     final isUser = widget.message.role == 'user';
-    final beginOffset = isUser
-        ? const Offset(0.3, 0.0)
-        : const Offset(-0.3, 0.0);
+    final beginOffset =
+        isUser ? const Offset(0.2, 0.0) : const Offset(-0.2, 0.0);
 
-    _slideAnimation = Tween<Offset>(
-      begin: beginOffset,
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    _slideAnim = Tween<Offset>(begin: beginOffset, end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: AppMotion.easeOutCubic,
+      ),
+    );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    ));
+    _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
+    );
+
+    _scaleAnim = Tween<double>(begin: 0.92, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
+      ),
+    );
 
     _controller.forward();
   }
@@ -489,80 +459,73 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
   Widget build(BuildContext context) {
     final isUser = widget.message.role == 'user';
     final maxWidth = MediaQuery.sizeOf(context).width * 0.78;
+    final gradient = widget.gradient;
 
     return SlideTransition(
-      position: _slideAnimation,
+      position: _slideAnim,
       child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: Align(
-          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth),
-            child: GestureDetector(
-              onLongPress: widget.onLongPress,
-              child: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.symmetric(vertical: 5),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 15, vertical: 11),
-                    decoration: BoxDecoration(
-                      gradient: isUser
-                          ? LinearGradient(
-                              colors: widget.gradient,
-                            )
-                          : null,
-                      color: isUser
-                          ? null
-                          : widget.gradient.first.withValues(alpha: 0.16),
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(18),
-                        topRight: const Radius.circular(18),
-                        bottomLeft: Radius.circular(isUser ? 18 : 4),
-                        bottomRight: Radius.circular(isUser ? 4 : 18),
-                      ),
-                      boxShadow: isUser
-                          ? [
-                              BoxShadow(
-                                color: widget.gradient.first.withValues(alpha: 0.25),
-                                blurRadius: 8,
-                                offset: const Offset(0, 2),
-                              ),
-                            ]
-                          : null,
-                    ),
-                    child: Text(
-                      widget.message.content,
-                      style: TextStyle(
+        opacity: _fadeAnim,
+        child: ScaleTransition(
+          scale: _scaleAnim,
+          child: Align(
+            alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: GestureDetector(
+                onLongPress: widget.onLongPress,
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 15, vertical: 11),
+                      decoration: BoxDecoration(
+                        gradient: isUser
+                            ? LinearGradient(colors: gradient)
+                            : null,
                         color: isUser
-                            ? Colors.white
-                            : Theme.of(context).colorScheme.onSurface,
-                        fontSize: 15,
-                        height: 1.4,
+                            ? null
+                            : gradient.first.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.only(
+                          topLeft: const Radius.circular(18),
+                          topRight: const Radius.circular(18),
+                          bottomLeft: Radius.circular(isUser ? 18 : 4),
+                          bottomRight: Radius.circular(isUser ? 4 : 18),
+                        ),
+                        boxShadow: isUser
+                            ? [
+                                BoxShadow(
+                                  color:
+                                      gradient.first.withValues(alpha: 0.25),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ]
+                            : null,
+                      ),
+                      child: Text(
+                        widget.message.content,
+                        style: TextStyle(
+                          color: isUser
+                              ? Colors.white
+                              : Theme.of(context).colorScheme.onSurface,
+                          fontSize: 15,
+                          height: 1.4,
+                        ),
                       ),
                     ),
-                  ),
-                  if (widget.message.reaction != null)
-                    Positioned(
-                      bottom: -6,
-                      right: -2,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Theme.of(context).colorScheme.surface,
-                          border: Border.all(
-                            color: Theme.of(context).dividerColor,
-                          ),
-                        ),
-                        child: Text(
-                          widget.message.reaction!,
-                          style: const TextStyle(fontSize: 12),
+                    if (widget.message.reaction != null)
+                      Positioned(
+                        bottom: -6,
+                        right: -2,
+                        child: _ReactionBadge(
+                          reaction: widget.message.reaction!,
+                          gradient: gradient,
                         ),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -571,6 +534,72 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
     );
   }
 }
+
+// ── Reaction Badge (animated landing) ────────────────────────────────────
+
+class _ReactionBadge extends StatefulWidget {
+  final String reaction;
+  final List<Color> gradient;
+
+  const _ReactionBadge({required this.reaction, required this.gradient});
+
+  @override
+  State<_ReactionBadge> createState() => _ReactionBadgeState();
+}
+
+class _ReactionBadgeState extends State<_ReactionBadge>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scale;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _scale = TweenSequence<double>([
+      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.3), weight: 30),
+      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 70),
+    ]).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOutCubic,
+    ));
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: _scale,
+      child: Container(
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Theme.of(context).colorScheme.surface,
+          border: Border.all(color: Theme.of(context).dividerColor),
+          boxShadow: [
+            BoxShadow(
+              color: widget.gradient.first.withValues(alpha: 0.3),
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Text(widget.reaction, style: const TextStyle(fontSize: 12)),
+      ),
+    );
+  }
+}
+
+// ── Typing Bubble (enhanced with glow) ───────────────────────────────────
 
 class _TypingBubble extends StatefulWidget {
   final List<Color> gradient;
@@ -604,7 +633,7 @@ class _TypingBubbleState extends State<_TypingBubble>
   Widget build(BuildContext context) {
     return SlideTransition(
       position: Tween<Offset>(
-        begin: const Offset(-0.3, 0.0),
+        begin: const Offset(-0.2, 0.0),
         end: Offset.zero,
       ).animate(CurvedAnimation(
         parent: _controller,
@@ -630,6 +659,13 @@ class _TypingBubbleState extends State<_TypingBubble>
                 ],
               ),
               borderRadius: BorderRadius.circular(18),
+              boxShadow: [
+                BoxShadow(
+                  color: widget.gradient.first.withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 2),
+                ),
+              ],
             ),
             child: AnimatedBuilder(
               animation: _controller,
@@ -657,12 +693,10 @@ class _TypingBubbleState extends State<_TypingBubble>
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 colors: [
-                                  widget.gradient.first.withValues(
-                                    alpha: 0.4 + 0.6 * bounce,
-                                  ),
-                                  widget.gradient.last.withValues(
-                                    alpha: 0.4 + 0.6 * bounce,
-                                  ),
+                                  widget.gradient.first
+                                      .withValues(alpha: 0.4 + 0.6 * bounce),
+                                  widget.gradient.last
+                                      .withValues(alpha: 0.4 + 0.6 * bounce),
                                 ],
                               ),
                               boxShadow: [
@@ -683,6 +717,191 @@ class _TypingBubbleState extends State<_TypingBubble>
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── Reaction Picker Bottom Sheet ─────────────────────────────────────────
+
+class _ReactionSheet extends StatefulWidget {
+  final List<String> options;
+  final String? currentReaction;
+
+  const _ReactionSheet({required this.options, this.currentReaction});
+
+  @override
+  State<_ReactionSheet> createState() => _ReactionSheetState();
+}
+
+class _ReactionSheetState extends State<_ReactionSheet>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(24),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: List.generate(widget.options.length, (i) {
+          final emoji = widget.options[i];
+          final delay = i * 0.06;
+          final scaleAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+            CurvedAnimation(
+              parent: _controller,
+              curve: Interval(delay, (delay + 0.4).clamp(0.0, 1.0),
+                  curve: Curves.elasticOut),
+            ),
+          );
+          final fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+            CurvedAnimation(
+              parent: _controller,
+              curve: Interval(delay, (delay + 0.3).clamp(0.0, 1.0),
+                  curve: Curves.easeOut),
+            ),
+          );
+          final isSelected = widget.currentReaction == emoji;
+
+          return ScaleTransition(
+            scale: scaleAnim,
+            child: FadeTransition(
+              opacity: fadeAnim,
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context, emoji),
+                child: AnimatedContainer(
+                  duration: AppMotion.micro,
+                  padding: const EdgeInsets.all(6),
+                  decoration: isSelected
+                      ? BoxDecoration(
+                          color: AppColors.primary.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        )
+                      : null,
+                  child: Text(emoji,
+                      style: const TextStyle(fontSize: 28)),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+// ── Chat Input Bar ───────────────────────────────────────────────────────
+
+class _ChatInputBar extends StatelessWidget {
+  final TextEditingController controller;
+  final bool hasText;
+  final bool isTyping;
+  final List<Color> gradient;
+  final VoidCallback onSend;
+
+  const _ChatInputBar({
+    required this.controller,
+    required this.hasText,
+    required this.isTyping,
+    required this.gradient,
+    required this.onSend,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final active = hasText && !isTyping;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: Theme.of(context).dividerColor),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(color: Theme.of(context).dividerColor),
+              ),
+              child: TextField(
+                controller: controller,
+                minLines: 1,
+                maxLines: 4,
+                textInputAction: TextInputAction.send,
+                decoration: const InputDecoration(
+                  hintText: 'Type a message...',
+                  border: InputBorder.none,
+                  isDense: true,
+                  filled: false,
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                onSubmitted: (_) => onSend(),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          AnimatedContainer(
+            duration: AppMotion.micro,
+            curve: Curves.easeOutCubic,
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: active ? LinearGradient(colors: gradient) : null,
+              color: active ? null : Theme.of(context).colorScheme.surfaceContainerHighest,
+              boxShadow: active
+                  ? [
+                      BoxShadow(
+                        color: gradient.first.withValues(alpha: 0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 4),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: IconButton(
+              tooltip: 'Send',
+              icon: AnimatedSwitcher(
+                duration: AppMotion.micro,
+                child: Icon(
+                  isTyping ? Icons.hourglass_top_rounded : Icons.arrow_upward_rounded,
+                  key: ValueKey(isTyping),
+                  color: active
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              onPressed: active ? onSend : null,
+            ),
+          ),
+        ],
       ),
     );
   }
