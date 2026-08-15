@@ -48,8 +48,17 @@ public class PersonaService {
     public boolean isPersonaAccessible(User user, UUID personaId) {
         Persona persona = getPersonaById(personaId);
         boolean isOwner = persona.getOwner() != null && persona.getOwner().getId().equals(user.getId());
-        return isOwner
-                || user.getSubscriptionTier() == SubscriptionTier.premium
+        if (isOwner) {
+            // A custom persona is visible ONLY to the user who created it,
+            // regardless of anyone's subscription tier.
+            return true;
+        }
+        if (persona.getOwner() != null) {
+            // Someone else's custom persona -- not accessible to this user.
+            return false;
+        }
+        // Built-in persona: free for everyone; premium only for premium users.
+        return user.getSubscriptionTier() == SubscriptionTier.premium
                 || persona.getSubscriptionTier() == SubscriptionTier.free;
     }
 
