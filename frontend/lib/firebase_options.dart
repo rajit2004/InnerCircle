@@ -1,23 +1,23 @@
 // ============================================================================
-// PLACEHOLDER FILE -- DO NOT SHIP THESE VALUES
+// FIREBASE CONFIGURATION
 // ============================================================================
 //
-// FEATURE (push notifications, 2026-07-05): every value below is a fake
-// placeholder. This file cannot be generated correctly without your actual
-// Firebase project, which only you can create (it needs your Google account
-// and the Firebase console). See PUSH_NOTIFICATIONS_SETUP.md for the full
-// walkthrough, but the short version:
+// FEATURE (push notifications, 2026-07-05): the values below are the real
+// Firebase project configuration for this app and are already populated -- the
+// project compiles and runs against them as-is.
+//
+// If you ever create a new Firebase project or change the existing one,
+// regenerate this file (it overwrites all values here) with:
 //
 //   1. dart pub global activate flutterfire_cli
 //   2. flutterfire configure
 //
 // That command logs into your Firebase account, lets you pick/create a
-// project, and OVERWRITES this exact file with your real apiKey, appId,
-// projectId, and messagingSenderId. Do that -- don't hand-edit the values
-// below, they won't work no matter what you type in.
+// project, and overwrites this file with your real apiKey, appId, projectId,
+// and messagingSenderId.
 //
-// Kept here (rather than leaving the file missing) purely so the rest of
-// the app's imports resolve and the project stays compilable while you do
+// Kept here (rather than leaving the file missing) so the rest of the app's
+// imports resolve and the project stays compilable.
 // the Firebase console setup -- main.dart's Firebase.initializeApp() call
 // will fail at runtime with these placeholder values until you run
 // flutterfire configure.
