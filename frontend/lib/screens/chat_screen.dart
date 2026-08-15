@@ -146,7 +146,40 @@ class _ChatScreenState extends State<ChatScreen> {
     }
   }
 
-  void _clearConversation() {
+  Future<void> _clearConversation() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Clear chat?'),
+        content: Text(
+          'This permanently deletes your conversation with '
+          '${widget.persona.name}. This cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    try {
+      await ChatService.deleteConversation(widget.persona.id);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to clear chat: ${e.toString()}')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     setState(() {
       _messages.clear();
       final greeting = widget.persona.greeting?.trim();
@@ -226,9 +259,6 @@ class _ChatScreenState extends State<ChatScreen> {
 
   String _friendlyError(Object error) {
     final text = error.toString().replaceFirst('Exception: ', '').trim();
-    if (text.contains('No static resource api/chat/sync')) {
-      return 'The app was still calling the old chat endpoint. I changed it to /api/chat.';
-    }
     return text.isEmpty
         ? 'Something went wrong while sending the message.'
         : text;
