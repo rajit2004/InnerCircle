@@ -30,16 +30,24 @@ class ScheduledMessage {
   });
 
   factory ScheduledMessage.fromJson(Map<String, dynamic> json) {
-    final timeParts = (json['scheduledAt'] as String).split(':');
+    // BUG FIX: previously assumed scheduledAt was always a "HH:mm" string and
+    // did int.parse on raw substrings -- a null, non-string, or malformed
+    // value threw and took down the entire reminders list. Parse defensively.
+    TimeOfDay parseTime(dynamic raw) {
+      final str = raw?.toString();
+      if (str == null || str.isEmpty) return const TimeOfDay(hour: 0, minute: 0);
+      final parts = str.split(':');
+      final hour = int.tryParse(parts[0]) ?? 0;
+      final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
+      return TimeOfDay(hour: hour.clamp(0, 23), minute: minute.clamp(0, 59));
+    }
+
     return ScheduledMessage(
-      id: json['id'] as String,
-      personaId: json['personaId'] as String,
+      id: json['id'] as String? ?? '',
+      personaId: json['personaId'] as String? ?? '',
       personaName: json['personaName'] as String? ?? 'Unknown',
       personaAvatarEmoji: json['personaAvatarEmoji'] as String?,
-      scheduledAt: TimeOfDay(
-        hour: int.parse(timeParts[0]),
-        minute: int.parse(timeParts[1]),
-      ),
+      scheduledAt: parseTime(json['scheduledAt']),
       daysOfWeek: json['daysOfWeek'] as String? ?? '1,2,3,4,5,6,7',
       messageType: json['messageType'] as String? ?? 'check_in',
       active: json['active'] as bool? ?? true,
