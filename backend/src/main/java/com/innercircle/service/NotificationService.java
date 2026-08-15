@@ -115,15 +115,15 @@ public class NotificationService {
         LocalDateTime now = LocalDateTime.now();
         LocalTime currentMinute = now.toLocalTime().withSecond(0).withNano(0);
         // Java DayOfWeek is 1=Monday..7=Sunday; this schema's days_of_week uses
-        // 1=Sunday..7=Saturday (matching Postgres EXTRACT(DOW)), so convert.
+        // 1=Sunday..7=Saturday, so convert. NOTE: this is an internal convention
+        // (NOT Postgres EXTRACT(DOW), which is 0=Sunday..6=Saturday) -- the DB
+        // column just stores the CSV string "1,2,...".
         int isoDay = now.getDayOfWeek().getValue(); // 1=Mon .. 7=Sun
         int dowSundayBased = (isoDay % 7) + 1;       // 1=Sun .. 7=Sat
 
         List<ScheduledMessage> due = scheduledMessageRepository.findByActiveTrue().stream()
                 .filter(sm -> sm.getScheduledAt().withSecond(0).withNano(0).equals(currentMinute))
-                .filter(sm -> sm.getDaysOfWeek() == null
-                        || sm.getDaysOfWeek().isBlank()
-                        || sm.getDaysOfWeek().contains(String.valueOf(dowSundayBased)))
+                .filter(sm -> dayMatches(sm.getDaysOfWeek(), dowSundayBased))
                 .filter(sm -> sm.getLastSentAt() == null
                         || sm.getLastSentAt().isBefore(Instant.now().minus(1, ChronoUnit.HOURS)))
                 .toList();
@@ -187,5 +187,22 @@ public class NotificationService {
 
     private String safePrefix(String token) {
         return token == null ? "null" : token.substring(0, Math.min(8, token.length()));
+    }
+
+    // BUG FIX: previously used daysOfWeek.contains(String.valueOf(day)), which
+    // is a substring test -- e.g. "12" would falsely match day 1 or 2. Match by
+    // exact CSV token instead.
+    private boolean dayMatches(String daysOfWeek, int day) {
+        if (daysOfWeek == null || daysOfWeek.isBlank()) return true; // no restriction = every day
+        for (String part : daysOfWeek.split(",")) {
+            String trimmed = part.trim();
+            if (trimmed.isEmpty()) continue;
+            try {
+                if (Integer.parseInt(trimmed) == day) return true;
+            } catch (NumberFormatException ignored) {
+                // ignore malformed tokens
+            }
+        }
+        return false;
     }
 }
