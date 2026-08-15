@@ -12,6 +12,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.util.concurrent.Callable;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -20,10 +21,16 @@ public class ChatController {
 
     private final ChatService chatService;
 
+    // PERF: returns a Callable so Spring MVC executes chatDirect() on its async
+    // task executor instead of blocking a Tomcat worker thread while Groq is
+    // called (the .block() inside chatDirect would otherwise hold a servlet
+    // thread for the full multi-second LLM latency, exhausting the pool under
+    // concurrency). Exceptions thrown inside the Callable still propagate to
+    // the @ControllerAdvice exception handlers.
     @PostMapping
-    public ResponseEntity<ChatResponse> chat(@AuthenticationPrincipal User user,
-                                             @Valid @RequestBody ChatRequest request) {
-        return ResponseEntity.ok(chatService.chatDirect(request, user));
+    public Callable<ResponseEntity<ChatResponse>> chat(@AuthenticationPrincipal User user,
+                                                       @Valid @RequestBody ChatRequest request) {
+        return () -> ResponseEntity.ok(chatService.chatDirect(request, user));
     }
 
     // FEATURE (chat history, 2026-07-02): new endpoint so the frontend can
@@ -36,6 +43,16 @@ public class ChatController {
     public ResponseEntity<ChatHistoryResponse> history(@AuthenticationPrincipal User user,
                                                        @RequestParam UUID personaId) {
         return ResponseEntity.ok(chatService.getHistory(personaId, user));
+    }
+
+    // FEATURE (clear chat, 2026-07-06): deletes the most recent conversation
+    // for the persona so "clear chat" actually wipes server-side history. See
+    // ChatService.deleteConversation().
+    @DeleteMapping
+    public ResponseEntity<Void> clear(@AuthenticationPrincipal User user,
+                                      @RequestParam UUID personaId) {
+        chatService.deleteConversation(personaId, user);
+        return ResponseEntity.noContent().build();
     }
 
     // FEATURE (message reactions, round 12): sets or clears the reaction on
