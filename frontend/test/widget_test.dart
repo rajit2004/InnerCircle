@@ -11,7 +11,7 @@ void main() {
     await tester.pumpWidget(const InnerCircleApp());
     await tester.pump();
 
-    expect(find.text('InnerCircle Login'), findsOneWidget);
-    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Welcome back'), findsOneWidget);
+    expect(find.text('Log in'), findsOneWidget);
   });
 }
