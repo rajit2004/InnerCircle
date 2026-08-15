@@ -63,9 +63,13 @@ public class EmbeddingService {
             byte[] hash = digest.digest(word.getBytes(StandardCharsets.UTF_8));
             int h = ((hash[0] & 0xFF) << 24) | ((hash[1] & 0xFF) << 16)
                     | ((hash[2] & 0xFF) << 8) | (hash[3] & 0xFF);
-            return Math.abs(h) % DIMENSIONS;
+            // BUG FIX: Math.abs(Integer.MIN_VALUE) == Integer.MIN_VALUE (still
+            // negative), so the `%` could yield a negative index and throw
+            // ArrayIndexOutOfBoundsException on the chat path. Mask the sign bit
+            // instead to guarantee a non-negative bucket.
+            return (h & 0x7FFFFFFF) % DIMENSIONS;
         } catch (NoSuchAlgorithmException e) {
-            return Math.abs(word.hashCode()) % DIMENSIONS;
+            return (word.hashCode() & 0x7FFFFFFF) % DIMENSIONS;
         }
     }
 
