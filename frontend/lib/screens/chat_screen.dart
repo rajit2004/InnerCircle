@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../models/chat_message.dart';
 import '../models/persona.dart';
@@ -105,6 +106,8 @@ class _ChatScreenState extends State<ChatScreen> {
     final content = _controller.text.trim();
     if (content.isEmpty) return;
 
+    // Micro-interaction: haptic feedback on send
+    HapticFeedback.lightImpact();
     _controller.clear();
     setState(() {
       _messages.add(ChatMessage(role: 'user', content: content));
@@ -139,10 +142,15 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
+      HapticFeedback.lightImpact();
       setState(() => _isTyping = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(_friendlyError(e))));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_friendlyError(e)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -173,8 +181,13 @@ class _ChatScreenState extends State<ChatScreen> {
       await ChatService.deleteConversation(widget.persona.id);
     } catch (e) {
       if (!mounted) return;
+      HapticFeedback.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to clear chat: ${e.toString()}')),
+        SnackBar(
+          content: Text('Failed to clear chat: ${e.toString()}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
       return;
     }
@@ -228,6 +241,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
     if (selected == null) return;
 
+    // Micro-interaction: haptic feedback on reaction selection
+    HapticFeedback.selectionClick();
+
     // Tapping the reaction that's already set again clears it, rather than
     // needing a separate "remove reaction" affordance.
     final newReaction = (message.reaction == selected) ? null : selected;
@@ -237,11 +253,16 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       await ChatService.setReaction(message.id!, newReaction);
-    } catch (e) {
+       } catch (e) {
       if (!mounted) return;
       setState(() => message.reaction = previousReaction);
+      HapticFeedback.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to save reaction')),
+        SnackBar(
+          content: Text('Failed to save reaction'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
