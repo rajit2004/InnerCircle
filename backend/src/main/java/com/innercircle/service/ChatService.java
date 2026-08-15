@@ -236,6 +236,12 @@ public class ChatService {
         Persona persona = personaRepository.findById(personaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
 
+        // SECURITY: mirror the access check chatDirect() enforces, so a
+        // downgraded free user can't read a premium persona's history.
+        if (!personaService.isPersonaAccessible(user, personaId)) {
+            throw new ForbiddenException("Upgrade to premium to view this persona's history");
+        }
+
         Optional<Conversation> conversationOpt =
                 conversationRepository.findFirstByUserAndPersonaOrderByUpdatedAtDesc(user, persona);
 
@@ -251,6 +257,26 @@ public class ChatService {
                 .toList();
 
         return new ChatHistoryResponse(conversation.getId(), messages);
+    }
+
+    // FEATURE (clear chat, 2026-07-06): deletes the most recent conversation for
+    // the given persona so "clear chat" actually wipes server-side history
+    // instead of only resetting local widget state (which made cleared messages
+    // silently reappear on the next reopen, because getHistory() would just
+    // reload the same still-existing conversation). Messages cascade-delete via
+    // the ON DELETE CASCADE on messages.conversation_id, so no manual cleanup.
+    @Transactional
+    public void deleteConversation(UUID personaId, User user) {
+        Persona persona = personaRepository.findById(personaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
+
+        conversationRepository.findFirstByUserAndPersonaOrderByUpdatedAtDesc(user, persona)
+                .ifPresent(conversation -> {
+                    if (!conversation.getUser().getId().equals(user.getId())) {
+                        throw new ForbiddenException("No access to this conversation");
+                    }
+                    conversationRepository.delete(conversation);
+                });
     }
 
     // FEATURE (message reactions, round 12): sets or clears (reaction ==
