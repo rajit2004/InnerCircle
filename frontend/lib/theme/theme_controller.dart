@@ -10,7 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// "perfectly mirror my OS setting." A user who wants dark can just pick
 /// Dark directly.
 ///
-/// Wraps MaterialApp in main.dart via ValueListenableBuilder<ThemeMode> so
+/// Wraps MaterialApp in main.dart via `ValueListenableBuilder<ThemeMode>` so
 /// toggling rebuilds the whole tree with the new theme immediately.
 class ThemeController {
   ThemeController._();
