@@ -17,6 +17,10 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
+  sql:
+    init:
+      mode: always
+      schema-locations: file:../database/schema.sql
   jpa:
     hibernate:
       ddl-auto: none
@@ -49,9 +53,9 @@ firebase:
   credentials-path: ${FCM_CREDENTIALS_PATH:}
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://10.0.2.2:8080}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:3000,http://10.0.2.2:8080,http://10.76.238.34:8080}
 
 logging:
   level:
-    org.springframework.security: INFO
+    org.springframework.security: DEBUG
     com.innercircle: INFO
