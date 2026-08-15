@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../theme/app_theme.dart';
 
@@ -26,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _register() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
+    HapticFeedback.lightImpact();
     try {
       await AuthService.register(
         _emailController.text.trim(),
@@ -35,10 +37,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // login_screen.dart -- see bugs.md Bug 2.
       if (!mounted) return;
       Navigator.pushReplacementNamed(context, '/home');
+      HapticFeedback.mediumImpact();
     } catch (e) {
       if (!mounted) return;
+      HapticFeedback.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
     if (!mounted) return;
