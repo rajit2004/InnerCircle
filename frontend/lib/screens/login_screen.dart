@@ -34,8 +34,8 @@ class _LoginScreenState extends State<LoginScreen> {
       Navigator.of(context).pushReplacement(
         PageRouteBuilder(
           transitionDuration: const Duration(milliseconds: 300),
-          pageBuilder: (_, __, ___) => Container(color: Theme.of(context).scaffoldBackgroundColor),
-          transitionsBuilder: (_, animation, __, child) {
+          pageBuilder: (_, _, _) => Container(color: Theme.of(context).scaffoldBackgroundColor),
+          transitionsBuilder: (_, animation, _, child) {
             return FadeTransition(opacity: animation, child: child);
           },
         ),

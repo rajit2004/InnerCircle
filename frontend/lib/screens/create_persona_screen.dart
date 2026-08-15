@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../services/persona_service.dart';
 import '../theme/app_theme.dart';
@@ -56,6 +57,7 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen> {
   Future<void> _create() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
+    HapticFeedback.lightImpact();
 
     try {
       await PersonaService.createPersona(
@@ -65,12 +67,18 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen> {
         avatarEmoji: _selectedEmoji,
       );
       if (!mounted) return;
+      HapticFeedback.mediumImpact();
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
+      HapticFeedback.lightImpact();
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
       );
     }
   }
