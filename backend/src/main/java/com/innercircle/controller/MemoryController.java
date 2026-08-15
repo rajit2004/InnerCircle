@@ -1,6 +1,7 @@
 package com.innercircle.controller;
 
 import com.innercircle.dto.MemoryRequest;
+import com.innercircle.dto.MemoryResponse;
 import com.innercircle.exception.ForbiddenException;
 import com.innercircle.exception.ResourceNotFoundException;
 import com.innercircle.model.Memory;
@@ -36,18 +37,22 @@ public class MemoryController {
     // conversation -- previously it was invisible unless you queried with
     // no personaId filter at all.
     @GetMapping
-    public List<Memory> getMemories(@AuthenticationPrincipal User user,
+    public List<MemoryResponse> getMemories(@AuthenticationPrincipal User user,
                                     @RequestParam(required = false) UUID personaId) {
         if (personaId != null) {
             Persona persona = personaRepository.findById(personaId)
                     .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
-            return memoryRepository.findByUserAndPersonaOrSharedOrderByImportanceDesc(user, persona);
+            return memoryRepository.findByUserAndPersonaOrSharedOrderByImportanceDesc(user, persona).stream()
+                    .map(this::toResponse)
+                    .toList();
         }
-        return memoryRepository.findByUserOrderByImportanceDesc(user);
+        return memoryRepository.findByUserOrderByImportanceDesc(user).stream()
+                .map(this::toResponse)
+                .toList();
     }
 
     @PostMapping
-    public Memory createMemory(@AuthenticationPrincipal User user,
+    public MemoryResponse createMemory(@AuthenticationPrincipal User user,
                                @Valid @RequestBody MemoryRequest request) {
         Persona persona = null;
         if (request.getPersonaId() != null) {
@@ -62,7 +67,7 @@ public class MemoryController {
         memory.setShared(request.isShared());
         memory.setEmbedding(embeddingService.toPgVectorLiteral(embeddingService.embed(request.getFact())));
         memory.setImportance(1);
-        return memoryRepository.save(memory);
+        return toResponse(memoryRepository.save(memory));
     }
 
     @DeleteMapping("/{id}")
@@ -73,5 +78,17 @@ public class MemoryController {
             throw new ForbiddenException("You do not have permission to delete this memory");
         }
         memoryRepository.delete(memory);
+    }
+
+    private MemoryResponse toResponse(Memory memory) {
+        return new MemoryResponse(
+                memory.getId(),
+                memory.getFact(),
+                memory.isShared(),
+                memory.getImportance(),
+                memory.getLastAccessed(),
+                memory.getPersona() != null ? memory.getPersona().getId() : null,
+                memory.getPersona() != null ? memory.getPersona().getName() : null
+        );
     }
 }
