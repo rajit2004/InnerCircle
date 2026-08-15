@@ -40,6 +40,8 @@ groq:
 jwt:
   secret: ${JWT_SECRET:your-super-secret-jwt-key-change-in-production}
   expiration: 86400000        # 24 hours
+  # Set to true in production to refuse to start unless JWT_SECRET is set.
+  require-secret: ${JWT_REQUIRE_SECRET:false}
 
 firebase:
   # Path to a Firebase service-account JSON file. Leave unset to run without
@@ -51,5 +53,5 @@ cors:
 
 logging:
   level:
-    org.springframework.security: DEBUG
-    com.innercircle: DEBUG
+    org.springframework.security: INFO
+    com.innercircle: INFO
