@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../models/persona.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../services/persona_service.dart';
 import '../theme/app_theme.dart';
+import '../theme/motion.dart';
+import '../services/sound_service.dart';
 import '../widgets/exit_confirmation_wrapper.dart';
 import '../services/push_notification_service.dart';
 import '../widgets/persona_avatar.dart';
@@ -22,20 +23,22 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   List<Persona> _personas = [];
   bool _loading = true;
   String? _error;
   int _selectedIndex = 0;
   late AnimationController _fabController;
   late Animation<double> _fabScale;
+  bool _fabOpen = false;
 
   @override
   void initState() {
     super.initState();
     _fabController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 350),
     );
     _fabScale = CurvedAnimation(
       parent: _fabController,
@@ -66,7 +69,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ? 'premium'
               : 'free';
       await AuthService.updateSubscriptionTier(inferredTier);
-
       if (!mounted) return;
       setState(() {
         _personas = list;
@@ -85,23 +87,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _logout() async {
-    HapticFeedback.lightImpact();
+    AppSound.lightImpact();
     await AuthService.logout();
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   Future<void> _openCreatePersona() async {
-    HapticFeedback.lightImpact();
+    AppSound.lightImpact();
+    // FAB morph: rotate + to ×
+    setState(() => _fabOpen = true);
     final created = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => const CreatePersonaScreen()),
     );
+    setState(() => _fabOpen = false);
     if (created == true) _fetchPersonas();
   }
 
   Future<void> _deletePersona(Persona persona) async {
-    HapticFeedback.lightImpact();
+    AppSound.lightImpact();
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -162,7 +167,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: FloatingActionButton(
                   onPressed: _openCreatePersona,
                   tooltip: 'Create a persona',
-                  child: const Icon(Icons.add_rounded),
+                  child: AnimatedSwitcher(
+                    duration: AppMotion.micro,
+                    child: Icon(
+                      _fabOpen ? Icons.close_rounded : Icons.add_rounded,
+                      key: ValueKey(_fabOpen),
+                    ),
+                  ),
                 ),
               )
             : null,
@@ -215,17 +226,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                Icons.cloud_off_outlined,
-                size: 42,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+              Icon(Icons.cloud_off_outlined, size: 42,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(height: 12),
-              Text(
-                _error!,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
+              Text(_error!, textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _fetchPersonas,
@@ -244,28 +249,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: ListView(
           children: [
             const SizedBox(height: 120),
-            Icon(
-              Icons.people_outline_rounded,
-              size: 48,
-              color: Theme.of(context)
-                  .colorScheme
-                  .onSurfaceVariant
-                  .withValues(alpha: 0.5),
-            ),
+            Icon(Icons.people_outline_rounded, size: 48,
+                color: Theme.of(context).colorScheme.onSurfaceVariant
+                    .withValues(alpha: 0.5)),
             const SizedBox(height: 16),
-            Center(
-              child: Text(
-                'No one here yet',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
+            Center(child: Text('No one here yet',
+                style: Theme.of(context).textTheme.titleMedium)),
             const SizedBox(height: 6),
-            Center(
-              child: Text(
-                'Pull down to try again',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
+            Center(child: Text('Pull down to try again',
+                style: Theme.of(context).textTheme.bodyMedium)),
           ],
         ),
       );
@@ -273,28 +265,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
     return RefreshIndicator(
       onRefresh: () async {
-        HapticFeedback.lightImpact();
+        AppSound.selectionClick();
         return _fetchPersonas();
       },
       child: ListView.separated(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         itemCount: _personas.length,
-        separatorBuilder: (context, index) => const SizedBox(height: 12),
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final persona = _personas[index];
-          return _StaggeredPersonaCard(
-            persona: persona,
+          return StaggeredEntrance(
             index: index,
-            onTap: () {
-              HapticFeedback.selectionClick();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ChatScreen(persona: persona),
-                ),
-              );
-            },
-            onDelete: persona.owned ? () => _deletePersona(persona) : null,
+            child: _PersonaCard(
+              persona: persona,
+              onTap: () {
+                AppSound.selectionClick();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => ChatScreen(persona: persona)),
+                );
+              },
+              onDelete: persona.owned ? () => _deletePersona(persona) : null,
+            ),
           );
         },
       ),
@@ -302,94 +295,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 }
 
-class _StaggeredPersonaCard extends StatefulWidget {
-  final Persona persona;
-  final int index;
-  final VoidCallback onTap;
-  final VoidCallback? onDelete;
+// ── Persona Card ─────────────────────────────────────────────────────────
 
-  const _StaggeredPersonaCard({
-    required this.persona,
-    required this.index,
-    required this.onTap,
-    this.onDelete,
-  });
-
-  @override
-  State<_StaggeredPersonaCard> createState() => _StaggeredPersonaCardState();
-}
-
-class _StaggeredPersonaCardState extends State<_StaggeredPersonaCard>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<Offset> _slideAnimation;
-  late final Animation<double> _fadeAnimation;
-  late final Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 500),
-    );
-
-    final delay = (widget.index * 0.1).clamp(0.0, 0.4);
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Interval(delay, (delay + 0.5).clamp(0.0, 1.0),
-          curve: Curves.easeOutCubic),
-    ));
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Interval(delay, (delay + 0.4).clamp(0.0, 1.0),
-            curve: Curves.easeOut),
-      ),
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Interval(delay, (delay + 0.5).clamp(0.0, 1.0),
-            curve: Curves.easeOutCubic),
-      ),
-    );
-
-    _controller.forward();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SlideTransition(
-      position: _slideAnimation,
-      child: FadeTransition(
-        opacity: _fadeAnimation,
-        child: ScaleTransition(
-          scale: _scaleAnimation,
-          child: _PersonaCard(
-            persona: widget.persona,
-            onTap: widget.onTap,
-            onDelete: widget.onDelete,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _PersonaCard extends StatelessWidget {
+class _PersonaCard extends StatefulWidget {
   final Persona persona;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
@@ -401,70 +309,133 @@ class _PersonaCard extends StatelessWidget {
   });
 
   @override
+  State<_PersonaCard> createState() => _PersonaCardState();
+}
+
+class _PersonaCardState extends State<_PersonaCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pressController;
+  late final Animation<double> _glowAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _pressController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _glowAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _pressController, curve: Curves.easeOutCubic),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pressController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Material(
-      color: Theme.of(context).colorScheme.surface,
-      borderRadius: BorderRadius.circular(20),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(20),
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Theme.of(context).dividerColor),
-          ),
-          child: Row(
-            children: [
-              PersonaAvatar(personaName: persona.name, size: 56),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            persona.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _TierChip(tier: persona.subscriptionTier),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      (persona.greeting?.isNotEmpty ?? false)
-                          ? persona.greeting!
-                          : _humanize(persona.role),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              if (onDelete != null)
-                IconButton(
-                  tooltip: 'Delete persona',
-                  icon: Icon(
-                    Icons.delete_outline_rounded,
-                    color: Theme.of(context).colorScheme.error,
+    final gradient = AppColors.personaGradient(widget.persona.name);
+
+    return GestureDetector(
+      onTapDown: (_) {
+        _pressController.forward();
+      },
+      onTapUp: (_) {
+        _pressController.reverse();
+        widget.onTap();
+      },
+      onTapCancel: () {
+        _pressController.reverse();
+      },
+      child: AnimatedBuilder(
+        animation: _glowAnim,
+        builder: (context, _) {
+          return Transform.scale(
+            scale: 1.0 - 0.03 * _glowAnim.value,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: gradient.first.withValues(
+                        alpha: 0.15 * _glowAnim.value),
+                    blurRadius: 20 * _glowAnim.value,
+                    offset: const Offset(0, 4),
                   ),
-                  onPressed: onDelete,
-                ),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ],
               ),
-            ],
-          ),
-        ),
+              child: Material(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    border:
+                        Border.all(color: Theme.of(context).dividerColor),
+                  ),
+                  child: Row(
+                    children: [
+                      PersonaAvatar(
+                          personaName: widget.persona.name, size: 56),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    widget.persona.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                _TierChip(
+                                    tier: widget.persona.subscriptionTier),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              (widget.persona.greeting?.isNotEmpty ?? false)
+                                  ? widget.persona.greeting!
+                                  : _humanize(widget.persona.role),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style:
+                                  Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      if (widget.onDelete != null)
+                        IconButton(
+                          tooltip: 'Delete persona',
+                          icon: Icon(Icons.delete_outline_rounded,
+                              color:
+                                  Theme.of(context).colorScheme.error),
+                          onPressed: widget.onDelete,
+                        ),
+                      Icon(Icons.chevron_right_rounded,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -475,6 +446,8 @@ class _PersonaCard extends StatelessWidget {
     return spaced[0].toUpperCase() + spaced.substring(1);
   }
 }
+
+// ── Tier Chip ────────────────────────────────────────────────────────────
 
 class _TierChip extends StatelessWidget {
   final String tier;
