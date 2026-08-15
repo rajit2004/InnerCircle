@@ -9,9 +9,12 @@ CREATE TABLE IF NOT EXISTS profiles (
                                         avatar_url TEXT,
                                         password_hash TEXT NOT NULL,
                                         subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'premium')),
-                                        messages_used_today INT DEFAULT 0,
-                                        last_message_date DATE,
-                                        created_at TIMESTAMPTZ DEFAULT NOW()
+                                         messages_used_today INT DEFAULT 0,
+                                         last_message_date DATE,
+                                         reset_token TEXT,
+                                         reset_token_expires_at TIMESTAMPTZ,
+                                         version BIGINT DEFAULT 0,
+                                         created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Personas (AI Characters)
@@ -22,9 +25,10 @@ CREATE TABLE IF NOT EXISTS personas (
                                         avatar_emoji TEXT,
                                         system_prompt TEXT NOT NULL,
                                         greeting TEXT,
-                                        subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'premium')),
-                                        is_active BOOLEAN DEFAULT TRUE,
-                                        created_at TIMESTAMPTZ DEFAULT NOW()
+                                         subscription_tier TEXT DEFAULT 'free' CHECK (subscription_tier IN ('free', 'premium')),
+                                         is_active BOOLEAN DEFAULT TRUE,
+                                         owner_user_id UUID REFERENCES profiles(id) ON DELETE CASCADE,
+                                         created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Conversations
@@ -44,8 +48,16 @@ CREATE TABLE IF NOT EXISTS messages (
                                         role TEXT NOT NULL CHECK (role IN ('user', 'assistant', 'system')),
                                         content TEXT NOT NULL,
                                         tokens_used INT DEFAULT 0,
+                                        reaction TEXT,
                                         created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- NOTE: PostgreSQL does NOT auto-create indexes on foreign-key columns. Add
+-- explicit ones so chat-history / memory / push lookups don't sequential-scan.
+CREATE INDEX IF NOT EXISTS idx_messages_conversation_id ON messages (conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversations_user_persona ON conversations (user_id, persona_id);
+CREATE INDEX IF NOT EXISTS idx_memories_user_id ON memories (user_id);
+CREATE INDEX IF NOT EXISTS idx_memories_persona_id ON memories (persona_id);
 
 -- Memories
 CREATE TABLE IF NOT EXISTS memories (
@@ -57,6 +69,7 @@ CREATE TABLE IF NOT EXISTS memories (
                                         importance INT DEFAULT 1,
                                         access_count INT DEFAULT 0,
                                         last_accessed TIMESTAMPTZ,
+                                        shared BOOLEAN DEFAULT FALSE,
                                         created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
