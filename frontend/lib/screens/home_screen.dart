@@ -248,16 +248,49 @@ class _HomeScreenState extends State<HomeScreen>
         onRefresh: _fetchPersonas,
         child: ListView(
           children: [
-            const SizedBox(height: 120),
-            Icon(Icons.people_outline_rounded, size: 48,
-                color: Theme.of(context).colorScheme.onSurfaceVariant
-                    .withValues(alpha: 0.5)),
-            const SizedBox(height: 16),
-            Center(child: Text('No one here yet',
-                style: Theme.of(context).textTheme.titleMedium)),
-            const SizedBox(height: 6),
-            Center(child: Text('Pull down to try again',
-                style: Theme.of(context).textTheme.bodyMedium)),
+            const SizedBox(height: 100),
+            Container(
+              width: 100,
+              height: 100,
+              margin: const EdgeInsets.symmetric(horizontal: 140),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.15),
+                    AppColors.primaryDark.withValues(alpha: 0.08),
+                  ],
+                ),
+              ),
+              child: Icon(
+                Icons.people_outline_rounded,
+                size: 48,
+                color: AppColors.primary.withValues(alpha: 0.5),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: Text(
+                'No one here yet',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Center(
+              child: Text(
+                'Tap + to create your first companion',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant
+                          .withValues(alpha: 0.7),
+                    ),
+              ),
+            ),
           ],
         ),
       );
@@ -340,97 +373,177 @@ class _PersonaCardState extends State<_PersonaCard>
     final gradient = AppColors.personaGradient(widget.persona.name);
 
     return GestureDetector(
-      onTapDown: (_) {
-        _pressController.forward();
-      },
+      onTapDown: (_) => _pressController.forward(),
       onTapUp: (_) {
         _pressController.reverse();
         widget.onTap();
       },
-      onTapCancel: () {
-        _pressController.reverse();
-      },
+      onTapCancel: () => _pressController.reverse(),
       child: AnimatedBuilder(
         animation: _glowAnim,
         builder: (context, _) {
+          final t = _glowAnim.value;
           return Transform.scale(
-            scale: 1.0 - 0.03 * _glowAnim.value,
+            scale: 1.0 - 0.02 * t,
             child: Container(
+              height: 140,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: gradient.first.withValues(
-                        alpha: 0.15 * _glowAnim.value),
-                    blurRadius: 20 * _glowAnim.value,
-                    offset: const Offset(0, 4),
+                    color: gradient.first.withValues(alpha: 0.2 + 0.2 * t),
+                    blurRadius: 16 + 12 * t,
+                    offset: Offset(0, 4 + 4 * t),
+                    spreadRadius: -2,
                   ),
                 ],
               ),
-              child: Material(
-                color: Theme.of(context).colorScheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: Theme.of(context).dividerColor),
-                  ),
-                  child: Row(
-                    children: [
-                      PersonaAvatar(
-                          personaName: widget.persona.name, size: 56),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Text(
-                                    widget.persona.name,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium,
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                _TierChip(
-                                    tier: widget.persona.subscriptionTier),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              (widget.persona.greeting?.isNotEmpty ?? false)
-                                  ? widget.persona.greeting!
-                                  : _humanize(widget.persona.role),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style:
-                                  Theme.of(context).textTheme.bodyMedium,
-                            ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: Stack(
+                  children: [
+                    // ── Gradient background ──
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            gradient.first.withValues(alpha: 0.85),
+                            gradient.last,
                           ],
                         ),
                       ),
-                      const SizedBox(width: 6),
-                      if (widget.onDelete != null)
-                        IconButton(
-                          tooltip: 'Delete persona',
-                          icon: Icon(Icons.delete_outline_rounded,
-                              color:
-                                  Theme.of(context).colorScheme.error),
-                          onPressed: widget.onDelete,
+                    ),
+                    // ── Decorative circles ──
+                    Positioned(
+                      top: -20,
+                      right: -20,
+                      child: Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.1),
                         ),
-                      Icon(Icons.chevron_right_rounded,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant),
-                    ],
-                  ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -30,
+                      left: -10,
+                      child: Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.07),
+                        ),
+                      ),
+                    ),
+                    // ── Content ──
+                    Padding(
+                      padding: const EdgeInsets.all(18),
+                      child: Row(
+                        children: [
+                          // ── Avatar with ring ──
+                          Container(
+                            padding: const EdgeInsets.all(3),
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withValues(alpha: 0.5),
+                                width: 2,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: PersonaAvatar(
+                              personaName: widget.persona.name,
+                              size: 56,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          // ── Text content ──
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        widget.persona.name,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.white,
+                                          letterSpacing: -0.3,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    _TierChip(
+                                      tier: widget.persona.subscriptionTier,
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  (widget.persona.greeting?.isNotEmpty ?? false)
+                                      ? widget.persona.greeting!
+                                      : _humanize(widget.persona.role),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.white.withValues(alpha: 0.85),
+                                    height: 1.35,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          // ── Trailing actions ──
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (widget.onDelete != null)
+                                GestureDetector(
+                                  onTap: widget.onDelete,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: Colors.white.withValues(alpha: 0.2),
+                                    ),
+                                    child: Icon(
+                                      Icons.delete_outline_rounded,
+                                      size: 18,
+                                      color: Colors.white.withValues(alpha: 0.9),
+                                    ),
+                                  ),
+                                ),
+                              const SizedBox(height: 8),
+                              Icon(
+                                Icons.arrow_forward_ios_rounded,
+                                size: 16,
+                                color: Colors.white.withValues(alpha: 0.6),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -458,12 +571,16 @@ class _TierChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final isPremium = tier.toLowerCase() == 'premium';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: isPremium
-            ? AppColors.bestFriendDark.withValues(alpha: 0.14)
-            : Theme.of(context).colorScheme.surfaceContainerHighest,
+            ? Colors.white.withValues(alpha: 0.25)
+            : Colors.white.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.3),
+          width: 0.5,
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -472,20 +589,16 @@ class _TierChip extends StatelessWidget {
             isPremium
                 ? Icons.workspace_premium_rounded
                 : Icons.lock_open_rounded,
-            size: 11,
-            color: isPremium
-                ? AppColors.bestFriendDark
-                : Theme.of(context).colorScheme.onSurfaceVariant,
+            size: 10,
+            color: Colors.white,
           ),
           const SizedBox(width: 3),
           Text(
             isPremium ? 'premium' : 'free',
-            style: TextStyle(
-              fontSize: 10.5,
+            style: const TextStyle(
+              fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: isPremium
-                  ? AppColors.bestFriendDark
-                  : Theme.of(context).colorScheme.onSurfaceVariant,
+              color: Colors.white,
             ),
           ),
         ],
