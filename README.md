@@ -5,7 +5,7 @@
 <h1 align="center">InnerCircle</h1>
 
 <p align="center">
-  <strong>Your AI-powered support network — Mom, Best Friend, Girlfriend, Big Sister, all in one app.</strong>
+  <strong>Your AI-powered support network. Mom, Best Friend, Girlfriend, Big Sister, all in one app.</strong>
 </p>
 
 <p align="center">
@@ -29,93 +29,141 @@
 
 ---
 
-## 💡 What is InnerCircle?
+## What is InnerCircle?
 
-**InnerCircle** is a multi-persona AI companion platform designed to provide users with an emotional support network. Rather than interacting with a single generic chatbot, users engage with distinct AI personalities—each featuring its own tone, communication style, behavior patterns, and long-term memory.
+**InnerCircle** is a multi-persona AI companion platform designed to give users a genuine emotional support network. Instead of chatting with a single generic bot, users talk to distinct AI personalities. Each one has its own tone, communication style, behavior patterns, and long-term memory.
+
+The app is built to feel alive. Every screen has thoughtful animations, haptic feedback, and visual polish that reinforces the feeling that someone is actually there with you. It is not a utility. It is a relationship app.
 
 ### Available Personas
 
 | Persona            | Personality                                                |
 | ------------------ | ---------------------------------------------------------- |
-| 👩 **Mom**         | Nurturing, gentle, and offers thoughtful life advice       |
-| 🙌 **Best Friend** | Energetic, encouraging, and non-judgmental                 |
-| 💕 **Girlfriend**  | Affectionate, romantic, and proactive with daily check-ins |
-| 💪 **Big Sister**  | Protective, honest, and playful                            |
+| **Mom**            | Nurturing, gentle, and offers thoughtful life advice       |
+| **Best Friend**    | Energetic, encouraging, and non-judgmental                 |
+| **Girlfriend**     | Affectionate, romantic, and proactive with daily check-ins |
+| **Big Sister**     | Protective, honest, and playful                            |
 
-Built using **Flutter** for mobile, **Spring Boot** for backend services, **PostgreSQL + pgvector** for memory storage, and **Groq (Llama 3 70B)** for ultra-fast conversational AI.
+Users can also create their own custom personas with a specific relationship type, personality description, and avatar emoji.
 
----
-
-## ✨ Features
-
-* 🧠 **Persistent Memory**
-  Each persona remembers important facts shared by the user.
-
-* 💬 **Real-Time Chat Streaming**
-  AI responses stream token-by-token using Server-Sent Events (SSE).
-
-* 🔔 **Proactive Notifications**
-  Personas can initiate conversations through scheduled messages and reminders.
-
-* 📱 **Cross-Platform Mobile App**
-  Single Flutter codebase supporting both Android and iOS.
-
-* 🔐 **Secure Authentication**
-  JWT-based authentication powered by Spring Security.
-
-* 💎 **Freemium Subscription Model**
-
-  * **Free Tier:** 2 personas + 50 messages/day
-  * **Premium Tier:** Unlimited messaging + access to all personas
-
-* 🎛️ **Admin Dashboard**
-  Manage personas, moderate content, and monitor platform usage.
-
-* 🧩 **Highly Extensible Architecture**
-  Add or customize personas without modifying core business logic.
+Built with **Flutter** for mobile, **Spring Boot** for backend services, **PostgreSQL + pgvector** for memory storage, and **Groq (Llama 3 70B)** for fast conversational AI.
 
 ---
 
-## 🧠 How It Works
+## Features
+
+### Core Features
+
+* **Persistent Memory**
+  Each persona remembers important facts shared by the user. Memories are stored using pgvector embeddings and retrieved contextually during conversations.
+
+* **Real-Time Chat**
+  AI responses are generated quickly using Groq's inference engine. Messages appear with smooth slide-in animations and visual feedback.
+
+* **Custom Personas**
+  Users can create their own companions by choosing a relationship type, writing a personality description, and picking an avatar. The app uses a stepped flow with live preview to make creation feel tangible.
+
+* **Message Reactions**
+  Long-press any message to add an emoji reaction. The reaction picker appears with a staggered spring animation, and the selected reaction lands with a satisfying scale bounce.
+
+* **Proactive Notifications**
+  Personas can check in on you at scheduled times. Users can schedule recurring reminders with specific times and days, and toggle them on or off.
+
+* **Freemium Subscription**
+  * Free tier: 2 personas and 50 messages per day
+  * Premium tier: all personas, unlimited messages, priority response speed, and early access to new features
+
+* **Dark Mode**
+  Full dark mode support across every screen. The transition between light and dark uses a smooth crossfade instead of an instant swap.
+
+### Design and Motion
+
+* **Motion Design System**
+  A consistent timing and easing system built into the app. Micro interactions use 150ms, card entrances use 320ms, and big moments like the splash or upgrade celebration use 700ms. Every animation respects the OS-level reduced-motion setting.
+
+* **Haptic Feedback**
+  A small, consistent vocabulary of haptics: selection clicks for pickers and scrolling, light impacts for sending messages and toggling switches, and medium impacts for completing actions like reactions or upgrades.
+
+* **Shimmer Loading**
+  Every loading state uses shaped shimmer placeholders instead of bare spinners. The persona list shows card-shaped shimmers, the chat shows alternating left-right message bubble shimmers, and memories show card shimmers.
+
+* **Staggered Entrances**
+  Lists do not just appear all at once. Persona cards, memory cards, and notification cards fade and slide up one by one with a small delay between each, making the content feel like it is arriving rather than just existing.
+
+### Screen by Screen
+
+* **Splash Screen**
+  The logo bounces in with an elastic spring animation while the background gradient shifts through the brand colors. The subtitle slides up after the logo lands.
+
+* **Login and Register**
+  The logo scales in with a spring, then the title, fields, and button each slide up with increasing delay. On invalid input, the entire form shakes horizontally with a heavy haptic, clearly communicating "no" without being harsh.
+
+* **Home Screen**
+  Persona cards stagger in from bottom to top. Pressing a card gives it a subtle scale-down plus a glow pulse in that persona's gradient color. The create-persona FAB morphs from a plus to an X when tapped.
+
+* **Chat Screen**
+  The persona avatar in the appbar has a subtle breathing animation. New messages slide in from the side with a spring overshoot. The typing indicator has three bouncing dots with a soft persona-colored glow behind them. The reaction picker opens with each emoji scaling in one after another. A small FAB appears when you scroll up, letting you jump back to the bottom. The entire chat background has a very low-opacity tint of the current persona's color.
+
+* **Upgrade Screen**
+  A full-screen modal with an animated gradient that slowly rotates through all four persona colors. Free and premium comparison cards sit side by side, and the premium checkmarks animate in one at a time. The CTA button has a continuous shimmer sweep. On successful upgrade, a celebratory checkmark draws in with a scale animation.
+
+* **Create Persona**
+  A four-step flow (Name, Relationship, Personality, Avatar) with progress dots at the top. Each step slides in horizontally. The emoji picker has a spring scale on selection, and a live preview bubble updates as you type.
+
+* **Memories Screen**
+  Cards fade and slide up with staggered timing. Swipe left to delete with a red reveal. The loading state uses a shaped shimmer placeholder.
+
+* **Profile Screen**
+  The avatar bounces on tap with a three-stage scale animation. Navigation rows have a chevron that nudges right on press. The upgrade button opens the full-screen Upgrade modal.
+
+* **Notifications Screen**
+  Each scheduled card uses a custom animated toggle with a smooth thumb slide and color morph. Cards stagger in on load.
+
+* **Settings Screen**
+  The dark mode toggle uses an animated icon switcher that crossfades between sun and moon icons.
+
+---
+
+## How It Works
 
 ```text
 User signs up
-        │
-        ▼
+        |
+        v
 Spring Security issues JWT
-        │
-        ▼
+        |
+        v
 User selects a persona
-        │
-        ▼
+        |
+        v
 Persona prompt + user memories are loaded
-        │
-        ▼
-User sends message → POST /api/chat
-        │
-        ▼
+        |
+        v
+User sends message
+        |
+        v
 Backend retrieves relevant memories using pgvector
-        │
-        ▼
-Groq (Llama 3 70B) generates streamed response via SSE
-        │
-        ▼
+        |
+        v
+Groq (Llama 3 70B) generates a response
+        |
+        v
 Important facts are extracted and stored as memories
-        │
-        ▼
+        |
+        v
 Scheduler checks notification queue
-        │
-        ▼
+        |
+        v
 FCM push notifications are delivered
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Layer                        | Technology                                               |
 | ---------------------------- | -------------------------------------------------------- |
-| **Mobile**                   | Flutter, Riverpod, Dio                                   |
+| **Mobile**                   | Flutter, Material Design 3                               |
 | **Backend**                  | Java 17, Spring Boot 3, Spring Security, Spring Data JPA |
 | **Database**                 | PostgreSQL + pgvector                                    |
 | **LLM Provider**             | Groq Cloud (Llama 3 70B)                                 |
@@ -127,49 +175,52 @@ FCM push notifications are delivered
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```text
 innercircle/
-├── backend/
+├── backend/                          # Spring Boot 4.1 API
 │   ├── src/main/java/com/innercircle/
-│   │   ├── InnerCircleApplication.java
-│   │   ├── config/           # Security, JWT, WebClient
-│   │   ├── controller/       # REST APIs
-│   │   ├── service/          # Business logic
-│   │   ├── repository/       # Data access layer
-│   │   ├── model/            # JPA entities
-│   │   └── dto/              # Request/Response DTOs
-│   │
+│   │   ├── config/                   # Security, JWT, CORS, WebClient
+│   │   ├── controller/               # REST endpoints (Auth, Chat, Memory, Notification, Persona, User)
+│   │   ├── dto/                      # Request/response objects
+│   │   ├── exception/                # Custom exceptions + global handler
+│   │   ├── model/                    # JPA entities (User, Persona, Message, Conversation, Memory, etc.)
+│   │   ├── repository/               # Spring Data JPA repos
+│   │   ├── service/                  # Business logic (Chat, Auth, Embedding, Notification, etc.)
+│   │   └── util/                     # JwtUtil
 │   ├── src/main/resources/
 │   │   └── application.yml
 │   └── pom.xml
 │
-├── admin/
-│   ├── src/
-│   └── package.json
+├── database/                         # SQL schemas and migrations
+│   ├── schema.sql
+│   └── migration_round*.sql
 │
-├── mobile/
+├── frontend/                         # Flutter (Dart) Android app
 │   ├── lib/
+│   │   ├── models/                   # Data classes (User, Persona, ChatMessage, Memory, etc.)
+│   │   ├── screens/                  # UI screens (Home, Chat, Login, Register, Profile, etc.)
+│   │   ├── services/                 # API client, auth, chat, push notifications, haptics
+│   │   ├── theme/                    # Colors, typography, motion design tokens
+│   │   └── widgets/                  # Shared widgets, splash screen, persona avatar
+│   ├── android/                      # Android-specific config (Gradle, manifest, Firebase)
 │   └── pubspec.yaml
 │
-├── database/
-│   └── schema.sql
-│
-├── LICENSE
+├── .github/workflows/ci.yml         # GitHub Actions CI (backend tests, frontend analyze)
 └── README.md
 ```
 
 ---
 
-# 🚀 Quick Start
+# Quick Start
 
 ## Prerequisites
 
 * Java 17+
 * Maven 3.8+
 * Flutter 3.16+
-* PostgreSQL 14+ with `pgvector`
+* PostgreSQL 14+ with pgvector
 * Groq API Key
 
 Obtain a free API key from:
@@ -183,8 +234,8 @@ https://console.groq.com
 ## 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/innercircle.git
-cd innercircle
+git clone https://github.com/rajit2004/InnerCircle.git
+cd InnerCircle
 ```
 
 ---
@@ -223,10 +274,10 @@ cp src/main/resources/application.yml.example \
 Update the following values inside `application.yml`:
 
 * Database URL
-* Database username/password
+* Database username and password
 * JWT secret
 * Groq API key
-* Firebase credentials (optional)
+* Firebase credentials (optional, for push notifications)
 
 ---
 
@@ -236,7 +287,7 @@ Update the following values inside `application.yml`:
 ./mvnw spring-boot:run
 ```
 
-Backend server:
+Backend server starts at:
 
 ```text
 http://localhost:8080
@@ -266,31 +317,25 @@ Use the admin key configured in `application.yml`.
 ## 6. Run the Flutter App
 
 ```bash
-cd mobile
+cd frontend
 
 flutter pub get
-
-# Update API base URL in:
-# lib/config/api.dart
-
 flutter run
 ```
 
-### Android Emulator Notes
+### Android Emulator
 
-Use:
+Use `10.0.2.2` instead of `localhost`.
 
-```text
-10.0.2.2
+For physical devices, use your machine's local network IP address. You can pass it as a build argument:
+
+```bash
+flutter run --dart-define=BASE_URL=http://192.168.1.100:8080
 ```
-
-instead of `localhost`.
-
-For physical devices, use your machine's local network IP.
 
 ---
 
-# 📚 API Documentation
+# API Documentation
 
 All endpoints are prefixed with:
 
@@ -352,7 +397,36 @@ POST /api/auth/login
 GET /api/personas
 ```
 
-> Authentication required.
+Returns all personas the current user has access to. Free users see only free-tier personas. Premium users see all of them.
+
+---
+
+### Create Custom Persona
+
+```http
+POST /api/personas
+```
+
+**Request Body**
+
+```json
+{
+  "name": "Alex",
+  "relationshipType": "FRIEND",
+  "personalityDescription": "witty and a little sarcastic",
+  "avatarEmoji": "😎"
+}
+```
+
+---
+
+### Delete Custom Persona
+
+```http
+DELETE /api/personas/{id}
+```
+
+Only custom personas created by the user can be deleted.
 
 ---
 
@@ -374,31 +448,74 @@ POST /api/chat
 }
 ```
 
-**Response Type**
-
-```text
-text/event-stream
-```
-
-Example stream chunk:
+**Response**
 
 ```json
 {
-  "token": "..."
+  "reply": "Hey, talk to me. What's going on?",
+  "conversationId": "uuid",
+  "messageId": "uuid"
 }
 ```
 
 ---
 
-## Memory
-
-### Retrieve Memories
+### Get Chat History
 
 ```http
-GET /api/memories?persona_id={uuid}
+GET /api/chat/history/{personaId}
 ```
 
-Returns stored memories for a specific persona.
+Returns the most recent conversation and its messages for a given persona.
+
+---
+
+### Set Message Reaction
+
+```http
+POST /api/chat/reactions
+```
+
+**Request Body**
+
+```json
+{
+  "messageId": "uuid",
+  "reaction": "heart"
+}
+```
+
+---
+
+### Delete Conversation
+
+```http
+DELETE /api/chat/conversation/{personaId}
+```
+
+Permanently deletes the conversation history with a specific persona.
+
+---
+
+## Memory
+
+### Get User Memories
+
+```http
+GET /api/memories
+```
+
+Returns all memories the system has learned about the current user across all personas.
+
+---
+
+### Delete Memory
+
+```http
+DELETE /api/memories/{id}
+```
+
+Removes a specific memory. The persona will forget that fact.
 
 ---
 
@@ -413,13 +530,13 @@ POST /api/notifications/register
 ```json
 {
   "token": "fcm_token",
-  "platform": "ios"
+  "platform": "android"
 }
 ```
 
 ---
 
-### Schedule Proactive Messages
+### Schedule Check-in
 
 ```http
 POST /api/notifications/schedule
@@ -433,15 +550,53 @@ POST /api/notifications/schedule
 }
 ```
 
-A complete Postman collection is available under:
+---
 
-```text
-/docs
+### List Scheduled Check-ins
+
+```http
+GET /api/notifications/scheduled
 ```
 
 ---
 
-# 📦 Deployment
+### Cancel Scheduled Check-in
+
+```http
+DELETE /api/notifications/schedule/{id}
+```
+
+---
+
+## Subscription
+
+### Update Subscription Tier
+
+```http
+POST /api/users/subscription
+```
+
+**Request Body**
+
+```json
+{
+  "tier": "premium"
+}
+```
+
+---
+
+### Get User Profile
+
+```http
+GET /api/users/me
+```
+
+Returns the current user's profile including subscription tier, message usage, and account info.
+
+---
+
+# Deployment
 
 ## Backend
 
@@ -493,7 +648,7 @@ Upload builds to TestFlight before App Store release.
 
 ---
 
-# 🤝 Contributing
+# Contributing
 
 Contributions are welcome.
 
@@ -522,25 +677,25 @@ Please review the project's Code of Conduct and Contributing Guidelines before c
 
 ---
 
-# 📄 License
+# License
 
 Distributed under the **MIT License**.
 
 ---
 
-# 🙌 Acknowledgements
+# Acknowledgements
 
-* **Groq** — ultra-fast LLM inference
-* **Spring Boot** — robust backend ecosystem
-* **Flutter** — cross-platform mobile framework
-* **Supabase** — PostgreSQL hosting and pgvector support
+* **Groq** for ultra-fast LLM inference
+* **Spring Boot** for a robust backend ecosystem
+* **Flutter** for a powerful cross-platform mobile framework
+* **Supabase** for PostgreSQL hosting and pgvector support
 
 ---
 
-# 👨‍💻 Author
+# Author
 
 **Ranesh Rajit**
-B.Tech Computer Science Student • India
+B.Tech Computer Science Student, India
 
 [![GitHub](https://img.shields.io/badge/GitHub-rajit2004-black?style=flat&logo=github)](https://github.com/rajit2004)
 
