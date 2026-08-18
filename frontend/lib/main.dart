@@ -18,6 +18,10 @@ import 'theme/app_theme.dart';
 import 'theme/theme_controller.dart';
 import 'widgets/splash_screen.dart';
 
+/// Global navigator key so ApiClient can redirect to login on 401/403
+/// without needing a BuildContext.
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
 // FEATURE (push notifications, 2026-07-05): main() has to become async
 // to initialize Firebase before anything else runs, and the background
 // message handler has to be registered here, at the top level, before
@@ -61,6 +65,7 @@ class InnerCircleApp extends StatelessWidget {
       valueListenable: ThemeController.mode,
       builder: (context, mode, _) {
         return MaterialApp(
+          navigatorKey: navigatorKey,
           title: 'InnerCircle',
           // DESIGN FIX (2026-07-03): replaced the ColorScheme.fromSeed() theme
           // with AppTheme.light -- a hand-built design system with a warm,

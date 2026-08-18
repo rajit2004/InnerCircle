@@ -1,6 +1,9 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../main.dart';
 
 // BUG FIX (frontend, 2026-06-30): baseUrl was hardcoded to the iOS/macOS value
 // (localhost), which silently fails on the Android emulator -- localhost from
@@ -142,10 +145,28 @@ class ApiClient {
       // declare a charset, so emoji/non-ASCII (persona avatars, chat replies)
       // came back as mojibake. Decode the raw bytes as UTF-8 explicitly.
       return jsonDecode(utf8.decode(response.bodyBytes));
-    } else {
-      final message = _extractErrorMessage(response.body);
-      throw Exception('Server error ${response.statusCode}: $message');
     }
+
+    // If token expired or invalid, clear session and redirect to login.
+    // Skip if already on an auth screen to avoid redirect loops.
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      final currentRoute = navigatorKey.currentContext != null
+          ? ModalRoute.of(navigatorKey.currentContext!)
+          : null;
+      final path = currentRoute?.settings.name ?? '';
+      final onAuthScreen = path == '/' || path == '/login' || path == '/register';
+
+      if (!onAuthScreen) {
+        clearToken();
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          '/login',
+          (route) => false,
+        );
+      }
+    }
+
+    final message = _extractErrorMessage(response.body);
+    throw Exception('Server error ${response.statusCode}: $message');
   }
 
   static String _extractErrorMessage(String body) {
