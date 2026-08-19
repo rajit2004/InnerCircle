@@ -1,5 +1,5 @@
 <p align="center">
-  <span style="font-size: 75px;">🟣</span>
+  <img src="assets/logo.png" alt="InnerCircle" width="400" />
 </p>
 
 <h1 align="center">InnerCircle</h1>
