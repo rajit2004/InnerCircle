@@ -175,6 +175,18 @@ class _RegisterScreenState extends State<RegisterScreen>
                       ),
                     ),
                   ),
+                  Positioned(
+                    top: 80,
+                    right: 30,
+                    child: Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.04),
+                      ),
+                    ),
+                  ),
                   SafeArea(
                     child: Column(
                       children: [
@@ -195,39 +207,39 @@ class _RegisterScreenState extends State<RegisterScreen>
                           child: FadeTransition(
                             opacity: _logoFade,
                             child: Container(
-                              width: 80,
-                              height: 80,
+                              width: 84,
+                              height: 84,
                               alignment: Alignment.center,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: Colors.white.withValues(alpha: 0.2),
+                                color: Colors.white.withValues(alpha: 0.18),
                                 border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.3),
+                                  color: Colors.white.withValues(alpha: 0.25),
                                   width: 2,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
                                     color: Colors.black.withValues(alpha: 0.2),
-                                    blurRadius: 24,
-                                    offset: const Offset(0, 8),
+                                    blurRadius: 28,
+                                    offset: const Offset(0, 10),
                                   ),
                                 ],
                               ),
                               child: const Icon(Icons.celebration_rounded,
-                                  color: Colors.white, size: 36),
+                                  color: Colors.white, size: 38),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 22),
                         SlideTransition(
                           position: _titleSlide,
                           child: const Text(
                             'Join InnerCircle',
                             style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w700,
+                              fontSize: 30,
+                              fontWeight: FontWeight.w800,
                               color: Colors.white,
-                              letterSpacing: -0.5,
+                              letterSpacing: -0.8,
                             ),
                           ),
                         ),
