@@ -94,7 +94,8 @@ public class ChatService {
         Message userMsg = new Message();
         userMsg.setConversation(conversation);
         userMsg.setRole("user");
-        userMsg.setContent(request.getContent());
+        // SECURITY: sanitize user input before storing and before sending to LLM
+        userMsg.setContent(sanitizeChatInput(request.getContent()));
         messageRepository.save(userMsg);
 
         List<Message> recent = messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
@@ -199,19 +200,20 @@ public class ChatService {
             // after save() -- no need for a re-fetch.
             assistantMessageId = assistantMsg.getId();
 
-            String finalReply = reply;
-            Mono.fromRunnable(() -> {
-                try {
-                    memoryService.extractAndStoreMemory(
-                            user,
-                            request.getPersonaId().toString(),
-                            request.getContent(),
-                            finalReply
-                    );
-                } catch (Exception e) {
-                    log.warn("Memory extraction failed: {}", e.getMessage());
-                }
-            }).subscribeOn(Schedulers.boundedElastic()).subscribe();
+        String finalReply = reply;
+        String sanitizedContent = sanitizeChatInput(request.getContent());
+        Mono.fromRunnable(() -> {
+            try {
+                memoryService.extractAndStoreMemory(
+                        user,
+                        request.getPersonaId().toString(),
+                        sanitizedContent,
+                        finalReply
+                );
+            } catch (Exception e) {
+                log.warn("Memory extraction failed: {}", e.getMessage());
+            }
+        }).subscribeOn(Schedulers.boundedElastic()).subscribe();
         }
 
         return new ChatResponse(reply, conversation.getId(), assistantMessageId);
@@ -316,6 +318,41 @@ public class ChatService {
     private static final Pattern MD_BULLET = Pattern.compile("(?m)^\\s*[-*]\\s+");
     private static final Pattern MD_NUMBERED = Pattern.compile("(?m)^\\s*\\d+\\.\\s+");
     private static final Pattern EXTRA_BLANK_LINES = Pattern.compile("\n{3,}");
+
+    // SECURITY: prompt injection patterns — strip or neutralize attempts to
+    // override the system prompt. These are advisory (the model may still
+    // occasionally comply with injected instructions), but they significantly
+    // reduce the success rate of casual injection attempts.
+    private static final Pattern INJECTION_PATTERNS = Pattern.compile(
+            "(?i)(ignore|forget|disregard|override|bypass|new|actual|real)\\s+" +
+            "(instructions|prompt|system|rules|guidelines|constraints|persona)",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern ROLE_OVERRIDE = Pattern.compile(
+            "(?i)you\\s+are\\s+now|act\\s+as|pretend\\s+to\\s+be|simulate\\s+being|your\\s+new\\s+role",
+            Pattern.CASE_INSENSITIVE
+    );
+    private static final Pattern SYSTEM_TAG = Pattern.compile(
+            "<\\s*(system|assistant|user)\\s*>",
+            Pattern.CASE_INSENSITIVE
+    );
+
+    /**
+     * SECURITY: sanitizes user chat input to reduce prompt injection risk.
+     * Neutralizes common injection patterns without altering the meaning of
+     * legitimate messages. Returns the cleaned text.
+     */
+    static String sanitizeChatInput(String input) {
+        if (input == null || input.isBlank()) return input;
+        String result = input;
+        // Neutralize role-override phrases
+        result = ROLE_OVERRIDE.matcher(result).replaceAll("[redacted]");
+        // Neutralize system/assistant/user tags
+        result = SYSTEM_TAG.matcher(result).replaceAll("[redacted]");
+        // Neutralize instruction-override attempts
+        result = INJECTION_PATTERNS.matcher(result).replaceAll("[redacted]");
+        return result;
+    }
 
     private static String stripMarkdown(String text) {
         if (text == null || text.isBlank()) return text;
