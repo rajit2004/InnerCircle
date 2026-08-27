@@ -9,6 +9,7 @@ import com.innercircle.model.Persona;
 import com.innercircle.model.SubscriptionTier;
 import com.innercircle.model.User;
 import com.innercircle.repository.PersonaRepository;
+import com.innercircle.util.InputSanitizer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -75,15 +76,16 @@ public class PersonaService {
         }
 
         Persona persona = new Persona();
-        persona.setName(request.getName().trim());
+        // SECURITY: sanitize all user inputs before storing
+        persona.setName(InputSanitizer.sanitizeText(request.getName()));
         persona.setRole(relationshipType.toLowerCase());
         persona.setAvatarEmoji(
                 request.getAvatarEmoji() != null && !request.getAvatarEmoji().isBlank()
                         ? request.getAvatarEmoji().trim()
                         : defaultEmojiFor(relationshipType)
         );
-        persona.setSystemPrompt(buildSystemPrompt(relationshipType, request.getPersonalityDescription().trim()));
-        persona.setGreeting(buildGreeting(relationshipType, request.getName().trim()));
+        persona.setSystemPrompt(buildSystemPrompt(relationshipType, InputSanitizer.sanitizeText(request.getPersonalityDescription())));
+        persona.setGreeting(buildGreeting(relationshipType, InputSanitizer.sanitizeText(request.getName())));
         persona.setSubscriptionTier(SubscriptionTier.free);
         persona.setActive(true);
         persona.setOwner(user);
