@@ -477,32 +477,41 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                   clipBehavior: Clip.none,
                   children: [
                     Container(
-                      margin: const EdgeInsets.symmetric(vertical: 5),
+                      margin: const EdgeInsets.symmetric(vertical: 6),
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 15, vertical: 11),
+                          horizontal: 16, vertical: 12),
                       decoration: BoxDecoration(
                         gradient: isUser
-                            ? LinearGradient(colors: gradient)
+                            ? LinearGradient(
+                                colors: gradient,
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
                             : null,
                         color: isUser
                             ? null
-                            : gradient.first.withValues(alpha: 0.16),
+                            : Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(18),
-                          topRight: const Radius.circular(18),
-                          bottomLeft: Radius.circular(isUser ? 18 : 4),
-                          bottomRight: Radius.circular(isUser ? 4 : 18),
+                          topLeft: const Radius.circular(20),
+                          topRight: const Radius.circular(20),
+                          bottomLeft: Radius.circular(isUser ? 20 : 6),
+                          bottomRight: Radius.circular(isUser ? 6 : 20),
                         ),
-                        boxShadow: isUser
-                            ? [
-                                BoxShadow(
-                                  color:
-                                      gradient.first.withValues(alpha: 0.25),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ]
-                            : null,
+                        boxShadow: [
+                          BoxShadow(
+                            color: isUser
+                                ? gradient.first.withValues(alpha: 0.25)
+                                : Colors.black.withValues(alpha: 0.06),
+                            blurRadius: isUser ? 10 : 8,
+                            offset: Offset(0, isUser ? 3 : 2),
+                          ),
+                        ],
+                        border: isUser
+                            ? null
+                            : Border.all(
+                                color: Theme.of(context).dividerColor,
+                                width: 0.5,
+                              ),
                       ),
                       child: Text(
                         widget.message.content,
@@ -511,14 +520,14 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                               ? Colors.white
                               : Theme.of(context).colorScheme.onSurface,
                           fontSize: 15,
-                          height: 1.4,
+                          height: 1.45,
                         ),
                       ),
                     ),
                     if (widget.message.reaction != null)
                       Positioned(
-                        bottom: -6,
-                        right: -2,
+                        bottom: -8,
+                        right: -4,
                         child: _ReactionBadge(
                           reaction: widget.message.reaction!,
                           gradient: gradient,
@@ -633,7 +642,7 @@ class _TypingBubbleState extends State<_TypingBubble>
   Widget build(BuildContext context) {
     return SlideTransition(
       position: Tween<Offset>(
-        begin: const Offset(-0.2, 0.0),
+        begin: const Offset(-0.15, 0.0),
         end: Offset.zero,
       ).animate(CurvedAnimation(
         parent: _controller,
@@ -649,20 +658,19 @@ class _TypingBubbleState extends State<_TypingBubble>
         child: Align(
           alignment: Alignment.centerLeft,
           child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 5),
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            margin: const EdgeInsets.symmetric(vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  widget.gradient.first.withValues(alpha: 0.2),
-                  widget.gradient.first.withValues(alpha: 0.08),
-                ],
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Theme.of(context).dividerColor,
+                width: 0.5,
               ),
-              borderRadius: BorderRadius.circular(18),
               boxShadow: [
                 BoxShadow(
-                  color: widget.gradient.first.withValues(alpha: 0.15),
-                  blurRadius: 12,
+                  color: widget.gradient.first.withValues(alpha: 0.12),
+                  blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
               ],
@@ -679,30 +687,30 @@ class _TypingBubbleState extends State<_TypingBubble>
                     final bounce = (t < 0.5)
                         ? Curves.easeOut.transform(t * 2)
                         : Curves.easeIn.transform((1 - t) * 2);
-                    final scale = 0.6 + 0.4 * bounce;
+                    final scale = 0.5 + 0.5 * bounce;
                     return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 3),
                       child: Transform.translate(
-                        offset: Offset(0, -5 * bounce),
+                        offset: Offset(0, -4 * bounce),
                         child: Transform.scale(
                           scale: scale,
                           child: Container(
-                            width: 8,
-                            height: 8,
+                            width: 9,
+                            height: 9,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 colors: [
                                   widget.gradient.first
-                                      .withValues(alpha: 0.4 + 0.6 * bounce),
+                                      .withValues(alpha: 0.5 + 0.5 * bounce),
                                   widget.gradient.last
-                                      .withValues(alpha: 0.4 + 0.6 * bounce),
+                                      .withValues(alpha: 0.5 + 0.5 * bounce),
                                 ],
                               ),
                               boxShadow: [
                                 BoxShadow(
                                   color: widget.gradient.last
-                                      .withValues(alpha: 0.3 * bounce),
+                                      .withValues(alpha: 0.25 * bounce),
                                   blurRadius: 4 * bounce,
                                 ),
                               ],
@@ -835,32 +843,60 @@ class _ChatInputBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          top: BorderSide(color: Theme.of(context).dividerColor),
+          top: BorderSide(
+            color: Theme.of(context).dividerColor,
+            width: 0.5,
+          ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
       ),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           Expanded(
-            child: Container(
+            child: AnimatedContainer(
+              duration: AppMotion.micro,
               decoration: BoxDecoration(
                 color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.circular(22),
-                border: Border.all(color: Theme.of(context).dividerColor),
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(
+                  color: active
+                      ? gradient.first.withValues(alpha: 0.4)
+                      : Theme.of(context).dividerColor,
+                  width: active ? 1.2 : 0.8,
+                ),
+                boxShadow: active
+                    ? [
+                        BoxShadow(
+                          color: gradient.first.withValues(alpha: 0.08),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
               ),
               child: TextField(
                 controller: controller,
                 minLines: 1,
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
-                decoration: const InputDecoration(
-                  hintText: 'Type a message...',
+                decoration: InputDecoration(
+                  hintText: 'Say something...',
+                  hintStyle: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   border: InputBorder.none,
                   isDense: true,
                   filled: false,
                   contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
                 ),
                 onSubmitted: (_) => onSend(),
               ),
@@ -874,13 +910,19 @@ class _ChatInputBar extends StatelessWidget {
             height: 44,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: active ? LinearGradient(colors: gradient) : null,
+              gradient: active
+                  ? LinearGradient(
+                      colors: gradient,
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    )
+                  : null,
               color: active ? null : Theme.of(context).colorScheme.surfaceContainerHighest,
               boxShadow: active
                   ? [
                       BoxShadow(
                         color: gradient.first.withValues(alpha: 0.4),
-                        blurRadius: 12,
+                        blurRadius: 14,
                         offset: const Offset(0, 4),
                       ),
                     ]
