@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: innercircle-backend
+  servlet:
+    multipart:
+      max-file-size: 2MB
+      max-request-size: 2MB
   datasource:
     # BUG FIX (Round 6): Added ?characterEncoding=UTF-8&useUnicode=true to the JDBC
     # URL. Without an explicit encoding, the PostgreSQL JDBC driver negotiates
