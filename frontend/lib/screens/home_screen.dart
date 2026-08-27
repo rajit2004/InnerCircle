@@ -214,6 +214,58 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  Widget _buildPersonaPreviewChips() {
+    final personas = [
+      ('Mom', AppColors.momLight, AppColors.momDark, Icons.volunteer_activism_rounded),
+      ('Best Friend', AppColors.bestFriendLight, AppColors.bestFriendDark, Icons.celebration_rounded),
+      ('Girlfriend', AppColors.girlfriendLight, AppColors.girlfriendDark, Icons.favorite_rounded),
+      ('Big Sister', AppColors.bigSisterLight, AppColors.bigSisterDark, Icons.shield_rounded),
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 10,
+        runSpacing: 10,
+        children: personas.map((p) {
+          final gradient = AppColors.personaGradient(p.$1);
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  gradient.first.withValues(alpha: 0.15),
+                  gradient.last.withValues(alpha: 0.08),
+                ],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: gradient.first.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(p.$4, size: 16, color: p.$3),
+                const SizedBox(width: 6),
+                Text(
+                  p.$1,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: p.$3,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   Widget _buildPersonaList() {
     if (_loading) {
       return const ShimmerList(itemCount: 4, height: 88);
@@ -249,48 +301,79 @@ class _HomeScreenState extends State<HomeScreen>
         child: ListView(
           children: [
             const SizedBox(height: 100),
-            Container(
-              width: 100,
-              height: 100,
-              margin: const EdgeInsets.symmetric(horizontal: 140),
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary.withValues(alpha: 0.15),
-                    AppColors.primaryDark.withValues(alpha: 0.08),
-                  ],
+            // Animated gradient circle container
+            Center(
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.0, end: 1.0),
+                duration: const Duration(milliseconds: 800),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Transform.scale(
+                    scale: 0.8 + 0.2 * value,
+                    child: Opacity(
+                      opacity: value,
+                      child: child,
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 120,
+                  height: 120,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.primary.withValues(alpha: 0.18),
+                        AppColors.primaryDark.withValues(alpha: 0.08),
+                      ],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        blurRadius: 32,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.waving_hand_rounded,
+                    size: 52,
+                    color: AppColors.primary.withValues(alpha: 0.6),
+                  ),
                 ),
               ),
-              child: Icon(
-                Icons.people_outline_rounded,
-                size: 48,
-                color: AppColors.primary.withValues(alpha: 0.5),
-              ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 28),
             Center(
               child: Text(
-                'No one here yet',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
+                'Your circle is empty',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
               ),
             ),
             const SizedBox(height: 8),
-            Center(
-              child: Text(
-                'Tap + to create your first companion',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .onSurfaceVariant
-                          .withValues(alpha: 0.7),
-                    ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48),
+              child: Center(
+                child: Text(
+                  'Create your first companion and start a meaningful conversation',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurfaceVariant
+                            .withValues(alpha: 0.7),
+                        height: 1.5,
+                      ),
+                ),
               ),
             ),
+            const SizedBox(height: 32),
+            // Persona preview chips
+            _buildPersonaPreviewChips(),
           ],
         ),
       );
