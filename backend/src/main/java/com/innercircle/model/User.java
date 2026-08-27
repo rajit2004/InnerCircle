@@ -47,6 +47,14 @@ public class User {
     @JsonIgnore
     private Instant resetTokenExpiresAt;
 
+    // SECURITY: account lockout after too many failed login attempts.
+    // failedAttempts resets on successful login; lockedUntil is set to a
+    // future timestamp when the account should auto-unlock.
+    @JsonIgnore
+    private int failedLoginAttempts = 0;
+    @JsonIgnore
+    private Instant lockedUntil;
+
     @CreationTimestamp
     private Instant createdAt;
 

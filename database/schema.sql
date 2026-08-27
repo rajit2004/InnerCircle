@@ -13,11 +13,16 @@ CREATE TABLE IF NOT EXISTS profiles (
                                          last_message_date DATE,
                                          reset_token TEXT,
                                          reset_token_expires_at TIMESTAMPTZ,
+                                         -- SECURITY: account lockout fields
+                                         failed_login_attempts INT DEFAULT 0,
+                                         locked_until TIMESTAMPTZ,
                                          version BIGINT DEFAULT 0,
                                          created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS version BIGINT DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS failed_login_attempts INTEGER DEFAULT 0;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS locked_until TIMESTAMPTZ;
 
 -- Personas (AI Characters)
 CREATE TABLE IF NOT EXISTS personas (
