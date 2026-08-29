@@ -319,13 +319,13 @@ public class ChatService {
      * Very short messages get shorter max responses.
      */
     private int determineMaxTokens(ConversationUnderstandingService.ConversationState state) {
-        if (state.isShortForm()) return 80;
+        if (state.isShortForm()) return 250;
         return switch (state.getResponseLengthHint()) {
-            case "very_short" -> 80;
-            case "short" -> 150;
-            case "medium" -> 250;
-            case "long" -> 400;
-            default -> 200;
+            case "very_short" -> 250;
+            case "short" -> 400;
+            case "medium" -> 600;
+            case "long" -> 1000;
+            default -> 400;
         };
     }
 
