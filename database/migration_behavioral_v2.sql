@@ -2,7 +2,7 @@
 -- Adds message metadata, relationships table, memory types, conversation state
 
 -- ── Message metadata (JSONB) ──────────────────────────────────────────────
-ALTER TABLE messages ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}';
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS metadata TEXT DEFAULT '{}';
 
 -- ── Memory type constraints ───────────────────────────────────────────────
 -- Update existing memories to have proper types

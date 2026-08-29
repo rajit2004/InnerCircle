@@ -31,7 +31,7 @@ public class Message {
     private int tokensUsed = 0;
     private String reaction;
 
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "text")
     private String metadata;
 
     @CreationTimestamp

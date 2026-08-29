@@ -71,7 +71,7 @@ CREATE TABLE IF NOT EXISTS messages (
                                         content TEXT NOT NULL,
                                         tokens_used INT DEFAULT 0,
                                         reaction TEXT,
-                                        metadata JSONB DEFAULT '{}',
+                                        metadata TEXT DEFAULT '{}',
                                         created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
