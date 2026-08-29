@@ -549,6 +549,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
 
     if (result != true) return;
+    if (!mounted) return;
 
     if (newCtrl.text != confirmCtrl.text) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords do not match'), backgroundColor: AppColors.error));
@@ -591,6 +592,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
     );
     if (confirmed != true) return;
+    if (!mounted) return;
 
     // Double confirm
     final doubleConfirm = await showDialog<bool>(
@@ -659,7 +661,7 @@ class _NetworkAvatar extends StatelessWidget {
       child: Image.network(
         fullUrl,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
+        errorBuilder: (_, _, _) => Container(
           decoration: const BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(colors: [AppColors.primary, AppColors.primaryDark]),
