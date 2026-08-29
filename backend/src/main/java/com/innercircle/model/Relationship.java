@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "relationships")
@@ -16,7 +17,7 @@ public class Relationship {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    private java.util.UUID id;
+    private UUID id;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
@@ -26,10 +27,15 @@ public class Relationship {
     @JoinColumn(name = "persona_id", nullable = false)
     private Persona persona;
 
+    @Column(columnDefinition = "REAL DEFAULT 0.0")
     private double affinityScore = 0.0;
+
+    @Column(columnDefinition = "INT DEFAULT 0")
     private int interactionCount = 0;
+
     private Instant lastInteractionAt;
 
+    @Column(columnDefinition = "TEXT DEFAULT 'new'")
     private String relationshipStage = "new";
 
     @Column(columnDefinition = "TEXT DEFAULT '[]'")
@@ -39,6 +45,7 @@ public class Relationship {
     private String sharedTopics = "[]";
 
     private String preferredResponseStyle;
+
     private String userNickname;
 
     @CreationTimestamp

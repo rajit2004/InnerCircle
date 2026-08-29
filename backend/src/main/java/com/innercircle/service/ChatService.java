@@ -185,13 +185,12 @@ public class ChatService {
             assistantMsg.setConversation(conversation);
             assistantMsg.setRole("assistant");
             assistantMsg.setContent(reply);
-            assistantMsg.setMetadata(Map.of(
-                    "intent", state.getIntent(),
-                    "emotion", state.getEmotion(),
-                    "topic", state.getTopic(),
-                    "response_strategy", strategy.getResponseTone(),
-                    "relationship_stage", relationship.getRelationshipStage()
-            ));
+            assistantMsg.setMetadata("{\"intent\":\"" + state.getIntent()
+                    + "\",\"emotion\":\"" + state.getEmotion()
+                    + "\",\"topic\":\"" + (state.getTopic() != null ? state.getTopic() : "")
+                    + "\",\"response_strategy\":\"" + strategy.getResponseTone()
+                    + "\",\"relationship_stage\":\"" + relationship.getRelationshipStage()
+                    + "\"}");
             messageRepository.save(assistantMsg);
             assistantMessageId = assistantMsg.getId();
 

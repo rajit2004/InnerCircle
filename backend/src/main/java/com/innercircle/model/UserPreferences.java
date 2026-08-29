@@ -7,6 +7,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "user_preferences")
@@ -16,11 +17,10 @@ public class UserPreferences {
 
     @Id
     @Column(name = "user_id")
-    private java.util.UUID userId;
+    private UUID userId;
 
     @OneToOne
-    @MapsId
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
 
     private String preferredName;
