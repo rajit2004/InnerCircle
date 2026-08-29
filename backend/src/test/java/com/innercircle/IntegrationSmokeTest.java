@@ -19,6 +19,8 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import com.innercircle.service.EmbeddingService;
+import com.innercircle.service.ConversationUnderstandingService;
+import com.innercircle.service.ConversationUnderstandingService.ConversationState;
 
 import java.util.Map;
 import java.util.UUID;
@@ -64,6 +66,8 @@ class IntegrationSmokeTest {
         registry.add("jwt.secret", () -> "test-secret-test-secret-test-secret-1234567890");
         registry.add("jwt.require-secret", () -> "false");
         registry.add("groq.api-key", () -> "test-key");
+        registry.add("groq.url", () -> "http://localhost:0/chat/completions");
+        registry.add("groq.model", () -> "test-model");
     }
 
     @BeforeEach
@@ -150,6 +154,29 @@ class IntegrationSmokeTest {
                         if (i < e.length - 1) sb.append(",");
                     }
                     return sb.append("]").toString();
+                }
+            };
+        }
+
+        @Bean
+        @Primary
+        ConversationUnderstandingService conversationUnderstandingService() {
+            return new ConversationUnderstandingService(null) {
+                @Override
+                public ConversationState analyze(String userMessage, java.util.List<java.util.Map<String, String>> recentMessages) {
+                    return ConversationState.builder()
+                            .intent("REACTION")
+                            .emotion("neutral")
+                            .emotionalIntensity("low")
+                            .topic("")
+                            .needsResponse(true)
+                            .isQuestion(false)
+                            .isShortForm(userMessage.trim().length() <= 5)
+                            .responseLengthHint("short")
+                            .requiresEmotionalResponse(false)
+                            .shouldAskFollowup(false)
+                            .userEnergy("medium")
+                            .build();
                 }
             };
         }
