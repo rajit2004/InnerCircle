@@ -49,6 +49,8 @@ dependencies:
   # get that for free. This shows one manually in that case so behavior is
   # consistent regardless of whether the app happens to be open.
   flutter_local_notifications: ^18.0.1
+  image_picker: ^1.2.3
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:
