@@ -15,6 +15,7 @@ import 'chat_screen.dart';
 import 'create_persona_screen.dart';
 import 'memories_screen.dart';
 import 'profile_screen.dart';
+import 'upgrade_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -29,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _loading = true;
   String? _error;
   int _selectedIndex = 0;
+  bool _isPremium = false;
   late AnimationController _fabController;
   late Animation<double> _fabScale;
   bool _fabOpen = false;
@@ -64,14 +66,12 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final data = await ApiClient.get('/api/personas');
       final list = (data as List).map((p) => Persona.fromJson(p)).toList();
-      final inferredTier =
-          list.any((p) => p.subscriptionTier.toLowerCase() == 'premium')
-              ? 'premium'
-              : 'free';
-      await AuthService.updateSubscriptionTier(inferredTier);
+      final profile = await ApiClient.getStoredProfile();
+      final isPremium = (profile['subscriptionTier'] ?? 'free').toLowerCase() == 'premium';
       if (!mounted) return;
       setState(() {
         _personas = list;
+        _isPremium = isPremium;
         _loading = false;
       });
     } catch (e) {
@@ -390,22 +390,73 @@ class _HomeScreenState extends State<HomeScreen>
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
           final persona = _personas[index];
+          final isLocked = !_isPremium &&
+              persona.subscriptionTier.toLowerCase() == 'premium';
           return StaggeredEntrance(
             index: index,
             child: _PersonaCard(
               persona: persona,
+              isLocked: isLocked,
               onTap: () {
                 AppSound.selectionClick();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (_) => ChatScreen(persona: persona)),
-                );
+                if (isLocked) {
+                  _showUpgradeDialog();
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => ChatScreen(persona: persona)),
+                  );
+                }
               },
               onDelete: persona.owned ? () => _deletePersona(persona) : null,
             ),
           );
         },
+      ),
+    );
+  }
+
+  void _showUpgradeDialog() {
+    AppSound.mediumImpact();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppColors.bestFriendLight, AppColors.bestFriendDark],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.workspace_premium_rounded,
+                  color: Colors.white, size: 20),
+            ),
+            const SizedBox(width: 12),
+            const Text('Premium Persona'),
+          ],
+        ),
+        content: const Text(
+          'This persona is available with Premium. Upgrade to unlock all companions and unlimited messages.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Maybe later'),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const UpgradeScreen()));
+            },
+            child: const Text('Upgrade'),
+          ),
+        ],
       ),
     );
   }
@@ -415,11 +466,13 @@ class _HomeScreenState extends State<HomeScreen>
 
 class _PersonaCard extends StatefulWidget {
   final Persona persona;
+  final bool isLocked;
   final VoidCallback onTap;
   final VoidCallback? onDelete;
 
   const _PersonaCard({
     required this.persona,
+    required this.isLocked,
     required this.onTap,
     this.onDelete,
   });
@@ -454,6 +507,7 @@ class _PersonaCardState extends State<_PersonaCard>
   @override
   Widget build(BuildContext context) {
     final gradient = AppColors.personaGradient(widget.persona.name);
+    final locked = widget.isLocked;
 
     return GestureDetector(
       onTapDown: (_) => _pressController.forward(),
@@ -474,7 +528,9 @@ class _PersonaCardState extends State<_PersonaCard>
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
-                    color: gradient.first.withValues(alpha: 0.2 + 0.2 * t),
+                    color: locked
+                        ? Colors.black.withValues(alpha: 0.1 + 0.05 * t)
+                        : gradient.first.withValues(alpha: 0.2 + 0.2 * t),
                     blurRadius: 16 + 12 * t,
                     offset: Offset(0, 4 + 4 * t),
                     spreadRadius: -2,
@@ -491,10 +547,15 @@ class _PersonaCardState extends State<_PersonaCard>
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [
-                            gradient.first.withValues(alpha: 0.85),
-                            gradient.last,
-                          ],
+                          colors: locked
+                              ? [
+                                  gradient.first.withValues(alpha: 0.35),
+                                  gradient.last.withValues(alpha: 0.25),
+                                ]
+                              : [
+                                  gradient.first.withValues(alpha: 0.85),
+                                  gradient.last,
+                                ],
                         ),
                       ),
                     ),
@@ -507,7 +568,7 @@ class _PersonaCardState extends State<_PersonaCard>
                         height: 90,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.1),
+                          color: Colors.white.withValues(alpha: locked ? 0.05 : 0.1),
                         ),
                       ),
                     ),
@@ -519,7 +580,7 @@ class _PersonaCardState extends State<_PersonaCard>
                         height: 70,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: 0.07),
+                          color: Colors.white.withValues(alpha: locked ? 0.03 : 0.07),
                         ),
                       ),
                     ),
@@ -529,25 +590,28 @@ class _PersonaCardState extends State<_PersonaCard>
                       child: Row(
                         children: [
                           // ── Avatar with ring ──
-                          Container(
-                            padding: const EdgeInsets.all(3),
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                width: 2,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.15),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 2),
+                          Opacity(
+                            opacity: locked ? 0.5 : 1.0,
+                            child: Container(
+                              padding: const EdgeInsets.all(3),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.5),
+                                  width: 2,
                                 ),
-                              ],
-                            ),
-                            child: PersonaAvatar(
-                              personaName: widget.persona.name,
-                              size: 56,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.15),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: PersonaAvatar(
+                                personaName: widget.persona.name,
+                                size: 56,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 16),
@@ -564,10 +628,10 @@ class _PersonaCardState extends State<_PersonaCard>
                                         widget.persona.name,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w700,
-                                          color: Colors.white,
+                                          color: Colors.white.withValues(alpha: locked ? 0.7 : 1.0),
                                           letterSpacing: -0.3,
                                         ),
                                       ),
@@ -587,7 +651,7 @@ class _PersonaCardState extends State<_PersonaCard>
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.white.withValues(alpha: 0.85),
+                                    color: Colors.white.withValues(alpha: locked ? 0.5 : 0.85),
                                     height: 1.35,
                                   ),
                                 ),
@@ -599,7 +663,20 @@ class _PersonaCardState extends State<_PersonaCard>
                           Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              if (widget.onDelete != null)
+                              if (locked)
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                  ),
+                                  child: const Icon(
+                                    Icons.lock_rounded,
+                                    size: 18,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              else if (widget.onDelete != null)
                                 GestureDetector(
                                   onTap: widget.onDelete,
                                   child: Container(
@@ -617,9 +694,11 @@ class _PersonaCardState extends State<_PersonaCard>
                                 ),
                               const SizedBox(height: 8),
                               Icon(
-                                Icons.arrow_forward_ios_rounded,
+                                locked
+                                    ? Icons.arrow_forward_ios_rounded
+                                    : Icons.arrow_forward_ios_rounded,
                                 size: 16,
-                                color: Colors.white.withValues(alpha: 0.6),
+                                color: Colors.white.withValues(alpha: locked ? 0.4 : 0.6),
                               ),
                             ],
                           ),
