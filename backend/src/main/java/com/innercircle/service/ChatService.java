@@ -154,29 +154,53 @@ public class ChatService {
                                     })
                     )
                     .bodyToMono(String.class)
+                    .timeout(java.time.Duration.ofSeconds(30))
                     .block();
         } catch (Exception e) {
             log.error("Groq request failed: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to reach AI service: " + e.getMessage());
+            String fallbackReply = getFallbackReply(persona);
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(conversation);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(fallbackReply);
+            assistantMsg.setMetadata("{\"intent\":\"fallback\",\"emotion\":\"neutral\",\"response_strategy\":\"fallback\"}");
+            messageRepository.save(assistantMsg);
+            return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
         }
 
         String reply;
         try {
             JsonNode root = objectMapper.readTree(response);
             JsonNode choices = root.path("choices");
-            if (choices.isEmpty()) {
-                log.error("Groq returned no choices: {}", response);
-                throw new RuntimeException("AI service returned an empty response");
+            if (choices.isEmpty() || choices.get(0).path("message").path("content").asText("").isBlank()) {
+                log.error("Groq returned empty response: {}", response);
+                String fallbackReply = getFallbackReply(persona);
+                Message assistantMsg = new Message();
+                assistantMsg.setConversation(conversation);
+                assistantMsg.setRole("assistant");
+                assistantMsg.setContent(fallbackReply);
+                assistantMsg.setMetadata("{\"intent\":\"fallback\",\"emotion\":\"neutral\",\"response_strategy\":\"fallback\"}");
+                messageRepository.save(assistantMsg);
+                return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
             }
             reply = choices.get(0).path("message").path("content").asText("");
         } catch (Exception e) {
             log.error("Failed to parse Groq response: {} — raw body: {}", e.getMessage(), response);
-            throw new RuntimeException("Failed to parse AI response: " + e.getMessage());
+            String fallbackReply = getFallbackReply(persona);
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(conversation);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(fallbackReply);
+            assistantMsg.setMetadata("{\"intent\":\"fallback\",\"emotion\":\"neutral\",\"response_strategy\":\"fallback\"}");
+            messageRepository.save(assistantMsg);
+            return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
         }
 
         // Layer 5: Naturalness Filter
-        reply = stripMarkdown(reply);
-        reply = naturalnessFilter.filter(reply, persona.getRole());
+        String filteredReply = naturalnessFilter.filter(stripMarkdown(reply), persona.getRole());
+        if (!filteredReply.isBlank()) {
+            reply = filteredReply;
+        }
 
         // Store assistant message with metadata
         java.util.UUID assistantMessageId = null;
@@ -378,6 +402,17 @@ public class ChatService {
         result = MD_NUMBERED.matcher(result).replaceAll("");
         result = EXTRA_BLANK_LINES.matcher(result).replaceAll("\n\n");
         return result.trim();
+    }
+
+    private String getFallbackReply(Persona persona) {
+        String name = persona.getName();
+        return switch (persona.getRole().toLowerCase()) {
+            case "best_friend" -> "sorry my brain just blue-screened for a sec 😭 what were you saying?";
+            case "mentor" -> "Hmm, give me a moment — I got a bit distracted. What were we talking about?";
+            case "partner" -> "babe? I'm here, just spacing out for a sec lol what's up";
+            case "therapist" -> "I apologize for the brief pause. Please continue — I'm listening.";
+            default -> "oops lost my train of thought for a sec, say that again?";
+        };
     }
 
     @Transactional

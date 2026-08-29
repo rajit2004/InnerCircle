@@ -97,6 +97,14 @@ public class ConversationUnderstandingService {
                 cleanContent = cleanContent.replaceAll("(?s)^```[a-zA-Z]*\\n?", "").replaceAll("```\\s*$", "").trim();
             }
 
+            // If the response is truncated (no closing brace), try to salvage it
+            if (!cleanContent.endsWith("}")) {
+                int lastBrace = cleanContent.lastIndexOf('}');
+                if (lastBrace > 0) {
+                    cleanContent = cleanContent.substring(0, lastBrace + 1);
+                }
+            }
+
             JsonNode stateNode = objectMapper.readTree(cleanContent);
             return ConversationState.builder()
                     .intent(stateNode.path("intent").asText("REACTION"))
