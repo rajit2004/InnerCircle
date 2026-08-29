@@ -74,12 +74,12 @@ public class MemoryService {
 
         Persona persona = personaId != null ? personaRepository.findById(personaId).orElse(null) : null;
         if (persona == null) {
-            return memoryRepository.findByUserOrderByImportanceDesc(user)
+            return memoryRepository.findActiveByUser(user)
                     .stream()
                     .limit(MAX_RELEVANT_MEMORIES)
                     .toList();
         }
-        return memoryRepository.findByUserAndPersonaOrSharedOrderByImportanceDesc(user, persona)
+        return memoryRepository.findActiveByUserAndPersonaOrShared(user, persona)
                 .stream()
                 .limit(MAX_RELEVANT_MEMORIES)
                 .toList();
@@ -91,8 +91,8 @@ public class MemoryService {
             Persona persona = personaId != null ? personaRepository.findById(UUID.fromString(personaId)).orElse(null) : null;
 
             List<Memory> existing = persona != null
-                    ? memoryRepository.findByUserAndPersonaOrSharedOrderByImportanceDesc(user, persona)
-                    : memoryRepository.findByUserOrderByImportanceDesc(user);
+                    ? memoryRepository.findActiveByUserAndPersonaOrShared(user, persona)
+                    : memoryRepository.findActiveByUser(user);
             String existingFacts = existing.stream()
                     .map(Memory::getFact)
                     .reduce((a, b) -> a + "\n" + b)

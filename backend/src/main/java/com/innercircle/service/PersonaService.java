@@ -79,7 +79,6 @@ public class PersonaService {
         }
 
         Persona persona = new Persona();
-        // SECURITY: sanitize all user inputs before storing
         persona.setName(InputSanitizer.sanitizeText(request.getName()));
         persona.setRole(relationshipType.toLowerCase());
         persona.setAvatarEmoji(
@@ -87,6 +86,8 @@ public class PersonaService {
                         ? request.getAvatarEmoji().trim()
                         : defaultEmojiFor(relationshipType)
         );
+        persona.setPersonality(request.getPersonality());
+        persona.setVoice(request.getVoice());
         persona.setSystemPrompt(buildSystemPrompt(relationshipType, InputSanitizer.sanitizeText(request.getPersonalityDescription())));
         persona.setGreeting(buildGreeting(relationshipType, InputSanitizer.sanitizeText(request.getName())));
         persona.setSubscriptionTier(SubscriptionTier.free);
@@ -125,11 +126,14 @@ public class PersonaService {
                 persona.getName(),
                 persona.getRole(),
                 persona.getAvatarEmoji(),
+                persona.getPersonality(),
                 persona.getSystemPrompt(),
                 persona.getGreeting(),
+                persona.getVoice(),
                 persona.isActive(),
                 persona.getSubscriptionTier().name(),
-                owned
+                owned,
+                persona.getOwner() != null ? persona.getOwner().getId() : null
         );
     }
 

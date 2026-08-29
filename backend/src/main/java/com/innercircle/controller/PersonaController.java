@@ -25,10 +25,6 @@ public class PersonaController {
         return personaService.getPersonasForUser(user);
     }
 
-    // FEATURE (custom personas, 2026-07-06): builds a persona from a
-    // relationship template + short personality description -- see
-    // PersonaService.buildSystemPrompt for why this isn't a raw free-text
-    // system prompt field.
     @PostMapping
     public PersonaResponse createPersona(@AuthenticationPrincipal User user,
                                          @Valid @RequestBody CreatePersonaRequest request) {

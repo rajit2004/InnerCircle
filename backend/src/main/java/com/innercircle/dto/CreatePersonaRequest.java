@@ -19,10 +19,6 @@ public class CreatePersonaRequest {
     @Size(max = 40)
     private String name;
 
-    // One of: PARENT, SIBLING, FRIEND, PARTNER, MENTOR, OTHER
-    // (validated against that exact set in PersonaService, not bound as a
-    // Java enum directly -- an unrecognized value should be a clean 400
-    // with a clear message, not a JSON deserialization error)
     @NotBlank
     private String relationshipType;
 
@@ -30,10 +26,7 @@ public class CreatePersonaRequest {
     @Size(max = 300)
     private String personalityDescription;
 
-    // Optional -- a single emoji to represent this persona in lists. Kept
-    // as free text but expected to be one simple, common, single-codepoint
-    // emoji, same reasoning as the emoji guidance baked into the built-in
-    // persona prompts in Round 8 (compound/ZWJ emoji are the ones most
-    // likely to render inconsistently across Android devices/fonts).
     private String avatarEmoji;
+    private String personality;
+    private String voice;
 }

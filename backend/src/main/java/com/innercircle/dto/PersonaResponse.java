@@ -22,9 +22,12 @@ public class PersonaResponse {
     private String name;
     private String role;
     private String avatarEmoji;
+    private String personality;
     private String systemPrompt;
     private String greeting;
+    private String voice;
     private boolean active;
     private String subscriptionTier;
     private boolean owned;
+    private UUID userId;
 }

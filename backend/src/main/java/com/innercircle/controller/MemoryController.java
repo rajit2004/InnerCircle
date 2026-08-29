@@ -42,11 +42,11 @@ public class MemoryController {
         if (personaId != null) {
             Persona persona = personaRepository.findById(personaId)
                     .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
-            return memoryRepository.findByUserAndPersonaOrSharedOrderByImportanceDesc(user, persona).stream()
+            return memoryRepository.findActiveByUserAndPersonaOrShared(user, persona).stream()
                     .map(this::toResponse)
                     .toList();
         }
-        return memoryRepository.findByUserOrderByImportanceDesc(user).stream()
+        return memoryRepository.findActiveByUser(user).stream()
                 .map(this::toResponse)
                 .toList();
     }
@@ -77,7 +77,8 @@ public class MemoryController {
         if (!memory.getUser().getId().equals(user.getId())) {
             throw new ForbiddenException("You do not have permission to delete this memory");
         }
-        memoryRepository.delete(memory);
+        memory.setDeletedAt(java.time.Instant.now());
+        memoryRepository.save(memory);
     }
 
     private MemoryResponse toResponse(Memory memory) {
