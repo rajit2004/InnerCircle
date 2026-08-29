@@ -113,7 +113,7 @@ CREATE TABLE IF NOT EXISTS relationships (
     inside_jokes TEXT DEFAULT '[]',
     shared_topics TEXT DEFAULT '[]',
     preferred_response_style TEXT,
-    user.nickname TEXT,
+    user_nickname TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW(),
     UNIQUE (user_id, persona_id)
