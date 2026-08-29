@@ -317,12 +317,12 @@ class _ChatScreenState extends State<ChatScreen> {
                       ],
                     ),
                     // Scroll-to-bottom FAB
-                    AnimatedOpacity(
-                      duration: AppMotion.micro,
-                      opacity: _showScrollToBottom ? 1.0 : 0.0,
-                      child: Positioned(
-                        bottom: 80,
-                        right: 16,
+                    Positioned(
+                      bottom: 80,
+                      right: 16,
+                      child: AnimatedOpacity(
+                        duration: AppMotion.micro,
+                        opacity: _showScrollToBottom ? 1.0 : 0.0,
                         child: FloatingActionButton.small(
                           heroTag: 'scroll-to-bottom',
                           onPressed: () {
