@@ -35,8 +35,7 @@ public class PersonaService {
     private final PersonaRepository personaRepository;
 
     public List<PersonaResponse> getPersonasForUser(User user) {
-        List<SubscriptionTier> tiers = List.of(user.getSubscriptionTier(), SubscriptionTier.free);
-        return personaRepository.findVisibleTo(user, tiers).stream()
+        return personaRepository.findVisibleTo(user).stream()
                 .map(p -> toResponse(p, user))
                 .toList();
     }
