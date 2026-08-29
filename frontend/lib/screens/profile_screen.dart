@@ -196,7 +196,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Center(
             child: Column(
               children: [
-                // Animated avatar with bounce on tap
                 GestureDetector(
                   onTap: () {
                     AppSound.selectionClick();
@@ -230,33 +229,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onToggle: _toggleSubscription,
             onUpgrade: _openUpgrade,
           ),
-          const SizedBox(height: 16),
-          _NudgeTile(
-            icon: Icons.notifications_outlined,
-            title: 'Check-in reminders',
-            subtitle: 'Manage scheduled persona check-ins',
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const NotificationsScreen())),
-          ),
-          const SizedBox(height: 16),
-          _NudgeTile(
-            icon: Icons.settings_outlined,
-            title: 'Settings',
-            subtitle: 'Appearance and app info',
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen())),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+          Text('Account details',
+              style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 10),
           Card(
             child: Column(
               children: [
-                _ProfileTile(
+                _DetailTile(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Display name',
+                  value: profile.displayName?.isNotEmpty == true
+                      ? profile.displayName!
+                      : 'Not set',
+                  trailing: IconButton(
+                    icon: const Icon(Icons.edit_outlined, size: 20),
+                    onPressed: () => _editDisplayName(profile),
+                  ),
+                ),
+                const Divider(height: 1, indent: 56),
+                _DetailTile(
+                  icon: Icons.mail_outline_rounded,
+                  label: 'Email',
+                  value: profile.email,
+                ),
+                const Divider(height: 1, indent: 56),
+                _DetailTile(
                   icon: Icons.calendar_today_outlined,
                   label: 'Member since',
                   value: _formatDate(profile.memberSince),
                 ),
                 const Divider(height: 1, indent: 56),
-                _ProfileTile(
+                _DetailTile(
                   icon: Icons.fingerprint_rounded,
                   label: 'Account ID',
                   value: profile.id,
@@ -264,7 +268,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
+          Text('Preferences',
+              style: Theme.of(context).textTheme.titleSmall),
+          const SizedBox(height: 10),
+          _NudgeTile(
+            icon: Icons.notifications_outlined,
+            title: 'Check-in reminders',
+            subtitle: 'Manage scheduled persona check-ins',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+          ),
+          const SizedBox(height: 10),
+          _NudgeTile(
+            icon: Icons.settings_outlined,
+            title: 'Settings',
+            subtitle: 'Appearance and app info',
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen())),
+          ),
+          const SizedBox(height: 24),
           Card(
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(
@@ -279,6 +302,91 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _editDisplayName(UserProfile profile) async {
+    AppSound.selectionClick();
+    final controller = TextEditingController(
+      text: profile.displayName ?? '',
+    );
+
+    final newName = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Container(
+          margin: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          decoration: BoxDecoration(
+            color: Theme.of(ctx).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).dividerColor,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text('Edit display name',
+                  style: Theme.of(ctx).textTheme.titleLarge),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  labelText: 'Display name',
+                  hintText: 'How should we call you?',
+                  prefixIcon: Icon(Icons.person_outline_rounded),
+                ),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+                  child: const Text('Save'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (newName == null) return;
+
+    try {
+      final updated = await UserService.updateProfile(
+        displayName: newName.isEmpty ? null : newName,
+      );
+      if (!mounted) return;
+      setState(() => _profile = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Display name updated')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update: ${e.toString().replaceFirst('Exception: ', '')}'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
   }
 
   void _showAvatarOptions() {
@@ -656,22 +764,24 @@ class _BenefitRow extends StatelessWidget {
   }
 }
 
-class _ProfileTile extends StatelessWidget {
+class _DetailTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
+  final Widget? trailing;
 
-  const _ProfileTile({
+  const _DetailTile({
     required this.icon,
     required this.label,
     required this.value,
+    this.trailing,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading:
-          Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+      leading: Icon(icon, color: AppColors.primary, size: 22),
       title: Text(label, style: Theme.of(context).textTheme.bodyMedium),
       subtitle: Text(
         value,
@@ -682,6 +792,7 @@ class _ProfileTile extends StatelessWidget {
             .bodyLarge
             ?.copyWith(fontWeight: FontWeight.w500),
       ),
+      trailing: trailing,
     );
   }
 }

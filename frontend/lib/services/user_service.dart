@@ -7,6 +7,14 @@ class UserService {
     return UserProfile.fromJson(data);
   }
 
+  static Future<UserProfile> updateProfile({String? displayName}) async {
+    final data = await ApiClient.put(
+      '/api/users/me',
+      body: {'displayName': displayName},
+    ) as Map<String, dynamic>;
+    return UserProfile.fromJson(data);
+  }
+
   static Future<UserProfile> updateSubscription(String tier) async {
     final data =
     await ApiClient.post('/api/users/subscription', body: {'tier': tier})
