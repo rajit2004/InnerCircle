@@ -68,6 +68,10 @@ public class PersonaService {
     // made for yourself.
     @Transactional
     public PersonaResponse createCustomPersona(User user, CreatePersonaRequest request) {
+        if (user.getSubscriptionTier() != SubscriptionTier.premium) {
+            throw new ForbiddenException("Upgrade to premium to create custom personas");
+        }
+
         String relationshipType = request.getRelationshipType().trim().toUpperCase();
         if (!ALLOWED_RELATIONSHIP_TYPES.contains(relationshipType)) {
             throw new BadRequestException(
