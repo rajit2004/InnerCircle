@@ -4,8 +4,11 @@ class UserProfile {
   final String? displayName;
   final String subscriptionTier;
   final int messagesUsedToday;
-  final int dailyMessageLimit; // 0 = unlimited
+  final int dailyMessageLimit;
   final DateTime? memberSince;
+  final DateTime? updatedAt;
+  final String? language;
+  final String? timezone;
 
   UserProfile({
     required this.id,
@@ -15,6 +18,9 @@ class UserProfile {
     required this.messagesUsedToday,
     required this.dailyMessageLimit,
     this.memberSince,
+    this.updatedAt,
+    this.language,
+    this.timezone,
   });
 
   bool get isPremium => subscriptionTier.toLowerCase() == 'premium';
@@ -30,6 +36,11 @@ class UserProfile {
       memberSince: json['memberSince'] != null
           ? DateTime.tryParse(json['memberSince'])
           : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.tryParse(json['updatedAt'])
+          : null,
+      language: json['language'],
+      timezone: json['timezone'],
     );
   }
 }

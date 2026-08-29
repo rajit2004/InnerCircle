@@ -412,7 +412,7 @@ class _HomeScreenState extends State<HomeScreen>
                   );
                 }
               },
-              onDelete: persona.owned ? () => _deletePersona(persona) : null,
+              onDelete: persona.isOwned ? () => _deletePersona(persona) : null,
             ),
           );
         },
