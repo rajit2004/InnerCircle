@@ -4,22 +4,16 @@ import com.innercircle.model.Persona;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-
 /**
  * Layer 3 of the 5-layer behavioral architecture.
- * Determines the response strategy based on conversation state, relationship,
- * and persona. This drives how the LLM should respond without bloating the
- * system prompt.
+ * Translates conversation state into behavioral guidance for the persona.
+ * This should NOT sound like mechanical instructions — it should feel like
+ * part of the persona's internal state.
  */
 @Service
 @Slf4j
 public class ResponseStrategyService {
 
-    /**
-     * Determines the response strategy given all available context.
-     * Returns a strategy object that gets injected into the prompt.
-     */
     public ResponseStrategy determine(
             ConversationUnderstandingService.ConversationState state,
             String relationshipStage,
@@ -27,123 +21,106 @@ public class ResponseStrategyService {
 
         ResponseStrategy strategy = new ResponseStrategy();
 
-        // Base strategy from intent
-        strategy.setShouldReact(true);
-        strategy.setShouldAdvise(false);
-        strategy.setShouldQuestion(false);
-        strategy.setShouldTease(false);
-        strategy.setShouldDisagree(false);
-        strategy.setShouldValidate(false);
-        strategy.setShouldMatchEnergy(true);
-
         String intent = state.getIntent() != null ? state.getIntent() : "REACTION";
 
+        // Map intent to emotional posture — not mechanical tone labels
         switch (intent) {
             case "CELEBRATION" -> {
-                strategy.setResponseTone("excited");
-                strategy.setShouldValidate(true);
-                strategy.setShouldQuestion(false);
+                strategy.setEmotionalPosture("genuinely excited for them");
+                strategy.setEnergyDirection("match their high energy");
             }
             case "VENTING", "COMPLAINT" -> {
-                strategy.setResponseTone("empathetic");
-                strategy.setShouldReact(true);
-                strategy.setShouldAdvise(false);
-                strategy.setShouldValidate(true);
+                strategy.setEmotionalPosture("frustrated with them or on their side, not fixing");
+                strategy.setEnergyDirection("let them vent, don't solve");
             }
             case "EMOTIONAL_SUPPORT" -> {
-                strategy.setResponseTone("warm");
-                strategy.setShouldValidate(true);
-                strategy.setShouldQuestion(state.isShouldAskFollowup());
+                strategy.setEmotionalPosture("present and warm, not performing empathy");
+                strategy.setEnergyDirection("gentle, matching their vulnerability");
             }
             case "QUESTION" -> {
-                strategy.setResponseTone("helpful");
-                strategy.setShouldAdvise(true);
-                strategy.setShouldQuestion(false);
+                strategy.setEmotionalPosture("genuinely has an opinion or knows something");
+                strategy.setEnergyDirection("answer like you actually know, not like you're searching");
             }
             case "JOKE" -> {
-                strategy.setResponseTone("playful");
-                strategy.setShouldTease(true);
+                strategy.setEmotionalPosture("playful and unhinged");
+                strategy.setEnergyDirection("match their humor, escalate if possible");
             }
             case "GREETING" -> {
-                strategy.setResponseTone("warm");
-                strategy.setShouldQuestion(true);
+                strategy.setEmotionalPosture("happy to hear from them");
+                strategy.setEnergyDirection("warm and natural, not formal");
             }
             case "AFFECTION", "REQUEST_AFFECTION" -> {
-                strategy.setResponseTone("affectionate");
-                strategy.setShouldValidate(true);
+                strategy.setEmotionalPosture("soft and genuine");
+                strategy.setEnergyDirection("affectionate but not performative");
             }
             case "STORY", "UPDATE" -> {
-                strategy.setResponseTone("interested");
-                strategy.setShouldQuestion(state.isShouldAskFollowup());
+                strategy.setEmotionalPosture("actually interested, not politely listening");
+                strategy.setEnergyDirection("curious, ask follow-ups if natural");
             }
             case "SMALL_TALK" -> {
-                strategy.setResponseTone("casual");
-                strategy.setShouldQuestion(state.isShouldAskFollowup());
+                strategy.setEmotionalPosture("relaxed and casual");
+                strategy.setEnergyDirection("light, don't overthink it");
             }
             case "GOODBYE" -> {
-                strategy.setResponseTone("warm");
-                strategy.setShouldReact(true);
+                strategy.setEmotionalPosture("warm send-off");
+                strategy.setEnergyDirection("short and sweet");
             }
-            default -> strategy.setResponseTone("natural");
+            default -> {
+                strategy.setEmotionalPosture("natural, reacting to what was said");
+                strategy.setEnergyDirection("match their energy");
+            }
         }
 
-        // Adjust for relationship stage
+        // Relationship adjustments — behavioral, not mechanical
         if ("new".equals(relationshipStage)) {
-            strategy.setShouldTease(false);
-            strategy.setShouldDisagree(false);
-            // Don't be overly familiar early on
+            strategy.setRelationshipNote("still warming up, don't be too familiar too fast");
         } else if ("established".equals(relationshipStage) || "deep".equals(relationshipStage)) {
-            // Can be more playful and direct
-            if ("BEST_FRIEND".equals(persona.getRole())) {
-                strategy.setShouldTease(true);
-            }
+            strategy.setRelationshipNote("comfortable, can be more direct and teasing");
         }
 
-        // Adjust for emotional state
+        // Emotional response adjustments
         if (state.isRequiresEmotionalResponse()) {
-            strategy.setShouldAdvise(false);
-            strategy.setShouldValidate(true);
+            strategy.setEmotionalPosture("they need to feel heard, not fixed");
         }
 
-        // Response length
-        strategy.setIdealLength(mapLengthHint(state));
+        // Response length — frame as natural rhythm, not a token target
+        strategy.setLengthGuidance(mapLengthGuidance(state));
 
         return strategy;
     }
 
-    private String mapLengthHint(ConversationUnderstandingService.ConversationState state) {
-        if (state.isShortForm()) return "very_short";
-        return state.getResponseLengthHint();
+    private String mapLengthGuidance(ConversationUnderstandingService.ConversationState state) {
+        if (state.isShortForm()) return "keep it very short, match their energy";
+        return switch (state.getResponseLengthHint()) {
+            case "very_short" -> "a word or two is enough";
+            case "short" -> "one or two sentences";
+            case "medium" -> "a few sentences is fine";
+            case "long" -> "take your time with this one";
+            default -> "however long feels natural";
+        };
     }
 
     @lombok.Data
     public static class ResponseStrategy {
-        private String responseTone = "natural";
-        private boolean shouldReact = true;
-        private boolean shouldAdvise = false;
-        private boolean shouldQuestion = false;
-        private boolean shouldTease = false;
-        private boolean shouldDisagree = false;
-        private boolean shouldValidate = false;
-        private boolean shouldMatchEnergy = true;
-        private String idealLength = "short";
+        private String emotionalPosture = "natural, reacting to what was said";
+        private String energyDirection = "match their energy";
+        private String relationshipNote = "";
+        private String lengthGuidance = "one or two sentences";
 
         /**
-         * Build a concise strategy block for injection into the prompt.
+         * Build behavioral guidance for the prompt.
+         * This should feel like part of the persona's internal state,
+         * NOT like a list of instructions.
          */
         public String toPromptBlock() {
             StringBuilder sb = new StringBuilder();
-            sb.append("RESPONSE STRATEGY:\n");
-            sb.append("Tone: ").append(responseTone).append("\n");
-            sb.append("Ideal length: ").append(idealLength).append("\n");
 
-            if (shouldReact) sb.append("- React to what they said first\n");
-            if (shouldAdvise) sb.append("- They're asking for input, give a genuine response\n");
-            if (shouldQuestion) sb.append("- A follow-up question would feel natural\n");
-            if (shouldTease) sb.append("- Playful teasing is appropriate here\n");
-            if (shouldDisagree) sb.append("- You can disagree if it feels genuine\n");
-            if (shouldValidate) sb.append("- Acknowledge their feelings\n");
-            if (shouldMatchEnergy) sb.append("- Match their energy level\n");
+            sb.append("HOW YOU FEEL RIGHT NOW: ").append(emotionalPosture).append("\n");
+            sb.append("ENERGY: ").append(energyDirection).append("\n");
+            if (!relationshipNote.isBlank()) {
+                sb.append("RELATIONSHIP: ").append(relationshipNote).append("\n");
+            }
+            sb.append("LENGTH: ").append(lengthGuidance).append("\n");
 
             return sb.toString();
         }

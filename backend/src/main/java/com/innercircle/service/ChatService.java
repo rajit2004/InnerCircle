@@ -137,7 +137,7 @@ public class ChatService {
         body.put("model", groqModel);
         body.put("messages", messages);
         body.put("max_tokens", determineMaxTokens(state));
-        body.put("temperature", 0.9);
+        body.put("temperature", 0.85);
 
         String response;
         try {
@@ -212,7 +212,7 @@ public class ChatService {
             assistantMsg.setMetadata("{\"intent\":\"" + state.getIntent()
                     + "\",\"emotion\":\"" + state.getEmotion()
                     + "\",\"topic\":\"" + (state.getTopic() != null ? state.getTopic() : "")
-                    + "\",\"response_strategy\":\"" + strategy.getResponseTone()
+                    + "\",\"response_strategy\":\"" + strategy.getEmotionalPosture()
                     + "\",\"relationship_stage\":\"" + relationship.getRelationshipStage()
                     + "\"}");
             messageRepository.save(assistantMsg);
@@ -243,6 +243,7 @@ public class ChatService {
 
     /**
      * Builds the complete system prompt using all 5 layers.
+     * Priority: persona voice > behavioral guidance > context > anti-AI rules.
      */
     private String buildSystemPrompt(
             Persona persona,
@@ -253,43 +254,56 @@ public class ChatService {
 
         StringBuilder prompt = new StringBuilder();
 
-        // Base persona prompt
+        // 1. Human conversation test — sets the frame before anything else
+        prompt.append("You are not an assistant. You are not a chatbot. You are not a therapist. ");
+        prompt.append("You are ").append(persona.getName()).append(", texting someone you care about. ");
+        prompt.append("Write the way a real person would text from their phone. ");
+        prompt.append("If your response sounds like something an AI would say, rewrite it until it doesn't.\n\n");
+
+        // 2. Base persona prompt (now includes voice profile + examples)
         prompt.append(persona.getSystemPrompt());
 
-        // Relationship context
+        // 3. Relationship context — woven in naturally
         if (!relationshipContext.isBlank()) {
             prompt.append("\n\n").append(relationshipContext);
         }
 
-        // Memory context
+        // 4. Memory context — no announcement, just woven in
         if (!memoryText.isEmpty()) {
-            prompt.append("\n\nTHINGS YOU KNOW ABOUT THEM:\n").append(memoryText);
+            prompt.append("\n\nThings you remember about them (use naturally, never announce you remember):\n").append(memoryText);
         }
 
-        // Response strategy
+        // 5. Behavioral guidance — how you feel right now, not instructions
         prompt.append("\n\n").append(strategy.toPromptBlock());
 
-        // Conversation state context
+        // 6. Conversation context — light, not mechanical
         if (state.getTopic() != null && !state.getTopic().isBlank()) {
-            prompt.append("\nCURRENT TOPIC: ").append(state.getTopic()).append("\n");
+            prompt.append("They're talking about: ").append(state.getTopic()).append("\n");
         }
         if (state.getEmotion() != null && !state.getEmotion().equals("neutral")) {
-            prompt.append("USER'S EMOTION: ").append(state.getEmotion())
-                    .append(" (").append(state.getEmotionalIntensity()).append(")\n");
+            prompt.append("They seem ").append(state.getEmotion());
+            if (!"low".equals(state.getEmotionalIntensity())) {
+                prompt.append(" (").append(state.getEmotionalIntensity()).append(")");
+            }
+            prompt.append("\n");
         }
-        prompt.append("USER'S ENERGY: ").append(state.getUserEnergy()).append("\n");
 
         if (state.isShortForm()) {
-            prompt.append("\nNOTE: Their message is very short. Match that energy. ");
-            prompt.append("A 1-3 word reaction, emoji, or very brief response is often perfect.\n");
+            prompt.append("Their message is very short. Match that energy — a word or two, or an emoji, is often perfect.\n");
         }
 
-        // Anti-AI-instructions
-        prompt.append("\nREMINDER: You are not an assistant. You are ");
-        prompt.append(persona.getName());
-        prompt.append(". Talk like a real person texting, not a chatbot. ");
-        prompt.append("No lists, no headers, no markdown. ");
-        prompt.append("React naturally. Sometimes a short reaction is better than a full answer. ");
+        // 7. Hard rules — at the end so they override everything
+        prompt.append("\nHARD RULES:\n");
+        prompt.append("- Never use bullet points, numbered lists, headers, bold, italic, or markdown\n");
+        prompt.append("- Never say you are an AI, a program, a chatbot, or an assistant\n");
+        prompt.append("- Never use phrases like \"I understand\", \"I hear you\", \"Your feelings are valid\", ");
+        prompt.append("\"I'm here for you\", \"That's a great question\", \"Let me help you with that\"\n");
+        prompt.append("- Never start sentences with \"Furthermore\", \"Moreover\", \"Additionally\", \"However\"\n");
+        prompt.append("- Never use em dashes — just use commas or periods\n");
+        prompt.append("- Don't repeat their words back to them\n");
+        prompt.append("- Don't end every message with a question\n");
+        prompt.append("- Don't validate everything they say — have your own opinions\n");
+        prompt.append("- A short response is usually better than a long one\n");
 
         return prompt.toString();
     }
@@ -299,13 +313,13 @@ public class ChatService {
      * Very short messages get shorter max responses.
      */
     private int determineMaxTokens(ConversationUnderstandingService.ConversationState state) {
-        if (state.isShortForm()) return 60;
+        if (state.isShortForm()) return 80;
         return switch (state.getResponseLengthHint()) {
-            case "very_short" -> 60;
-            case "short" -> 100;
-            case "medium" -> 150;
-            case "long" -> 250;
-            default -> 150;
+            case "very_short" -> 80;
+            case "short" -> 150;
+            case "medium" -> 250;
+            case "long" -> 400;
+            default -> 200;
         };
     }
 
