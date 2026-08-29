@@ -85,7 +85,7 @@ CREATE TABLE IF NOT EXISTS memories (
     persona_id UUID REFERENCES personas(id) ON DELETE CASCADE,
     fact TEXT NOT NULL,
     content TEXT,
-    memory_type TEXT DEFAULT 'fact' CHECK (memory_type IN ('semantic', 'episodic', 'preference', 'relationship', 'emotional')),
+    memory_type TEXT DEFAULT 'semantic' CHECK (memory_type IN ('semantic', 'episodic', 'preference', 'relationship', 'emotional')),
     embedding vector(1536),
     importance INT DEFAULT 1,
     access_count INT DEFAULT 0,

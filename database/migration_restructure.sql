@@ -31,7 +31,7 @@ UPDATE personas SET personality = system_prompt WHERE personality IS NULL;
 
 -- ── Memory new columns ────────────────────────────────────────────────────
 ALTER TABLE memories ADD COLUMN IF NOT EXISTS content TEXT;
-ALTER TABLE memories ADD COLUMN IF NOT EXISTS memory_type TEXT DEFAULT 'fact';
+ALTER TABLE memories ADD COLUMN IF NOT EXISTS memory_type TEXT DEFAULT 'semantic';
 ALTER TABLE memories ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
 ALTER TABLE memories ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
 

@@ -34,7 +34,7 @@ public class Memory {
     @Column(columnDefinition = "TEXT")
     private String content;
 
-    private String memoryType = "fact";
+    private String memoryType = "semantic";
 
     @Column(columnDefinition = "vector(1536)")
     @ColumnTransformer(write = "?::vector", read = "embedding::text")
