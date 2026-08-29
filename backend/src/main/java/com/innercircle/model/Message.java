@@ -4,8 +4,10 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.type.NumericBooleanConverter;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.UUID;
 
 @Entity
@@ -30,6 +32,9 @@ public class Message {
 
     private int tokensUsed = 0;
     private String reaction;
+
+    @Column(columnDefinition = "jsonb")
+    private Map<String, Object> metadata;
 
     @CreationTimestamp
     private Instant createdAt;
