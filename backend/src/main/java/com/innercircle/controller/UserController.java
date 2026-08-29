@@ -1,6 +1,7 @@
 package com.innercircle.controller;
 
 import com.innercircle.dto.SubscriptionUpdateRequest;
+import com.innercircle.dto.UpdateProfileRequest;
 import com.innercircle.dto.UserProfileResponse;
 import com.innercircle.model.SubscriptionTier;
 import com.innercircle.model.User;
@@ -11,10 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-// FEATURE (self-profile screen, 2026-07-03): see UserProfileResponse for the
-// reasoning. No new SecurityConfig rule needed -- /api/users/** already falls
-// under the existing .anyRequest().authenticated() rule, same as everything
-// else that isn't explicitly listed under /api/auth/**, /health, or /api/admin/**.
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
@@ -27,10 +24,13 @@ public class UserController {
         return toResponse(user);
     }
 
-    // FEATURE (subscription upgrade, 2026-07-04): mock/manual tier toggle --
-    // see UserService for why this is deliberately not dressed up as a real
-    // payment flow. Returns the updated profile so the frontend can refresh
-    // its display in one round trip instead of needing a second GET /me.
+    @PutMapping("/me")
+    public UserProfileResponse updateProfile(@AuthenticationPrincipal User user,
+                                             @Valid @RequestBody UpdateProfileRequest request) {
+        User updated = userService.updateProfile(user, request.getDisplayName());
+        return toResponse(updated);
+    }
+
     @PostMapping("/subscription")
     public UserProfileResponse updateSubscription(@AuthenticationPrincipal User user,
                                                   @Valid @RequestBody SubscriptionUpdateRequest request) {
