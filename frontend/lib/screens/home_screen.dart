@@ -95,7 +95,10 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _openCreatePersona() async {
     AppSound.lightImpact();
-    // FAB morph: rotate + to ×
+    if (!_isPremium) {
+      _showUpgradeDialog();
+      return;
+    }
     setState(() => _fabOpen = true);
     final created = await Navigator.push<bool>(
       context,
@@ -424,20 +427,26 @@ class _HomeScreenState extends State<HomeScreen>
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [AppColors.bestFriendLight, AppColors.bestFriendDark],
                 ),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
               ),
               child: const Icon(Icons.workspace_premium_rounded,
-                  color: Colors.white, size: 20),
+                  color: Colors.white, size: 18),
             ),
-            const SizedBox(width: 12),
-            const Text('Premium Persona'),
+            const SizedBox(width: 10),
+            const Flexible(
+              child: Text(
+                'Premium Persona',
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: const Text(
@@ -449,10 +458,11 @@ class _HomeScreenState extends State<HomeScreen>
             child: const Text('Maybe later'),
           ),
           FilledButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              Navigator.push(context,
+              await Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const UpgradeScreen()));
+              if (mounted) _fetchPersonas();
             },
             child: const Text('Upgrade'),
           ),

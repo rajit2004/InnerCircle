@@ -171,7 +171,7 @@ class _UpgradeScreenState extends State<UpgradeScreen>
                 Align(
                   alignment: Alignment.topLeft,
                   child: IconButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(context, false),
                     icon: const Icon(Icons.close_rounded, color: Colors.white),
                   ),
                 ),
@@ -481,7 +481,7 @@ class _UpgradeScreenState extends State<UpgradeScreen>
                       ),
                       const SizedBox(height: 48),
                       FilledButton(
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () => Navigator.pop(context, true),
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: AppColors.primary,
