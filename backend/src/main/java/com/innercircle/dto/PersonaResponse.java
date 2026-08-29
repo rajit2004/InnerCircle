@@ -27,6 +27,7 @@ public class PersonaResponse {
     private String greeting;
     private String voice;
     private boolean active;
+    private boolean nsfwEnabled;
     private String subscriptionTier;
     private boolean owned;
     private UUID userId;

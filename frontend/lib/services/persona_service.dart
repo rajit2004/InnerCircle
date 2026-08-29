@@ -16,6 +16,7 @@ class PersonaService {
     String? avatarEmoji,
     String? personality,
     String? voice,
+    bool nsfwEnabled = false,
   }) async {
     final data =
     await ApiClient.post(
@@ -28,6 +29,7 @@ class PersonaService {
           'avatarEmoji': avatarEmoji,
         if (personality != null) 'personality': personality,
         if (voice != null) 'voice': voice,
+        'nsfwEnabled': nsfwEnabled,
       },
     )
     as Map<String, dynamic>;

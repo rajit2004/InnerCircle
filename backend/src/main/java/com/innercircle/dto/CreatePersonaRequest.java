@@ -29,4 +29,5 @@ public class CreatePersonaRequest {
     private String avatarEmoji;
     private String personality;
     private String voice;
+    private boolean nsfwEnabled = false;
 }

@@ -261,7 +261,13 @@ public class ChatService {
         prompt.append("If your response sounds like something an AI would say, rewrite it until it doesn't.\n\n");
 
         // 2. Base persona prompt (now includes voice profile + examples)
-        prompt.append(persona.getSystemPrompt());
+        String basePrompt = persona.getSystemPrompt();
+        // Strip PG-13 restrictions if nsfw is enabled
+        if (persona.isNsfwEnabled()) {
+            basePrompt = basePrompt.replaceAll("(?i)\\s*--?\\s*keep it romantic and playful but PG-13[^.]*\\.", "");
+            basePrompt = basePrompt.replaceAll("(?i)\\s*PG-13[^.]*\\.", "");
+        }
+        prompt.append(basePrompt);
 
         // 3. Relationship context — woven in naturally
         if (!relationshipContext.isBlank()) {

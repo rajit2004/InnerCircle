@@ -36,6 +36,7 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
   String _relationshipType = 'FRIEND';
   String _selectedEmoji = '🙂';
   bool _saving = false;
+  bool _nsfwEnabled = false;
 
   int _currentStep = 0; // 0: Name, 1: Relationship, 2: Personality, 3: Avatar
   late AnimationController _slideController;
@@ -99,6 +100,7 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
         relationshipType: _relationshipType,
         personalityDescription: _descriptionController.text.trim(),
         avatarEmoji: _selectedEmoji,
+        nsfwEnabled: _nsfwEnabled,
       );
       if (!mounted) return;
       AppSound.mediumImpact();
@@ -342,6 +344,39 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
           const SizedBox(height: 16),
           // Live preview bubble
           _buildPreviewBubble(),
+          const SizedBox(height: 24),
+          // NSFW toggle
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Theme.of(context).dividerColor),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Unrestricted content',
+                          style: Theme.of(context).textTheme.titleSmall),
+                      const SizedBox(height: 4),
+                      Text('Allow explicit and adult conversations',
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                Switch(
+                  value: _nsfwEnabled,
+                  onChanged: (val) {
+                    AppSound.selectionClick();
+                    setState(() => _nsfwEnabled = val);
+                  },
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

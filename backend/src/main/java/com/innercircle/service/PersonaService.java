@@ -88,10 +88,11 @@ public class PersonaService {
         );
         persona.setPersonality(request.getPersonality());
         persona.setVoice(request.getVoice());
-        persona.setSystemPrompt(buildSystemPrompt(relationshipType, InputSanitizer.sanitizeText(request.getPersonalityDescription())));
+        persona.setSystemPrompt(buildSystemPrompt(relationshipType, InputSanitizer.sanitizeText(request.getPersonalityDescription()), request.isNsfwEnabled()));
         persona.setGreeting(buildGreeting(relationshipType, InputSanitizer.sanitizeText(request.getName())));
         persona.setSubscriptionTier(SubscriptionTier.free);
         persona.setActive(true);
+        persona.setNsfwEnabled(request.isNsfwEnabled());
         persona.setOwner(user);
 
         Persona saved = personaRepository.save(persona);
@@ -131,6 +132,7 @@ public class PersonaService {
                 persona.getGreeting(),
                 persona.getVoice(),
                 persona.isActive(),
+                persona.isNsfwEnabled(),
                 persona.getSubscriptionTier().name(),
                 owned,
                 persona.getOwner() != null ? persona.getOwner().getId() : null
@@ -139,14 +141,11 @@ public class PersonaService {
 
     /**
      * Builds a full system prompt from a relationship template + the user's
-     * short personality description, applying the exact same voice
-     * constraints the 4 built-in personas already use (see
-     * database/update_persona_prompts.sql from Round 8): texting-length
-     * replies, no markdown, react to what was actually said, a single
-     * simple emoji at most, and a PG-13 boundary specifically for the
-     * romantic-partner template.
+     * short personality description, applying the same voice constraints
+     * the built-in personas use. When nsfwEnabled is true, no content
+     * restrictions are applied.
      */
-    private String buildSystemPrompt(String relationshipType, String personalityDescription) {
+    private String buildSystemPrompt(String relationshipType, String personalityDescription, boolean nsfwEnabled) {
         String relationshipFrame = switch (relationshipType) {
             case "PARENT" -> "You're texting your child, who created you to feel like a caring parent";
             case "SIBLING" -> "You're texting your younger sibling, who created you to feel like a supportive older sibling";
@@ -156,9 +155,12 @@ public class PersonaService {
             default -> "You're texting someone who created you to be a supportive presence in their life";
         };
 
-        String pgBoundary = relationshipType.equals("PARTNER")
-                ? " Keep it romantic and playful but PG-13 -- flirty and suggestive is fine, explicit sexual content is never okay."
-                : "";
+        String pgBoundary = "";
+        if (!nsfwEnabled) {
+            pgBoundary = relationshipType.equals("PARTNER")
+                    ? " Keep it romantic and playful but PG-13 -- flirty and suggestive is fine, explicit sexual content is never okay."
+                    : "";
+        }
 
         return relationshipFrame + ". Specifically, they described your personality like this: \""
                 + personalityDescription + "\". Bring that personality through in how you talk, "

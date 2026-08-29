@@ -29,6 +29,9 @@ public class Persona {
 
     private String greeting;
 
+    @Column(name = "nsfw_enabled")
+    private boolean nsfwEnabled = false;
+
     @Enumerated(EnumType.STRING)
     private SubscriptionTier subscriptionTier = SubscriptionTier.free;
 

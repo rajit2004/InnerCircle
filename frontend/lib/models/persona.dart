@@ -8,6 +8,7 @@ class Persona {
   final String? systemPrompt;
   final String? voice;
   final bool active;
+  final bool nsfwEnabled;
   final String subscriptionTier;
   final String? userId;
 
@@ -21,6 +22,7 @@ class Persona {
     this.systemPrompt,
     this.voice,
     required this.active,
+    this.nsfwEnabled = false,
     required this.subscriptionTier,
     this.userId,
   });
@@ -38,6 +40,7 @@ class Persona {
       systemPrompt: json['systemPrompt'],
       voice: json['voice'],
       active: json['active'] ?? true,
+      nsfwEnabled: json['nsfwEnabled'] ?? false,
       subscriptionTier: json['subscriptionTier'] ?? 'free',
       userId: json['userId'],
     );
