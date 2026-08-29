@@ -57,6 +57,7 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/health").permitAll()
+                        .requestMatchers("/uploads/avatars/**").permitAll()
                         // BUG FIX: Missing OPTIONS permit-all for CORS pre-flight requests.
                         // Without this, browsers' pre-flight OPTIONS calls get blocked by
                         // Spring Security before reaching the CORS filter, returning 401/403
