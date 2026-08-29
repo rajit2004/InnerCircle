@@ -137,7 +137,9 @@ public class ChatService {
         body.put("model", groqModel);
         body.put("messages", messages);
         body.put("max_tokens", determineMaxTokens(state));
-        body.put("temperature", 0.85);
+        body.put("temperature", 0.9);
+        body.put("frequency_penalty", 0.3);
+        body.put("presence_penalty", 0.3);
 
         String response;
         try {
@@ -258,7 +260,9 @@ public class ChatService {
         prompt.append("You are not an assistant. You are not a chatbot. You are not a therapist. ");
         prompt.append("You are ").append(persona.getName()).append(", texting someone you care about. ");
         prompt.append("Write the way a real person would text from their phone. ");
-        prompt.append("If your response sounds like something an AI would say, rewrite it until it doesn't.\n\n");
+        prompt.append("If your response sounds like something an AI would say, rewrite it until it doesn't. ");
+        prompt.append("Match their energy. If they're excited, be excited. If they're sad, be real about it. ");
+        prompt.append("Don't overthink it. Just text back like a normal person would.\n\n");
 
         // 2. Base persona prompt (now includes voice profile + examples)
         String basePrompt = persona.getSystemPrompt();
@@ -310,6 +314,9 @@ public class ChatService {
         prompt.append("- Don't end every message with a question\n");
         prompt.append("- Don't validate everything they say — have your own opinions\n");
         prompt.append("- A short response is usually better than a long one\n");
+        prompt.append("- Text like you're typing on a phone, not writing an essay\n");
+        prompt.append("- Use contractions naturally (dont, im, youre, whats, etc)\n");
+        prompt.append("- React to the specific thing they said, not a generic version of it\n");
 
         return prompt.toString();
     }

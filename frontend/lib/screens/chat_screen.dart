@@ -259,8 +259,21 @@ class _ChatScreenState extends State<ChatScreen> {
               size: 36,
             ),
             const SizedBox(width: 10),
-            Flexible(
-              child: Text(widget.persona.name, overflow: TextOverflow.ellipsis),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.persona.name,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                Text(
+                  _isTyping ? 'typing...' : 'online',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: _isTyping ? gradient.first : Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontWeight: _isTyping ? FontWeight.w500 : FontWeight.w400,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -301,6 +314,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     'msg-${message.content.hashCode}-$index'),
                                 message: message,
                                 gradient: gradient,
+                                personaName: widget.persona.name,
                                 onLongPress: () =>
                                     _showReactionPicker(message),
                               );
@@ -392,12 +406,14 @@ class _BreathingAvatarState extends State<_BreathingAvatar>
 class _AnimatedMessageBubble extends StatefulWidget {
   final ChatMessage message;
   final List<Color> gradient;
+  final String personaName;
   final VoidCallback? onLongPress;
 
   const _AnimatedMessageBubble({
     super.key,
     required this.message,
     required this.gradient,
+    required this.personaName,
     this.onLongPress,
   });
 
@@ -473,66 +489,104 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
               constraints: BoxConstraints(maxWidth: maxWidth),
               child: GestureDetector(
                 onLongPress: widget.onLongPress,
-                child: Stack(
-                  clipBehavior: Clip.none,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Container(
-                      margin: const EdgeInsets.symmetric(vertical: 6),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        gradient: isUser
-                            ? LinearGradient(
-                                colors: gradient,
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              )
-                            : null,
-                        color: isUser
-                            ? null
-                            : Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.only(
-                          topLeft: const Radius.circular(20),
-                          topRight: const Radius.circular(20),
-                          bottomLeft: Radius.circular(isUser ? 20 : 6),
-                          bottomRight: Radius.circular(isUser ? 6 : 20),
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: isUser
-                                ? gradient.first.withValues(alpha: 0.25)
-                                : Colors.black.withValues(alpha: 0.06),
-                            blurRadius: isUser ? 10 : 8,
-                            offset: Offset(0, isUser ? 3 : 2),
+                    if (!isUser) ...[
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: gradient,
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                        ],
-                        border: isUser
-                            ? null
-                            : Border.all(
-                                color: Theme.of(context).dividerColor,
-                                width: 0.5,
-                              ),
-                      ),
-                      child: Text(
-                        widget.message.content,
-                        style: TextStyle(
-                          color: isUser
-                              ? Colors.white
-                              : Theme.of(context).colorScheme.onSurface,
-                          fontSize: 15,
-                          height: 1.45,
+                          boxShadow: [
+                            BoxShadow(
+                              color: gradient.first.withValues(alpha: 0.3),
+                              blurRadius: 6,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
+                        child: Center(
+                          child: Icon(
+                            AppColors.personaIcon(widget.personaName),
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                    ],
+                    Flexible(
+                      child: Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          Container(
+                            margin: const EdgeInsets.symmetric(vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: isUser
+                                  ? LinearGradient(
+                                      colors: gradient,
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    )
+                                  : null,
+                              color: isUser
+                                  ? null
+                                  : Theme.of(context).colorScheme.surface,
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(20),
+                                topRight: const Radius.circular(20),
+                                bottomLeft: Radius.circular(isUser ? 20 : 4),
+                                bottomRight: Radius.circular(isUser ? 4 : 20),
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isUser
+                                      ? gradient.first.withValues(alpha: 0.25)
+                                      : Colors.black.withValues(alpha: 0.06),
+                                  blurRadius: isUser ? 10 : 8,
+                                  offset: Offset(0, isUser ? 3 : 2),
+                                ),
+                              ],
+                              border: isUser
+                                  ? null
+                                  : Border.all(
+                                      color: Theme.of(context).dividerColor,
+                                      width: 0.5,
+                                    ),
+                            ),
+                            child: Text(
+                              widget.message.content,
+                              style: TextStyle(
+                                color: isUser
+                                    ? Colors.white
+                                    : Theme.of(context).colorScheme.onSurface,
+                                fontSize: 15,
+                                height: 1.45,
+                              ),
+                            ),
+                          ),
+                          if (widget.message.reaction != null)
+                            Positioned(
+                              bottom: -8,
+                              right: -4,
+                              child: _ReactionBadge(
+                                reaction: widget.message.reaction!,
+                                gradient: gradient,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                    if (widget.message.reaction != null)
-                      Positioned(
-                        bottom: -8,
-                        right: -4,
-                        child: _ReactionBadge(
-                          reaction: widget.message.reaction!,
-                          gradient: gradient,
-                        ),
-                      ),
+                    if (isUser) const SizedBox(width: 4),
                   ],
                 ),
               ),

@@ -34,6 +34,8 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _fabController;
   late Animation<double> _fabScale;
   bool _fabOpen = false;
+  String _greeting = '';
+  String _userName = '';
 
   @override
   void initState() {
@@ -47,8 +49,18 @@ class _HomeScreenState extends State<HomeScreen>
       curve: Curves.elasticOut,
     );
     _fabController.forward();
+    _greeting = _getGreeting();
     _fetchPersonas();
     PushNotificationService.initialize();
+  }
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 6) return 'Good night';
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    if (hour < 21) return 'Good evening';
+    return 'Good night';
   }
 
   @override
@@ -67,11 +79,13 @@ class _HomeScreenState extends State<HomeScreen>
       final data = await ApiClient.get('/api/personas');
       final list = (data as List).map((p) => Persona.fromJson(p)).toList();
       final profile = await ApiClient.getStoredProfile();
-      final isPremium = (profile['subscriptionTier'] ?? 'free').toLowerCase() == 'premium';
+      final isPremium = (profile['subscriptionTier'] ?? 'free').toString().toLowerCase() == 'premium';
+      final displayName = profile['displayName'] ?? '';
       if (!mounted) return;
       setState(() {
         _personas = list;
         _isPremium = isPremium;
+        _userName = displayName;
         _loading = false;
       });
     } catch (e) {
@@ -303,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen>
         onRefresh: _fetchPersonas,
         child: ListView(
           children: [
-            const SizedBox(height: 100),
+            const SizedBox(height: 60),
             // Animated gradient circle container
             Center(
               child: TweenAnimationBuilder<double>(
@@ -387,35 +401,71 @@ class _HomeScreenState extends State<HomeScreen>
         AppSound.selectionClick();
         return _fetchPersonas();
       },
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        itemCount: _personas.length,
-        separatorBuilder: (_, _) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final persona = _personas[index];
-          final isLocked = !_isPremium &&
-              persona.subscriptionTier.toLowerCase() == 'premium';
-          return StaggeredEntrance(
-            index: index,
-            child: _PersonaCard(
-              persona: persona,
-              isLocked: isLocked,
-              onTap: () {
-                AppSound.selectionClick();
-                if (isLocked) {
-                  _showUpgradeDialog();
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => ChatScreen(persona: persona)),
-                  );
-                }
-              },
-              onDelete: persona.isOwned ? () => _deletePersona(persona) : null,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+        children: [
+          // Greeting header
+          Padding(
+            padding: const EdgeInsets.fromLTRB(8, 16, 8, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _greeting,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 26,
+                      ),
+                ),
+                if (_userName.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    _userName,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+                const SizedBox(height: 4),
+                Text(
+                  _personas.length == 1
+                      ? 'You have 1 companion'
+                      : 'You have ${_personas.length} companions',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
             ),
-          );
-        },
+          ),
+          // Persona cards
+          ...List.generate(_personas.length, (index) {
+            final persona = _personas[index];
+            final isLocked = !_isPremium &&
+                persona.subscriptionTier.toLowerCase() == 'premium';
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: StaggeredEntrance(
+                index: index,
+                child: _PersonaCard(
+                  persona: persona,
+                  isLocked: isLocked,
+                  onTap: () {
+                    AppSound.selectionClick();
+                    if (isLocked) {
+                      _showUpgradeDialog();
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => ChatScreen(persona: persona)),
+                      );
+                    }
+                  },
+                  onDelete: persona.isOwned ? () => _deletePersona(persona) : null,
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }

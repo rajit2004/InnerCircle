@@ -3,6 +3,8 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 
 import 'firebase_options.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
@@ -12,6 +14,7 @@ import 'screens/notifications_screen.dart';
 import 'screens/settings_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/reset_password_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'services/auth_service.dart';
 import 'services/push_notification_service.dart';
 import 'theme/app_theme.dart';
@@ -21,6 +24,13 @@ import 'widgets/splash_screen.dart';
 /// Global navigator key so ApiClient can redirect to login on 401/403
 /// without needing a BuildContext.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+Future<Map<String, dynamic>> _initApp() async {
+  final loggedIn = await AuthService.isLoggedIn();
+  final prefs = await SharedPreferences.getInstance();
+  final onboardingSeen = prefs.getBool('onboarding_seen') ?? false;
+  return {'loggedIn': loggedIn, 'onboardingSeen': onboardingSeen};
+}
 
 // FEATURE (push notifications, 2026-07-05): main() has to become async
 // to initialize Firebase before anything else runs, and the background
@@ -80,18 +90,18 @@ class InnerCircleApp extends StatelessWidget {
           initialRoute: '/',
           routes: {
             '/': (context) => FutureBuilder(
-              future: AuthService.isLoggedIn(),
+              future: _initApp(),
               builder: (context, snapshot) {
-                // DESIGN FIX (2026-07-03): this branch used to be a bare
-                // CircularProgressIndicator on a blank Scaffold -- the very
-                // first thing anyone sees when opening the app. Swapped in the
-                // branded SplashScreen (see widgets/splash_screen.dart) for
-                // the same wait, at zero extra cost -- the wait was already
-                // happening, this just gives it a face.
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SplashScreen();
                 }
-                if (snapshot.data == true) {
+                final data = snapshot.data;
+                final loggedIn = data?['loggedIn'] ?? false;
+                final onboardingSeen = data?['onboardingSeen'] ?? false;
+                if (!onboardingSeen) {
+                  return const OnboardingScreen();
+                }
+                if (loggedIn) {
                   return const HomeScreen();
                 } else {
                   return const LoginScreen();
@@ -100,6 +110,7 @@ class InnerCircleApp extends StatelessWidget {
             ),
             '/login': (context) => const LoginScreen(),
             '/register': (context) => const RegisterScreen(),
+            '/onboarding': (context) => const OnboardingScreen(),
             '/home': (context) => const HomeScreen(),
             '/memories': (context) => const MemoriesScreen(),
             '/profile': (context) => const ProfileScreen(),
