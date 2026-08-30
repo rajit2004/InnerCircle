@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 
 @Service
@@ -44,6 +45,16 @@ public class AuthService {
         User user = new User();
         user.setEmail(request.getEmail());
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        if (request.getDisplayName() != null && !request.getDisplayName().isBlank()) {
+            user.setDisplayName(request.getDisplayName().trim());
+        }
+        if (request.getDateOfBirth() != null && !request.getDateOfBirth().isBlank()) {
+            try {
+                user.setDateOfBirth(LocalDate.parse(request.getDateOfBirth()));
+            } catch (Exception e) {
+                log.warn("Invalid dateOfBirth ignored during registration: {}", request.getDateOfBirth());
+            }
+        }
 
         userRepository.save(user);
 

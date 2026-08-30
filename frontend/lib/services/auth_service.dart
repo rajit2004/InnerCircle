@@ -18,9 +18,20 @@ class AuthService {
 
   static Future<Map<String, dynamic>> register(
       String email,
-      String password,
-      ) async {
-    final body = {'email': email, 'password': password};
+      String password, {
+      String? displayName,
+      String? dateOfBirth,
+      }) async {
+    final body = <String, dynamic>{
+      'email': email,
+      'password': password,
+    };
+    if (displayName != null && displayName.isNotEmpty) {
+      body['displayName'] = displayName;
+    }
+    if (dateOfBirth != null && dateOfBirth.isNotEmpty) {
+      body['dateOfBirth'] = dateOfBirth;
+    }
     final response =
     await ApiClient.post('/api/auth/register', body: body, auth: false)
     as Map<String, dynamic>;

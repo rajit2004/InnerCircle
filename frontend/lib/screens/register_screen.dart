@@ -15,6 +15,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _nameController = TextEditingController();
+  DateTime? _dateOfBirth;
   bool _loading = false;
   bool _obscurePassword = true;
 
@@ -24,6 +26,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   late Animation<Offset> _titleSlide;
   late Animation<Offset> _field1Slide;
   late Animation<Offset> _field2Slide;
+  late Animation<Offset> _field3Slide;
+  late Animation<Offset> _field4Slide;
   late Animation<Offset> _buttonSlide;
   late Animation<double> _allFade;
 
@@ -65,6 +69,20 @@ class _RegisterScreenState extends State<RegisterScreen>
         curve: const Interval(0.4, 0.7, curve: Curves.easeOutCubic),
       ),
     );
+    _field3Slide =
+        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.45, 0.75, curve: Curves.easeOutCubic),
+      ),
+    );
+    _field4Slide =
+        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.5, 0.8, curve: Curves.easeOutCubic),
+      ),
+    );
     _buttonSlide =
         Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
       CurvedAnimation(
@@ -87,9 +105,33 @@ class _RegisterScreenState extends State<RegisterScreen>
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
+    _nameController.dispose();
     _animController.dispose();
     _shakeController.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickDateOfBirth() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dateOfBirth ?? DateTime(now.year - 25, now.month, now.day),
+      firstDate: DateTime(1920),
+      lastDate: DateTime(now.year - 13),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: AppColors.bestFriendDark,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() => _dateOfBirth = picked);
+    }
   }
 
   void _register() async {
@@ -104,6 +146,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       await AuthService.register(
         _emailController.text.trim(),
         _passwordController.text,
+        displayName: _nameController.text.trim().isNotEmpty
+            ? _nameController.text.trim()
+            : null,
+        dateOfBirth: _dateOfBirth?.toIso8601String().split('T').first,
       );
       if (!mounted) return;
       AppSound.mediumImpact();
@@ -348,6 +394,51 @@ class _RegisterScreenState extends State<RegisterScreen>
                                   ? null
                                   : 'At least 6 characters',
                               onFieldSubmitted: (_) => _register(),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SlideTransition(
+                          position: _field3Slide,
+                          child: FadeTransition(
+                            opacity: _allFade,
+                            child: TextFormField(
+                              controller: _nameController,
+                              textCapitalization: TextCapitalization.words,
+                              decoration: const InputDecoration(
+                                labelText: 'Your name',
+                                helperText: 'How should we call you?',
+                                prefixIcon: Icon(Icons.person_outline_rounded),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SlideTransition(
+                          position: _field4Slide,
+                          child: FadeTransition(
+                            opacity: _allFade,
+                            child: InkWell(
+                              onTap: _pickDateOfBirth,
+                              borderRadius: BorderRadius.circular(12),
+                              child: InputDecorator(
+                                decoration: const InputDecoration(
+                                  labelText: 'Date of birth',
+                                  helperText: 'For personalized experiences',
+                                  prefixIcon: Icon(Icons.cake_outlined),
+                                  suffixIcon: Icon(Icons.calendar_today_rounded),
+                                ),
+                                child: Text(
+                                  _dateOfBirth != null
+                                      ? '${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}'
+                                      : 'Select your birthday',
+                                  style: TextStyle(
+                                    color: _dateOfBirth != null
+                                        ? Theme.of(context).colorScheme.onSurface
+                                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),

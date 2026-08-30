@@ -12,4 +12,7 @@ public class AuthRequest {
 
     @NotBlank
     private String password;
+
+    private String displayName;
+    private String dateOfBirth;
 }
