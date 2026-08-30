@@ -3,6 +3,7 @@ package com.innercircle.controller;
 import com.innercircle.dto.ChatHistoryResponse;
 import com.innercircle.dto.ChatRequest;
 import com.innercircle.dto.ChatResponse;
+import com.innercircle.dto.RegenerateRequest;
 import com.innercircle.model.User;
 import com.innercircle.service.ChatService;
 import jakarta.validation.Valid;
@@ -57,6 +58,15 @@ public class ChatController {
                                             @RequestBody com.innercircle.dto.ReactionRequest request) {
         chatService.setReaction(messageId, request.getReaction(), user);
         return ResponseEntity.noContent().build();
+    }
+
+    // FEATURE (regenerate, round 15): deletes the last assistant message and
+    // re-runs the LLM to get a fresh reply to the same conversation context.
+    @PostMapping("/regenerate")
+    public ResponseEntity<ChatResponse> regenerate(@AuthenticationPrincipal User user,
+                                                    @Valid @RequestBody RegenerateRequest request) {
+        return ResponseEntity.ok(chatService.regenerate(
+                request.getConversationId(), request.getPersonaId(), user));
     }
 
     @GetMapping("/test")

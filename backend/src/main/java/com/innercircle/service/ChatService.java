@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.innercircle.dto.ChatHistoryResponse;
 import com.innercircle.dto.ChatRequest;
 import com.innercircle.dto.ChatResponse;
+import com.innercircle.exception.BadRequestException;
 import com.innercircle.exception.DailyLimitExceededException;
 import com.innercircle.exception.ForbiddenException;
 import com.innercircle.exception.ResourceNotFoundException;
@@ -386,6 +387,147 @@ public class ChatService {
 
         message.setReaction(reaction);
         messageRepository.save(message);
+    }
+
+    @Transactional
+    public ChatResponse regenerate(java.util.UUID conversationId, java.util.UUID personaId, User user) {
+        Conversation conversation = conversationRepository.findById(conversationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+        if (!conversation.getUser().getId().equals(user.getId())) {
+            throw new ForbiddenException("No access to this conversation");
+        }
+
+        Persona persona = personaRepository.findById(personaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
+
+        List<Message> all = messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
+        if (all.isEmpty()) {
+            throw new BadRequestException("No messages to regenerate from");
+        }
+
+        // Find and delete the last assistant message
+        Message lastAssistant = null;
+        for (int i = all.size() - 1; i >= 0; i--) {
+            if ("assistant".equals(all.get(i).getRole())) {
+                lastAssistant = all.get(i);
+                break;
+            }
+        }
+        if (lastAssistant == null) {
+            throw new BadRequestException("No assistant message to regenerate");
+        }
+        messageRepository.delete(lastAssistant);
+
+        // Rebuild message history (without the deleted assistant message)
+        List<Message> recent = messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
+        recent = recent.stream().skip(Math.max(0, recent.size() - 20)).toList();
+
+        List<Map<String, String>> recentMaps = recent.stream()
+                .map(m -> Map.of("role", m.getRole(), "content", m.getContent()))
+                .toList();
+
+        // 5-layer architecture
+        String lastUserContent = recent.isEmpty() ? "" : recent.get(recent.size() - 1).getContent();
+        ConversationUnderstandingService.ConversationState state =
+                understandingService.analyze(lastUserContent, recentMaps);
+        Relationship relationship = relationshipService.getOrCreateRelationship(user, persona);
+        String relationshipContext = relationshipService.getRelationshipContext(relationship);
+        ResponseStrategyService.ResponseStrategy strategy =
+                strategyService.determine(state, relationship.getRelationshipStage(), persona);
+        List<Memory> memories = memoryService.findRelevantMemories(user, persona.getId(), lastUserContent);
+        String memoryText = memories.stream()
+                .map(Memory::getFact)
+                .reduce((a, b) -> a + "\n" + b)
+                .orElse("");
+        String systemPrompt = buildSystemPrompt(persona, relationshipContext, memoryText, state, strategy);
+
+        List<Map<String, String>> messages = new ArrayList<>();
+        messages.add(Map.of("role", "system", "content", systemPrompt));
+        for (Message m : recent) {
+            messages.add(Map.of("role", m.getRole(), "content", m.getContent()));
+        }
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", groqModel);
+        body.put("messages", messages);
+        body.put("max_tokens", determineMaxTokens(state));
+        body.put("temperature", 0.9);
+        body.put("frequency_penalty", 0.3);
+        body.put("presence_penalty", 0.3);
+
+        String response;
+        try {
+            response = webClient.post()
+                    .uri(groqUrl)
+                    .header("Authorization", "Bearer " + groqApiKey)
+                    .bodyValue(body)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, resp ->
+                            resp.bodyToMono(String.class)
+                                    .flatMap(errorBody -> {
+                                        log.error("Groq API error on regenerate: {}", errorBody);
+                                        return Mono.error(new RuntimeException("Groq API error: " + errorBody));
+                                    })
+                    )
+                    .bodyToMono(String.class)
+                    .timeout(java.time.Duration.ofSeconds(30))
+                    .block();
+        } catch (Exception e) {
+            log.error("Groq regenerate failed: {}", e.getMessage(), e);
+            String fallbackReply = getFallbackReply(persona);
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(conversation);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(fallbackReply);
+            assistantMsg.setMetadata("{\"intent\":\"fallback\",\"emotion\":\"neutral\",\"response_strategy\":\"regenerate_fallback\"}");
+            messageRepository.save(assistantMsg);
+            return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
+        }
+
+        String reply;
+        try {
+            JsonNode root = objectMapper.readTree(response);
+            JsonNode choices = root.path("choices");
+            if (choices.isEmpty() || choices.get(0).path("message").path("content").asText("").isBlank()) {
+                log.error("Groq returned empty on regenerate: {}", response);
+                String fallbackReply = getFallbackReply(persona);
+                Message assistantMsg = new Message();
+                assistantMsg.setConversation(conversation);
+                assistantMsg.setRole("assistant");
+                assistantMsg.setContent(fallbackReply);
+                assistantMsg.setMetadata("{\"intent\":\"fallback\",\"emotion\":\"neutral\",\"response_strategy\":\"regenerate_fallback\"}");
+                messageRepository.save(assistantMsg);
+                return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
+            }
+            reply = choices.get(0).path("message").path("content").asText("");
+        } catch (Exception e) {
+            log.error("Failed to parse regenerate response: {}", e.getMessage(), response);
+            String fallbackReply = getFallbackReply(persona);
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(conversation);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(fallbackReply);
+            assistantMsg.setMetadata("{\"intent\":\"fallback\",\"emotion\":\"neutral\",\"response_strategy\":\"regenerate_fallback\"}");
+            messageRepository.save(assistantMsg);
+            return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
+        }
+
+        // Naturalness filter
+        String filteredReply = naturalnessFilter.filter(stripMarkdown(reply), persona.getRole());
+        if (!filteredReply.isBlank()) {
+            reply = filteredReply;
+        }
+
+        Message assistantMsg = new Message();
+        assistantMsg.setConversation(conversation);
+        assistantMsg.setRole("assistant");
+        assistantMsg.setContent(reply);
+        assistantMsg.setMetadata("{\"intent\":\"" + state.getIntent()
+                + "\",\"emotion\":\"" + state.getEmotion()
+                + "\",\"response_strategy\":\"regenerate\"}");
+        messageRepository.save(assistantMsg);
+
+        return new ChatResponse(reply, conversation.getId(), assistantMsg.getId());
     }
 
     private static final Pattern MD_BOLD = Pattern.compile("\\*\\*(.+?)\\*\\*|__(.+?)__");
