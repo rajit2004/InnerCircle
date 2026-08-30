@@ -44,4 +44,18 @@ class ChatService {
   static Future<void> deleteConversation(String personaId) async {
     await ApiClient.delete('/api/chat?personaId=$personaId');
   }
+
+  // FEATURE (regenerate, round 15): deletes the last assistant message and
+  // re-runs the LLM to get a fresh reply. Returns the same shape as
+  // sendMessage: {reply, conversationId, messageId}.
+  static Future<Map<String, dynamic>> regenerate(
+      String personaId, String conversationId) async {
+    return await ApiClient.post(
+      '/api/chat/regenerate',
+      body: {
+        'personaId': personaId,
+        'conversationId': conversationId,
+      },
+    ) as Map<String, dynamic>;
+  }
 }
