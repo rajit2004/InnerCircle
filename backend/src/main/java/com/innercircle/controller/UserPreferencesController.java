@@ -22,7 +22,6 @@ public class UserPreferencesController {
                 .orElseGet(() -> {
                     UserPreferences prefs = new UserPreferences();
                     prefs.setUserId(user.getId());
-                    prefs.setUser(user);
                     return userPreferencesRepository.save(prefs);
                 });
     }
@@ -34,7 +33,6 @@ public class UserPreferencesController {
                 .orElseGet(() -> {
                     UserPreferences newPrefs = new UserPreferences();
                     newPrefs.setUserId(user.getId());
-                    newPrefs.setUser(user);
                     return userPreferencesRepository.save(newPrefs);
                 });
 

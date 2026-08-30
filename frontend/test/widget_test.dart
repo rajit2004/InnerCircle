@@ -9,7 +9,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
 
     await tester.pumpWidget(const InnerCircleApp());
-    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
 
     expect(find.text('Someone who\nunderstands'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
@@ -21,7 +21,7 @@ void main() {
     SharedPreferences.setMockInitialValues({'onboarding_seen': true});
 
     await tester.pumpWidget(const InnerCircleApp());
-    await tester.pump();
+    await tester.pump(const Duration(seconds: 3));
 
     expect(find.text('Welcome back'), findsOneWidget);
     expect(find.text('Log in'), findsOneWidget);
