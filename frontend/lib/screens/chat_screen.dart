@@ -450,6 +450,7 @@ class _ChatScreenState extends State<ChatScreen> {
                           isTyping: _isTyping,
                           gradient: gradient,
                           onSend: _sendMessage,
+                          personaName: widget.persona.name,
                         ),
                       ],
                     ),
@@ -1034,6 +1035,7 @@ class _ChatInputBar extends StatelessWidget {
   final bool isTyping;
   final List<Color> gradient;
   final VoidCallback onSend;
+  final String? personaName;
 
   const _ChatInputBar({
     required this.controller,
@@ -1041,6 +1043,7 @@ class _ChatInputBar extends StatelessWidget {
     required this.isTyping,
     required this.gradient,
     required this.onSend,
+    this.personaName,
   });
 
   @override
@@ -1096,7 +1099,7 @@ class _ChatInputBar extends StatelessWidget {
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
                 decoration: InputDecoration(
-                  hintText: 'Say something...',
+                  hintText: 'Message ${personaName ?? ''}...',
                   hintStyle: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
