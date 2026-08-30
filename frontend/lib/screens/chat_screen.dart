@@ -430,6 +430,17 @@ class _ChatScreenState extends State<ChatScreen> {
                             },
                           ),
                         ),
+                        if (!_isTyping && _messages.isNotEmpty &&
+                            _messages.last.role == 'assistant')
+                          _SuggestionChips(
+                            personaName: widget.persona.name,
+                            lastMessage: _messages.last.content,
+                            gradient: gradient,
+                            onSelected: (text) {
+                              _controller.text = text;
+                              setState(() => _hasText = true);
+                            },
+                          ),
                         _ChatInputBar(
                           controller: _controller,
                           hasText: _hasText,
@@ -1144,6 +1155,105 @@ class _ActionTile extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Suggested Follow-up Chips ─────────────────────────────────────────────
+
+class _SuggestionChips extends StatelessWidget {
+  final String personaName;
+  final String lastMessage;
+  final List<Color> gradient;
+  final ValueChanged<String> onSelected;
+
+  const _SuggestionChips({
+    required this.personaName,
+    required this.lastMessage,
+    required this.gradient,
+    required this.onSelected,
+  });
+
+  List<String> _generateSuggestions() {
+    final lower = lastMessage.toLowerCase();
+    if (lower.contains('?')) {
+      return [
+        'Tell me more',
+        'What do you think?',
+        'I agree',
+      ];
+    }
+    if (lower.contains('love') || lower.contains('miss') || lower.contains('cute')) {
+      return [
+        'Aww thanks',
+        'You\'re sweet',
+        'Same here',
+      ];
+    }
+    if (lower.contains('sorry') || lower.contains('sad') || lower.contains('bad')) {
+      return [
+        'It\'s okay',
+        'Thanks for listening',
+        'I appreciate you',
+      ];
+    }
+    if (lower.contains('haha') || lower.contains('lol') || lower.contains('funny')) {
+      return [
+        'Right??',
+        'I know',
+        'So true',
+      ];
+    }
+    if (lower.contains('food') || lower.contains('eat') || lower.contains('hungry')) {
+      return [
+        'I\'m starving',
+        'What should I get?',
+        'Good idea',
+      ];
+    }
+    return [
+      'Tell me more',
+      'That\'s interesting',
+      'What do you think?',
+    ];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final suggestions = _generateSuggestions();
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: suggestions.map((s) {
+          return GestureDetector(
+            onTap: () {
+              AppSound.selectionClick();
+              onSelected(s);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: gradient.first.withValues(alpha: 0.3),
+                  width: 1,
+                ),
+              ),
+              child: Text(
+                s,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: gradient.first,
+                ),
+              ),
+            ),
+          );
+        }).toList(),
       ),
     );
   }
