@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/chat_message.dart';
 import '../models/persona.dart';
@@ -237,6 +239,110 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  void _showMessageActions(ChatMessage message) {
+    if (message.role != 'assistant') return;
+    AppSound.selectionClick();
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(top: 12),
+              decoration: BoxDecoration(
+                color: Theme.of(context).dividerColor,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 16),
+            _ActionTile(
+              icon: Icons.copy_rounded,
+              label: 'Copy',
+              onTap: () {
+                Navigator.pop(ctx);
+                Clipboard.setData(ClipboardData(text: message.content));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Copied to clipboard'),
+                    duration: Duration(seconds: 1),
+                  ),
+                );
+              },
+            ),
+            _ActionTile(
+              icon: Icons.refresh_rounded,
+              label: 'Regenerate',
+              onTap: () {
+                Navigator.pop(ctx);
+                _regenerateMessage();
+              },
+            ),
+            _ActionTile(
+              icon: Icons.share_rounded,
+              label: 'Share',
+              onTap: () {
+                Navigator.pop(ctx);
+                SharePlus.instance.share(ShareParams(text: message.content));
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _regenerateMessage() async {
+    if (_isTyping || _conversationId == null) return;
+    AppSound.lightImpact();
+    setState(() => _isTyping = true);
+
+    try {
+      final response = await ChatService.regenerate(
+        widget.persona.id,
+        _conversationId!,
+      );
+      final reply = (response['reply'] as String? ?? '').trim();
+      final messageId = response['messageId'] as String?;
+      if (!mounted) return;
+
+      setState(() {
+        // Remove last assistant message and add new one
+        if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+          _messages.removeLast();
+        }
+        if (reply.isNotEmpty) {
+          _messages.add(
+            ChatMessage(id: messageId, role: 'assistant', content: reply),
+          );
+        }
+        _isTyping = false;
+        _animationKey++;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      AppSound.lightImpact();
+      setState(() => _isTyping = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_friendlyError(e)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
   String _friendlyError(Object error) {
     final text = error.toString().replaceFirst('Exception: ', '').trim();
     return text.isEmpty
@@ -317,6 +423,9 @@ class _ChatScreenState extends State<ChatScreen> {
                                 personaName: widget.persona.name,
                                 onLongPress: () =>
                                     _showReactionPicker(message),
+                                onTap: message.role == 'assistant'
+                                    ? () => _showMessageActions(message)
+                                    : null,
                               );
                             },
                           ),
@@ -408,6 +517,7 @@ class _AnimatedMessageBubble extends StatefulWidget {
   final List<Color> gradient;
   final String personaName;
   final VoidCallback? onLongPress;
+  final VoidCallback? onTap;
 
   const _AnimatedMessageBubble({
     super.key,
@@ -415,6 +525,7 @@ class _AnimatedMessageBubble extends StatefulWidget {
     required this.gradient,
     required this.personaName,
     this.onLongPress,
+    this.onTap,
   });
 
   @override
@@ -489,6 +600,7 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
               constraints: BoxConstraints(maxWidth: maxWidth),
               child: GestureDetector(
                 onLongPress: widget.onLongPress,
+                onTap: widget.onTap,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
@@ -998,6 +1110,40 @@ class _ChatInputBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Action Tile (for message action bottom sheet) ─────────────────────────
+
+class _ActionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        child: Row(
+          children: [
+            Icon(icon, size: 22, color: Theme.of(context).colorScheme.onSurface),
+            const SizedBox(width: 14),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.bodyLarge,
+            ),
+          ],
+        ),
       ),
     );
   }
