@@ -26,6 +26,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadPreferences() async {
+    setState(() => _loadingPrefs = true);
     try {
       final prefs = await _prefsService.getPreferences();
       if (!mounted) return;
@@ -35,7 +36,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _loadingPrefs = false);
+      setState(() {
+        _prefs = null;
+        _loadingPrefs = false;
+      });
     }
   }
 

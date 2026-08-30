@@ -26,8 +26,13 @@ import 'widgets/splash_screen.dart';
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<Map<String, dynamic>> _initApp() async {
-  final loggedIn = await AuthService.isLoggedIn();
-  final prefs = await SharedPreferences.getInstance();
+  final results = await Future.wait([
+    AuthService.isLoggedIn(),
+    SharedPreferences.getInstance(),
+    Future.delayed(const Duration(milliseconds: 2000)),
+  ]);
+  final loggedIn = results[0] as bool;
+  final prefs = results[1] as SharedPreferences;
   final onboardingSeen = prefs.getBool('onboarding_seen') ?? false;
   return {'loggedIn': loggedIn, 'onboardingSeen': onboardingSeen};
 }

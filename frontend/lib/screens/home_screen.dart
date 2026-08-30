@@ -13,6 +13,7 @@ import '../widgets/persona_avatar.dart';
 import '../widgets/shared_widgets.dart';
 import 'chat_screen.dart';
 import 'create_persona_screen.dart';
+import 'login_screen.dart';
 import 'memories_screen.dart';
 import 'profile_screen.dart';
 import 'upgrade_screen.dart';
@@ -105,7 +106,33 @@ class _HomeScreenState extends State<HomeScreen>
     AppSound.lightImpact();
     await AuthService.logout();
     if (!mounted) return;
-    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    Navigator.of(context).pushAndRemoveUntil(
+      PageRouteBuilder(
+        settings: const RouteSettings(name: '/login'),
+        transitionDuration: const Duration(milliseconds: 600),
+        pageBuilder: (context, animation, secondaryAnimation) {
+          // Import LoginScreen at top of file if needed
+          return const LoginScreen();
+        },
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          final fadeAnim = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
+          final scaleAnim = Tween<double>(begin: 0.92, end: 1.0).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          );
+          return FadeTransition(
+            opacity: fadeAnim,
+            child: ScaleTransition(
+              scale: scaleAnim,
+              child: child,
+            ),
+          );
+        },
+      ),
+      (route) => false,
+    );
   }
 
   Future<void> _openCreatePersona() async {
