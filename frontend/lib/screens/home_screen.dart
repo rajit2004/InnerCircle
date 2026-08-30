@@ -78,9 +78,10 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final data = await ApiClient.get('/api/personas');
       final list = (data as List).map((p) => Persona.fromJson(p)).toList();
-      final profile = await ApiClient.getStoredProfile();
-      final isPremium = (profile['subscriptionTier'] ?? 'free').toString().toLowerCase() == 'premium';
-      final displayName = profile['displayName'] ?? '';
+      final profileData = await ApiClient.get('/api/users/me') as Map<String, dynamic>;
+      final isPremium = (profileData['subscriptionTier'] ?? 'free').toString().toLowerCase() == 'premium';
+      final displayName = profileData['displayName'] ?? '';
+      await ApiClient.setSubscriptionTier(profileData['subscriptionTier'] ?? 'free');
       if (!mounted) return;
       setState(() {
         _personas = list;

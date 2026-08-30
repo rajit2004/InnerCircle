@@ -55,7 +55,7 @@ public class AuthService {
                 "USER"
         );
 
-        return new AuthResponse(token, user.getEmail(), "USER");
+        return new AuthResponse(token, user.getEmail(), "USER", user.getSubscriptionTier().name());
     }
 
     @Transactional
@@ -109,7 +109,7 @@ public class AuthService {
                 "USER"
         );
 
-        return new AuthResponse(token, user.getEmail(), "USER");
+        return new AuthResponse(token, user.getEmail(), "USER", user.getSubscriptionTier().name());
     }
 
     /**
