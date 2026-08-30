@@ -69,6 +69,9 @@ class _ChatScreenState extends State<ChatScreen> {
               role: m['role'] as String,
               content: m['content'] as String,
               reaction: m['reaction'] as String?,
+              timestamp: m['createdAt'] != null
+                  ? DateTime.tryParse(m['createdAt'] as String)
+                  : null,
             )));
         _loadingHistory = false;
       });
@@ -84,7 +87,7 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.clear();
       if (greeting != null && greeting.isNotEmpty) {
-        _messages.add(ChatMessage(role: 'assistant', content: greeting));
+        _messages.add(ChatMessage(role: 'assistant', content: greeting, timestamp: DateTime.now()));
       }
       _conversationId = null;
       _loadingHistory = false;
@@ -106,7 +109,7 @@ class _ChatScreenState extends State<ChatScreen> {
     AppSound.lightImpact();
     _controller.clear();
     setState(() {
-      _messages.add(ChatMessage(role: 'user', content: content));
+      _messages.add(ChatMessage(role: 'user', content: content, timestamp: DateTime.now()));
       _isTyping = true;
       _hasText = false;
       _animationKey++;
@@ -130,7 +133,7 @@ class _ChatScreenState extends State<ChatScreen> {
         }
         if (reply.isNotEmpty) {
           _messages.add(
-              ChatMessage(id: messageId, role: 'assistant', content: reply));
+              ChatMessage(id: messageId, role: 'assistant', content: reply, timestamp: DateTime.now()));
         }
         _isTyping = false;
         _animationKey++;
@@ -190,7 +193,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.clear();
       final greeting = widget.persona.greeting?.trim();
       if (greeting != null && greeting.isNotEmpty) {
-        _messages.add(ChatMessage(role: 'assistant', content: greeting));
+        _messages.add(ChatMessage(role: 'assistant', content: greeting, timestamp: DateTime.now()));
       }
       _conversationId = null;
       _isTyping = false;
@@ -322,7 +325,7 @@ class _ChatScreenState extends State<ChatScreen> {
         }
         if (reply.isNotEmpty) {
           _messages.add(
-            ChatMessage(id: messageId, role: 'assistant', content: reply),
+            ChatMessage(id: messageId, role: 'assistant', content: reply, timestamp: DateTime.now()),
           );
         }
         _isTyping = false;
@@ -593,6 +596,17 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
     super.dispose();
   }
 
+  String _formatTime(DateTime dt) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final msgDate = DateTime(dt.year, dt.month, dt.day);
+    final time = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    if (msgDate == today) return time;
+    final yesterday = today.subtract(const Duration(days: 1));
+    if (msgDate == yesterday) return 'Yesterday $time';
+    return '${dt.day}/${dt.month} $time';
+  }
+
   @override
   Widget build(BuildContext context) {
     final isUser = widget.message.role == 'user';
@@ -646,9 +660,13 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                       const SizedBox(width: 8),
                     ],
                     Flexible(
-                      child: Stack(
-                        clipBehavior: Clip.none,
+                      child: Column(
+                        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          Stack(
+                            clipBehavior: Clip.none,
+                            children: [
                           Container(
                             margin: const EdgeInsets.symmetric(vertical: 4),
                             padding: const EdgeInsets.symmetric(
@@ -704,6 +722,19 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                               child: _ReactionBadge(
                                 reaction: widget.message.reaction!,
                                 gradient: gradient,
+                              ),
+                            ),
+                          ],
+                          ),
+                          if (widget.message.timestamp != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                              child: Text(
+                                _formatTime(widget.message.timestamp!),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                ),
                               ),
                             ),
                         ],
