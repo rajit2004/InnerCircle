@@ -665,6 +665,19 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                         crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
+                          if (!isUser)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4, bottom: 3),
+                              child: Text(
+                                widget.personaName,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                  color: gradient.first,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ),
                           Stack(
                             clipBehavior: Clip.none,
                             children: [

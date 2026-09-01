@@ -50,7 +50,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Text('Appearance', style: Theme.of(context).textTheme.titleSmall),
+          _buildSectionHeader(context, 'Appearance', Icons.palette_outlined),
           const SizedBox(height: 10),
           Card(
             child: ValueListenableBuilder<ThemeMode>(
@@ -77,7 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 24),
 
           // ── Chat Preferences ──────────────────────────────────
-          Text('Chat preferences', style: Theme.of(context).textTheme.titleSmall),
+          _buildSectionHeader(context, 'Chat preferences', Icons.chat_outlined),
           const SizedBox(height: 10),
           if (_loadingPrefs)
             const Card(child: Padding(padding: EdgeInsets.all(18), child: Center(child: CircularProgressIndicator())))
@@ -151,7 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
 
           const SizedBox(height: 24),
-          Text('About', style: Theme.of(context).textTheme.titleSmall),
+          _buildSectionHeader(context, 'About', Icons.info_outline_rounded),
           const SizedBox(height: 10),
           const Card(
             child: Column(
@@ -279,5 +279,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
         SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
       );
     }
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.primary),
+        const SizedBox(width: 8),
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.3,
+              ),
+        ),
+      ],
+    );
   }
 }

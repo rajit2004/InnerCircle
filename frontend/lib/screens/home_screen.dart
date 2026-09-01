@@ -155,17 +155,34 @@ class _HomeScreenState extends State<HomeScreen>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete this persona?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 18),
+            ),
+            const SizedBox(width: 10),
+            const Flexible(
+              child: Text('Delete companion', overflow: TextOverflow.ellipsis),
+            ),
+          ],
+        ),
         content: Text(
-          '${persona.name} and your entire conversation history with them will be deleted. This can\'t be undone.',
+          '${persona.name} and your entire conversation history will be permanently deleted.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: const Text('Keep'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             child: const Text('Delete'),
           ),
         ],
@@ -224,8 +241,10 @@ class _HomeScreenState extends State<HomeScreen>
             : null,
         bottomNavigationBar: NavigationBar(
           selectedIndex: _selectedIndex,
-          onDestinationSelected: (index) =>
-              setState(() => _selectedIndex = index),
+          onDestinationSelected: (index) {
+            AppSound.selectionClick();
+            setState(() => _selectedIndex = index);
+          },
           destinations: const [
             NavigationDestination(
               icon: Icon(Icons.chat_bubble_outline_rounded),
@@ -275,35 +294,41 @@ class _HomeScreenState extends State<HomeScreen>
         runSpacing: 10,
         children: personas.map((p) {
           final gradient = AppColors.personaGradient(p.$1);
-          return Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  gradient.first.withValues(alpha: 0.15),
-                  gradient.last.withValues(alpha: 0.08),
+          return GestureDetector(
+            onTap: () {
+              AppSound.lightImpact();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    gradient.first.withValues(alpha: 0.15),
+                    gradient.last.withValues(alpha: 0.08),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: gradient.first.withValues(alpha: 0.25),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(p.$4, size: 16, color: p.$3),
+                  const SizedBox(width: 6),
+                  Text(
+                    p.$1,
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: p.$3,
+                    ),
+                  ),
                 ],
               ),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: gradient.first.withValues(alpha: 0.25),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(p.$4, size: 16, color: p.$3),
-                const SizedBox(width: 6),
-                Text(
-                  p.$1,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: p.$3,
-                  ),
-                ),
-              ],
             ),
           );
         }).toList(),
@@ -395,16 +420,17 @@ class _HomeScreenState extends State<HomeScreen>
               child: Text(
                 'Your circle is empty',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5,
                     ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Center(
                 child: Text(
-                  'Create your first companion and start a meaningful conversation',
+                  'Tap + to create your first companion\nand start a meaningful conversation',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Theme.of(context)
@@ -441,25 +467,29 @@ class _HomeScreenState extends State<HomeScreen>
                 Text(
                   _greeting,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 28,
+                        letterSpacing: -0.5,
                       ),
                 ),
                 if (_userName.isNotEmpty) ...[
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 4),
                   Text(
                     _userName,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
                         ),
                   ),
                 ],
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   _personas.length == 1
-                      ? 'You have 1 companion'
-                      : 'You have ${_personas.length} companions',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                      ? '1 companion in your circle'
+                      : '${_personas.length} companions in your circle',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                 ),
               ],
             ),
@@ -483,8 +513,32 @@ class _HomeScreenState extends State<HomeScreen>
                     } else {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => ChatScreen(persona: persona)),
+                        PageRouteBuilder(
+                          transitionDuration: const Duration(milliseconds: 400),
+                          reverseTransitionDuration: const Duration(milliseconds: 300),
+                          pageBuilder: (context, animation, secondaryAnimation) =>
+                              ChatScreen(persona: persona),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            final fadeAnim = CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            );
+                            final slideAnim = Tween<Offset>(
+                              begin: const Offset(0.05, 0),
+                              end: Offset.zero,
+                            ).animate(CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            ));
+                            return FadeTransition(
+                              opacity: fadeAnim,
+                              child: SlideTransition(
+                                position: slideAnim,
+                                child: child,
+                              ),
+                            );
+                          },
+                        ),
                       );
                     }
                   },
@@ -505,7 +559,6 @@ class _HomeScreenState extends State<HomeScreen>
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
-          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(6),
@@ -521,14 +574,15 @@ class _HomeScreenState extends State<HomeScreen>
             const SizedBox(width: 10),
             const Flexible(
               child: Text(
-                'Premium Persona',
+                'Premium Companion',
                 overflow: TextOverflow.ellipsis,
+                style: TextStyle(fontWeight: FontWeight.w700),
               ),
             ),
           ],
         ),
         content: const Text(
-          'This persona is available with Premium. Upgrade to unlock all companions and unlimited messages.',
+          'This companion is available with Premium. Upgrade to unlock all companions and unlimited messages.',
         ),
         actions: [
           TextButton(
