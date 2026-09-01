@@ -270,9 +270,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               page.title,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
+                    fontWeight: FontWeight.w800,
                     fontSize: 30,
                     height: 1.2,
+                    letterSpacing: -0.5,
                   ),
             ),
           ),

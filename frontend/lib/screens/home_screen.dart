@@ -652,7 +652,10 @@ class _PersonaCardState extends State<_PersonaCard>
     final locked = widget.isLocked;
 
     return GestureDetector(
-      onTapDown: (_) => _pressController.forward(),
+      onTapDown: (_) {
+        AppSound.lightImpact();
+        _pressController.forward();
+      },
       onTapUp: (_) {
         _pressController.reverse();
         widget.onTap();
@@ -663,19 +666,19 @@ class _PersonaCardState extends State<_PersonaCard>
         builder: (context, _) {
           final t = _glowAnim.value;
           return Transform.scale(
-            scale: 1.0 - 0.02 * t,
-            child: Container(
+            scale: 1.0 - 0.03 * t,
+              child: Container(
               height: 140,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   BoxShadow(
                     color: locked
-                        ? Colors.black.withValues(alpha: 0.1 + 0.05 * t)
-                        : gradient.first.withValues(alpha: 0.2 + 0.2 * t),
-                    blurRadius: 16 + 12 * t,
-                    offset: Offset(0, 4 + 4 * t),
-                    spreadRadius: -2,
+                        ? Colors.black.withValues(alpha: 0.1 + 0.08 * t)
+                        : gradient.first.withValues(alpha: 0.2 + 0.3 * t),
+                    blurRadius: 16 + 16 * t,
+                    offset: Offset(0, 4 + 6 * t),
+                    spreadRadius: -2 + 1 * t,
                   ),
                 ],
               ),
