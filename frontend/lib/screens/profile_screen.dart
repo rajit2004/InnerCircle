@@ -323,14 +323,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
             icon: Icons.notifications_outlined,
             title: 'Check-in reminders',
             subtitle: 'Manage scheduled persona check-ins',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen())),
+            onTap: () => Navigator.push(
+              context,
+              PageRouteBuilder(
+                transitionDuration: const Duration(milliseconds: 350),
+                reverseTransitionDuration: const Duration(milliseconds: 250),
+                pageBuilder: (_, _, _) => const NotificationsScreen(),
+                transitionsBuilder: (_, animation, _, child) {
+                  final fadeAnim = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+                  final slideAnim = Tween<Offset>(
+                    begin: const Offset(0.03, 0),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+                  return FadeTransition(
+                    opacity: fadeAnim,
+                    child: SlideTransition(position: slideAnim, child: child),
+                  );
+                },
+              ),
+            ),
           ),
           const SizedBox(height: 10),
           _NudgeTile(
             icon: Icons.settings_outlined,
             title: 'Settings',
             subtitle: 'Appearance and app info',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+            onTap: () => Navigator.push(
+              context,
+              PageRouteBuilder(
+                transitionDuration: const Duration(milliseconds: 350),
+                reverseTransitionDuration: const Duration(milliseconds: 250),
+                pageBuilder: (_, _, _) => const SettingsScreen(),
+                transitionsBuilder: (_, animation, _, child) {
+                  final fadeAnim = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+                  final slideAnim = Tween<Offset>(
+                    begin: const Offset(0.03, 0),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic));
+                  return FadeTransition(
+                    opacity: fadeAnim,
+                    child: SlideTransition(position: slideAnim, child: child),
+                  );
+                },
+              ),
+            ),
           ),
           const SizedBox(height: 24),
 

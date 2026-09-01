@@ -407,7 +407,7 @@ class _ChatScreenState extends State<ChatScreen> {
                         Expanded(
                           child: ListView.builder(
                             controller: _scrollController,
-                            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
                             itemCount:
                                 _messages.length + (_isTyping ? 1 : 0),
                             itemBuilder: (context, index) {
@@ -1080,7 +1080,7 @@ class _ChatInputBar extends StatelessWidget {
           ),
         ],
       ),
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 14),
+      padding: EdgeInsets.fromLTRB(12, 10, 12, MediaQuery.of(context).padding.bottom + 8),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -1111,6 +1111,7 @@ class _ChatInputBar extends StatelessWidget {
                 minLines: 1,
                 maxLines: 4,
                 textInputAction: TextInputAction.send,
+                textCapitalization: TextCapitalization.sentences,
                 decoration: InputDecoration(
                   hintText: 'Message ${personaName ?? ''}...',
                   hintStyle: TextStyle(
