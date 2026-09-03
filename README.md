@@ -44,7 +44,7 @@ The app is built to feel alive. Every screen has thoughtful animations, haptic f
 | **Girlfriend**     | Affectionate, romantic, and proactive with daily check-ins |
 | **Big Sister**     | Protective, honest, and playful                            |
 
-Users can also create their own custom personas with a specific relationship type, personality description, and avatar emoji.
+Users can also create their own custom personas with a specific relationship type, personality description, and avatar emoji. Premium personas can be configured with unrestricted content for more natural adult conversations.
 
 Built with **Flutter** for mobile, **Spring Boot** for backend services, **PostgreSQL + pgvector** for memory storage, and **Groq (Llama 3 70B)** for fast conversational AI.
 
@@ -55,26 +55,38 @@ Built with **Flutter** for mobile, **Spring Boot** for backend services, **Postg
 ### Core Features
 
 * **Persistent Memory**
-  Each persona remembers important facts shared by the user. Memories are stored using pgvector embeddings and retrieved contextually during conversations.
+  Each persona remembers important facts shared by the user. Memories are stored using pgvector embeddings and retrieved contextually during conversations. Users can view, search, and delete memories from the Memories screen.
 
 * **Real-Time Chat**
-  AI responses are generated quickly using Groq's inference engine. Messages appear with smooth slide-in animations and visual feedback.
+  AI responses are generated quickly using Groq's inference engine. Messages appear with smooth slide-in animations and visual feedback. The chat supports message regeneration, copying, sharing, and emoji reactions.
 
 * **Custom Personas**
-  Users can create their own companions by choosing a relationship type, writing a personality description, and picking an avatar. The app uses a stepped flow with live preview to make creation feel tangible.
+  Users can create their own companions by choosing a relationship type, writing a personality description, and picking an avatar. The app uses a stepped flow with live preview to make creation feel tangible. Custom personas can be marked as unrestricted for NSFW content.
+
+* **Suggested Follow-ups**
+  After each assistant response, the app suggests contextual follow-up messages based on the conversation. Tapping a suggestion populates the input field so the user can edit or send it directly.
+
+* **Message Actions**
+  Tap any assistant message to reveal a bottom sheet with options to copy the text, regenerate the response, or share it. The regenerate feature re-runs the AI with the full conversation context for a fresh take.
 
 * **Message Reactions**
   Long-press any message to add an emoji reaction. The reaction picker appears with a staggered spring animation, and the selected reaction lands with a satisfying scale bounce.
+
+* **Timestamps**
+  Every message displays a timestamp below the bubble. Today's messages show just the time. Yesterday shows "Yesterday" with the time. Older messages include the date as well.
 
 * **Proactive Notifications**
   Personas can check in on you at scheduled times. Users can schedule recurring reminders with specific times and days, and toggle them on or off.
 
 * **Freemium Subscription**
-  * Free tier: 2 personas and 50 messages per day
-  * Premium tier: all personas, unlimited messages, priority response speed, and early access to new features
+  * Free tier: all built-in personas with locked premium cards and 50 messages per day
+  * Premium tier: all personas unlocked, unlimited messages, priority response speed, and ability to create unlimited custom personas
 
 * **Dark Mode**
   Full dark mode support across every screen. The transition between light and dark uses a smooth crossfade instead of an instant swap.
+
+* **Chat Preferences**
+  Users can customize their experience from the Settings screen. Set a preferred name that personas use when talking to you, choose a communication style (casual, formal, playful, or direct), adjust response length, and toggle memory on or off.
 
 ### Design and Motion
 
@@ -90,47 +102,59 @@ Built with **Flutter** for mobile, **Spring Boot** for backend services, **Postg
 * **Staggered Entrances**
   Lists do not just appear all at once. Persona cards, memory cards, and notification cards fade and slide up one by one with a small delay between each, making the content feel like it is arriving rather than just existing.
 
+* **Smooth Page Transitions**
+  Every navigation uses fade and slide transitions instead of instant page swaps. The chat screen slides in gently from the right, profile settings fade in with a slight upward movement, and the logout animation smoothly transitions back to the login screen with a scale and fade effect.
+
 ### Screen by Screen
 
 * **Splash Screen**
-  The logo bounces in with an elastic spring animation while the background gradient shifts through the brand colors. The subtitle slides up after the logo lands.
+  The logo bounces in with an elastic spring animation while the background gradient shifts through the brand colors. The subtitle slides up after the logo lands. The splash appears for at least 2 seconds on every app launch, giving the app a polished feel every time you open it.
+
+* **Onboarding**
+  First-time users see four animated screens that introduce the app's core value. Each page has its own persona color, an animated icon, and a staggered text reveal. Users can skip or swipe through, and progress dots at the bottom show where they are in the flow.
 
 * **Login and Register**
-  The logo scales in with a spring, then the title, fields, and button each slide up with increasing delay. On invalid input, the entire form shakes horizontally with a heavy haptic, clearly communicating "no" without being harsh.
+  The logo scales in with a spring, then the title, fields, and button each slide up with increasing delay. On invalid input, the entire form shakes horizontally with a heavy haptic, clearly communicating "no" without being harsh. Registration now collects your display name and date of birth upfront so personas can personalize responses from the start.
 
 * **Home Screen**
-  Persona cards stagger in from bottom to top. Pressing a card gives it a subtle scale-down plus a glow pulse in that persona's gradient color. The create-persona FAB morphs from a plus to an X when tapped.
+  Persona cards stagger in from bottom to top. Pressing a card gives it a subtle scale-down plus a glow pulse in that persona's gradient color with haptic feedback. The greeting header shows a time-of-day message with your name highlighted in the brand color. The create-persona FAB morphs from a plus to an X when tapped. Pull to refresh reloads everything.
 
 * **Chat Screen**
-  The persona avatar in the appbar has a subtle breathing animation. New messages slide in from the side with a spring overshoot. The typing indicator has three bouncing dots with a soft persona-colored glow behind them. The reaction picker opens with each emoji scaling in one after another. A small FAB appears when you scroll up, letting you jump back to the bottom. The entire chat background has a very low-opacity tint of the current persona's color.
+  The persona avatar in the appbar has a subtle breathing animation and shows "typing..." or "online" status. New messages slide in from the side with a spring overshoot. Assistant messages show the persona's name above the bubble in their signature color. The typing indicator has three bouncing dots with a soft persona-colored glow behind them. After each response, contextual suggestion chips appear below the message. The reaction picker opens with each emoji scaling in one after another. A small FAB appears when you scroll up, letting you jump back to the bottom. The entire chat background has a very low-opacity tint of the current persona's color. The input field shows "Message [PersonaName]..." as placeholder text.
 
 * **Upgrade Screen**
   A full-screen modal with an animated gradient that slowly rotates through all four persona colors. Free and premium comparison cards sit side by side, and the premium checkmarks animate in one at a time. The CTA button has a continuous shimmer sweep. On successful upgrade, a celebratory checkmark draws in with a scale animation.
 
 * **Create Persona**
-  A four-step flow (Name, Relationship, Personality, Avatar) with progress dots at the top. Each step slides in horizontally. The emoji picker has a spring scale on selection, and a live preview bubble updates as you type.
+  A four-step flow (Name, Relationship, Personality, Avatar) with progress dots at the top. Each step slides in horizontally. The emoji picker has a spring scale on selection, and a live preview bubble updates as you type. The personality step includes an NSFW toggle for unrestricted content on custom personas.
 
 * **Memories Screen**
   Cards fade and slide up with staggered timing. Swipe left to delete with a red reveal. The loading state uses a shaped shimmer placeholder.
 
 * **Profile Screen**
-  The avatar bounces on tap with a three-stage scale animation. Navigation rows have a chevron that nudges right on press. The upgrade button opens the full-screen Upgrade modal.
+  The avatar bounces on tap with a three-stage scale animation. Navigation rows have a chevron that nudges right on press. The upgrade button opens the full-screen Upgrade modal. Account details show your display name, email, date of birth, language, and timezone.
 
 * **Notifications Screen**
   Each scheduled card uses a custom animated toggle with a smooth thumb slide and color morph. Cards stagger in on load.
 
 * **Settings Screen**
-  The dark mode toggle uses an animated icon switcher that crossfades between sun and moon icons.
+  The dark mode toggle uses an animated icon switcher that crossfades between sun and moon icons. Section headers have icons and bolder typography for better visual hierarchy. Chat preferences let you control how personas communicate with you.
 
 ---
 
 ## How It Works
 
 ```text
-User signs up
+User signs up (with name and date of birth)
         |
         v
-Spring Security issues JWT
+Spring Security issues JWT + subscription tier
+        |
+        v
+Onboarding screens introduce the app (first launch only)
+        |
+        v
+Splash screen plays for 2 seconds
         |
         v
 User selects a persona
@@ -146,6 +170,9 @@ Backend retrieves relevant memories using pgvector
         |
         v
 Groq (Llama 3 70B) generates a response
+        |
+        v
+Suggested follow-ups are generated for quick replies
         |
         v
 Important facts are extracted and stored as memories
@@ -164,10 +191,10 @@ FCM push notifications are delivered
 | Layer                        | Technology                                               |
 | ---------------------------- | -------------------------------------------------------- |
 | **Mobile**                   | Flutter, Material Design 3                               |
-| **Backend**                  | Java 17, Spring Boot 3, Spring Security, Spring Data JPA |
-| **Database**                 | PostgreSQL + pgvector                                    |
+| **Backend**                  | Java 17, Spring Boot 4.1, Spring Security, Spring Data JPA |
+| **Database**                 | PostgreSQL 18 + pgvector                                 |
 | **LLM Provider**             | Groq Cloud (Llama 3 70B)                                 |
-| **Authentication**           | JWT                                                      |
+| **Authentication**           | JWT with subscription tier in token                      |
 | **Admin Dashboard**          | React + Vite                                             |
 | **Push Notifications**       | Firebase Cloud Messaging (FCM)                           |
 | **Hosting**                  | Render, Fly.io                                           |
@@ -182,12 +209,12 @@ innercircle/
 ├── backend/                          # Spring Boot 4.1 API
 │   ├── src/main/java/com/innercircle/
 │   │   ├── config/                   # Security, JWT, CORS, WebClient
-│   │   ├── controller/               # REST endpoints (Auth, Chat, Memory, Notification, Persona, User)
-│   │   ├── dto/                      # Request/response objects
+│   │   ├── controller/               # REST endpoints (Auth, Chat, Memory, Notification, Persona, User, UserPreferences)
+│   │   ├── dto/                      # Request/response objects (AuthRequest with displayName + dateOfBirth, RegenerateRequest, etc.)
 │   │   ├── exception/                # Custom exceptions + global handler
-│   │   ├── model/                    # JPA entities (User, Persona, Message, Conversation, Memory, etc.)
+│   │   ├── model/                    # JPA entities (User, Persona, Message, Conversation, Memory, UserPreferences, etc.)
 │   │   ├── repository/               # Spring Data JPA repos
-│   │   ├── service/                  # Business logic (Chat, Auth, Embedding, Notification, etc.)
+│   │   ├── service/                  # Business logic (Chat, Auth, Embedding, Notification, Persona, etc.)
 │   │   └── util/                     # JwtUtil
 │   ├── src/main/resources/
 │   │   └── application.yml
@@ -195,13 +222,13 @@ innercircle/
 │
 ├── database/                         # SQL schemas and migrations
 │   ├── schema.sql
-│   └── migration_round*.sql
+│   └── migration_*.sql
 │
 ├── frontend/                         # Flutter (Dart) Android app
 │   ├── lib/
-│   │   ├── models/                   # Data classes (User, Persona, ChatMessage, Memory, etc.)
-│   │   ├── screens/                  # UI screens (Home, Chat, Login, Register, Profile, etc.)
-│   │   ├── services/                 # API client, auth, chat, push notifications, haptics
+│   │   ├── models/                   # Data classes (User, Persona, ChatMessage, Memory, UserPreferences, etc.)
+│   │   ├── screens/                  # UI screens (Home, Chat, Login, Register, Profile, Settings, Onboarding, etc.)
+│   │   ├── services/                 # API client, auth, chat, preferences, push notifications, haptics
 │   │   ├── theme/                    # Colors, typography, motion design tokens
 │   │   └── widgets/                  # Shared widgets, splash screen, persona avatar
 │   ├── android/                      # Android-specific config (Gradle, manifest, Firebase)
@@ -358,9 +385,13 @@ POST /api/auth/register
 ```json
 {
   "email": "user@example.com",
-  "password": "secret"
+  "password": "secret",
+  "displayName": "Alex",
+  "dateOfBirth": "1998-05-15"
 }
 ```
+
+The `displayName` and `dateOfBirth` fields are optional but recommended. They help personas personalize responses from the start.
 
 ---
 
@@ -383,7 +414,10 @@ POST /api/auth/login
 
 ```json
 {
-  "token": "jwt_token"
+  "token": "jwt_token",
+  "email": "user@example.com",
+  "role": "USER",
+  "subscriptionTier": "free"
 }
 ```
 
@@ -397,7 +431,7 @@ POST /api/auth/login
 GET /api/personas
 ```
 
-Returns all personas the current user has access to. Free users see only free-tier personas. Premium users see all of them.
+Returns all personas the current user has access to. Free users see premium personas with a lock overlay. Premium users see all of them unlocked.
 
 ---
 
@@ -414,9 +448,12 @@ POST /api/personas
   "name": "Alex",
   "relationshipType": "FRIEND",
   "personalityDescription": "witty and a little sarcastic",
-  "avatarEmoji": "😎"
+  "avatarEmoji": "😎",
+  "nsfwEnabled": false
 }
 ```
+
+The `nsfwEnabled` field enables unrestricted content for the persona. It defaults to false.
 
 ---
 
@@ -457,6 +494,25 @@ POST /api/chat
   "messageId": "uuid"
 }
 ```
+
+---
+
+### Regenerate Message
+
+```http
+POST /api/chat/regenerate
+```
+
+**Request Body**
+
+```json
+{
+  "conversationId": "uuid",
+  "personaId": "uuid"
+}
+```
+
+Deletes the last assistant message and generates a fresh response using the full conversation history.
 
 ---
 
@@ -568,6 +624,37 @@ DELETE /api/notifications/schedule/{id}
 
 ---
 
+## User Preferences
+
+### Get Preferences
+
+```http
+GET /api/user-preferences
+```
+
+Returns the user's chat preferences including preferred name, communication style, response length, and memory toggle.
+
+---
+
+### Update Preferences
+
+```http
+PUT /api/user-preferences
+```
+
+**Request Body**
+
+```json
+{
+  "preferredName": "Raj",
+  "communicationStyle": "casual",
+  "responseLength": "moderate",
+  "memoryEnabled": true
+}
+```
+
+---
+
 ## Subscription
 
 ### Update Subscription Tier
@@ -592,7 +679,26 @@ POST /api/users/subscription
 GET /api/users/me
 ```
 
-Returns the current user's profile including subscription tier, message usage, and account info.
+Returns the current user's profile including subscription tier, message usage, display name, date of birth, and account info.
+
+---
+
+### Update Profile
+
+```http
+PUT /api/users/me
+```
+
+**Request Body**
+
+```json
+{
+  "displayName": "Ranesh",
+  "dateOfBirth": "2002-03-15",
+  "language": "en",
+  "timezone": "UTC"
+}
+```
 
 ---
 
