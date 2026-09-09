@@ -420,7 +420,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Theme.of(ctx).dividerColor, borderRadius: BorderRadius.circular(2)))),
               Text('Edit display name', style: Theme.of(ctx).textTheme.titleLarge),
               const SizedBox(height: 16),
-              TextField(controller: controller, autofocus: true, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Display name', hintText: 'How should we call you?', prefixIcon: Icon(Icons.person_outline_rounded))),
+              TextField(controller: controller, autofocus: true, maxLength: 50, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Display name', hintText: 'How should we call you?', prefixIcon: Icon(Icons.person_outline_rounded))),
               const SizedBox(height: 20),
               SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Save'))),
             ],
@@ -587,12 +587,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (result != true) return;
     if (!mounted) return;
 
+    if (currentCtrl.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your current password'), backgroundColor: AppColors.error));
+      return;
+    }
     if (newCtrl.text != confirmCtrl.text) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords do not match'), backgroundColor: AppColors.error));
       return;
     }
-    if (newCtrl.text.length < 8) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password must be at least 8 characters'), backgroundColor: AppColors.error));
+    if (newCtrl.text.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password must be at least 6 characters'), backgroundColor: AppColors.error));
       return;
     }
 

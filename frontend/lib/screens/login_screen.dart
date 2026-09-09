@@ -312,7 +312,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 labelText: 'Email',
                                 prefixIcon: Icon(Icons.mail_outline_rounded),
                               ),
-                              validator: (v) => (v != null && v.contains('@'))
+                              validator: (v) => (v != null && RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v))
                                   ? null
                                   : 'Enter a valid email',
                             ),

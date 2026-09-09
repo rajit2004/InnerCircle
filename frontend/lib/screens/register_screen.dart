@@ -366,7 +366,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                 labelText: 'Email',
                                 prefixIcon: Icon(Icons.mail_outline_rounded),
                               ),
-                              validator: (v) => (v != null && v.contains('@'))
+                              validator: (v) => (v != null && RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v))
                                   ? null
                                   : 'Enter a valid email',
                             ),
@@ -408,6 +408,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                             child: TextFormField(
                               controller: _nameController,
                               textCapitalization: TextCapitalization.words,
+                              maxLength: 50,
                               decoration: const InputDecoration(
                                 labelText: 'Your name',
                                 helperText: 'How should we call you?',
