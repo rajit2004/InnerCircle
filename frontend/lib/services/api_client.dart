@@ -92,9 +92,13 @@ class ApiClient {
     return headers;
   }
 
+  static const Duration _timeout = Duration(seconds: 30);
+
   static Future<dynamic> get(String endpoint, {bool auth = true}) async {
     final uri = Uri.parse('$baseUrl$endpoint');
-    final response = await http.get(uri, headers: await _headers(auth: auth));
+    final response = await http
+        .get(uri, headers: await _headers(auth: auth))
+        .timeout(_timeout);
     return _handleResponse(response);
   }
 
@@ -104,20 +108,24 @@ class ApiClient {
         bool auth = true,
       }) async {
     final uri = Uri.parse('$baseUrl$endpoint');
-    final response = await http.post(
-      uri,
-      headers: await _headers(auth: auth),
-      body: body != null ? jsonEncode(body) : null,
-    );
+    final response = await http
+        .post(
+          uri,
+          headers: await _headers(auth: auth),
+          body: body != null ? jsonEncode(body) : null,
+        )
+        .timeout(_timeout);
     return _handleResponse(response);
   }
 
   static Future<dynamic> delete(String endpoint, {bool auth = true}) async {
     final uri = Uri.parse('$baseUrl$endpoint');
-    final response = await http.delete(
-      uri,
-      headers: await _headers(auth: auth),
-    );
+    final response = await http
+        .delete(
+          uri,
+          headers: await _headers(auth: auth),
+        )
+        .timeout(_timeout);
     return _handleResponse(response);
   }
 
@@ -130,25 +138,22 @@ class ApiClient {
         bool auth = true,
       }) async {
     final uri = Uri.parse('$baseUrl$endpoint');
-    final response = await http.put(
-      uri,
-      headers: await _headers(auth: auth),
-      body: body != null ? jsonEncode(body) : null,
-    );
+    final response = await http
+        .put(
+          uri,
+          headers: await _headers(auth: auth),
+          body: body != null ? jsonEncode(body) : null,
+        )
+        .timeout(_timeout);
     return _handleResponse(response);
   }
 
   static dynamic _handleResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.bodyBytes.isEmpty) return null;
-      // BUG FIX: Dart's http falls back to Latin-1 when the server doesn't
-      // declare a charset, so emoji/non-ASCII (persona avatars, chat replies)
-      // came back as mojibake. Decode the raw bytes as UTF-8 explicitly.
       return jsonDecode(utf8.decode(response.bodyBytes));
     }
 
-    // If token expired or invalid, clear session and redirect to login.
-    // Skip if already on an auth screen to avoid redirect loops.
     if (response.statusCode == 401 || response.statusCode == 403) {
       final currentRoute = navigatorKey.currentContext != null
           ? ModalRoute.of(navigatorKey.currentContext!)
@@ -163,6 +168,8 @@ class ApiClient {
           (route) => false,
         );
       }
+      final message = _extractErrorMessage(response.body);
+      throw Exception('Server error ${response.statusCode}: $message');
     }
 
     final message = _extractErrorMessage(response.body);
