@@ -96,7 +96,6 @@ class _LoginScreenState extends State<LoginScreen>
 
   void _login() async {
     if (!_formKey.currentState!.validate()) {
-      // Shake the form to indicate error
       _shakeController.forward(from: 0.0);
       AppSound.heavyImpact();
       return;
@@ -107,15 +106,6 @@ class _LoginScreenState extends State<LoginScreen>
       await AuthService.login(
           _emailController.text.trim(), _passwordController.text);
       if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          transitionDuration: const Duration(milliseconds: 300),
-          pageBuilder: (_, _, _) =>
-              Container(color: Theme.of(context).scaffoldBackgroundColor),
-          transitionsBuilder: (_, animation, _, child) =>
-              FadeTransition(opacity: animation, child: child),
-        ),
-      );
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
       if (!mounted) return;
@@ -138,7 +128,10 @@ class _LoginScreenState extends State<LoginScreen>
     final screenHeight = MediaQuery.sizeOf(context).height;
 
     return Scaffold(
-      body: Stack(
+      body: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: Stack(
         children: [
           // ── Gradient hero section ──
           Positioned(
@@ -415,6 +408,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ),
         ],
+      ),
       ),
     );
   }

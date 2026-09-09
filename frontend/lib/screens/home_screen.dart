@@ -104,6 +104,26 @@ class _HomeScreenState extends State<HomeScreen>
 
   Future<void> _logout() async {
     AppSound.lightImpact();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Log out?'),
+        content: const Text('You\'ll need to log in again to access your companions.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Log out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
     await AuthService.logout();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
@@ -111,7 +131,6 @@ class _HomeScreenState extends State<HomeScreen>
         settings: const RouteSettings(name: '/login'),
         transitionDuration: const Duration(milliseconds: 600),
         pageBuilder: (context, animation, secondaryAnimation) {
-          // Import LoginScreen at top of file if needed
           return const LoginScreen();
         },
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -243,6 +262,7 @@ class _HomeScreenState extends State<HomeScreen>
           selectedIndex: _selectedIndex,
           onDestinationSelected: (index) {
             AppSound.selectionClick();
+            FocusManager.instance.primaryFocus?.unfocus();
             setState(() => _selectedIndex = index);
           },
           destinations: const [

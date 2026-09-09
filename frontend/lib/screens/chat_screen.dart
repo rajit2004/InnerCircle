@@ -44,6 +44,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   void _onScroll() {
     if (!_scrollController.hasClients) return;
+    if (_scrollController.position.isScrollingNotifier.value) {
+      FocusManager.instance.primaryFocus?.unfocus();
+    }
     final atBottom = _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 80;
     if (atBottom != _showScrollToBottom) {

@@ -175,7 +175,10 @@ class _RegisterScreenState extends State<RegisterScreen>
     final screenHeight = MediaQuery.sizeOf(context).height;
 
     return Scaffold(
-      body: Stack(
+      body: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        behavior: HitTestBehavior.translucent,
+        child: Stack(
         children: [
           // ── Gradient hero section ──
           Positioned(
@@ -492,6 +495,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             ),
           ),
         ],
+      ),
       ),
     );
   }
