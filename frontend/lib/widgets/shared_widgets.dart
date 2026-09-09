@@ -31,7 +31,7 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
     _controller = AnimationController(
       duration: const Duration(milliseconds: 1400),
       vsync: this,
-    )..repeat(reverse: true);
+    )..repeat();
     _animation = Tween<double>(begin: -1.0, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );

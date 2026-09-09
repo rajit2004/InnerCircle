@@ -71,12 +71,21 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
     super.dispose();
   }
 
+  String? _nameError;
+  String? _descriptionError;
+
   void _nextStep() {
+    setState(() {
+      _nameError = null;
+      _descriptionError = null;
+    });
     if (_currentStep == 0 && _nameController.text.trim().isEmpty) {
+      setState(() => _nameError = 'Please enter a name');
       AppSound.heavyImpact();
       return;
     }
     if (_currentStep == 2 && _descriptionController.text.trim().isEmpty) {
+      setState(() => _descriptionError = 'Please describe their personality');
       AppSound.heavyImpact();
       return;
     }
@@ -104,6 +113,12 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
       );
       if (!mounted) return;
       AppSound.mediumImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_nameController.text.trim()} created!'),
+          duration: const Duration(seconds: 1),
+        ),
+      );
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
@@ -238,9 +253,11 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
             autofocus: true,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _nextStep(),
-            decoration: const InputDecoration(
+            onChanged: (_) => setState(() => _nameError = null),
+            decoration: InputDecoration(
               labelText: 'Name',
               hintText: 'e.g. Alex',
+              errorText: _nameError,
             ),
           ),
         ],
@@ -335,10 +352,12 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
             maxLength: 300,
             maxLines: 3,
             autofocus: true,
-            decoration: const InputDecoration(
+            onChanged: (_) => setState(() => _descriptionError = null),
+            decoration: InputDecoration(
               hintText:
                   'e.g. witty and a little sarcastic, always checks in about my workouts',
               alignLabelWithHint: true,
+              errorText: _descriptionError,
             ),
           ),
           const SizedBox(height: 16),

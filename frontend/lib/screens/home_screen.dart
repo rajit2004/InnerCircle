@@ -50,7 +50,6 @@ class _HomeScreenState extends State<HomeScreen>
       curve: Curves.elasticOut,
     );
     _fabController.forward();
-    _greeting = _getGreeting();
     _fetchPersonas();
     PushNotificationService.initialize();
   }
@@ -233,6 +232,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final titles = ['InnerCircle', 'Memories', 'Profile'];
+    final greeting = _getGreeting();
 
     return ExitConfirmationWrapper(
       child: Scaffold(
@@ -319,41 +319,36 @@ class _HomeScreenState extends State<HomeScreen>
         runSpacing: 10,
         children: personas.map((p) {
           final gradient = AppColors.personaGradient(p.$1);
-          return GestureDetector(
-            onTap: () {
-              AppSound.lightImpact();
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [
-                    gradient.first.withValues(alpha: 0.15),
-                    gradient.last.withValues(alpha: 0.08),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: gradient.first.withValues(alpha: 0.25),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(p.$4, size: 16, color: p.$3),
-                  const SizedBox(width: 6),
-                  Text(
-                    p.$1,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: p.$3,
-                    ),
-                  ),
+          return AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  gradient.first.withValues(alpha: 0.15),
+                  gradient.last.withValues(alpha: 0.08),
                 ],
               ),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: gradient.first.withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(p.$4, size: 16, color: p.$3),
+                const SizedBox(width: 6),
+                Text(
+                  p.$1,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: p.$3,
+                  ),
+                ),
+              ],
             ),
           );
         }).toList(),
@@ -490,7 +485,7 @@ class _HomeScreenState extends State<HomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _greeting,
+                  greeting,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         fontSize: 28,

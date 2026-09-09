@@ -183,7 +183,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 48),
               child: Center(
                 child: Text(
-                  'Important things you share get remembered here',
+                  'Start a conversation and share something important -- your companions will remember it.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         color: Theme.of(context)
