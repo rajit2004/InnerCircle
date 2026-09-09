@@ -26,6 +26,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   UserProfile? _profile;
   bool _loading = true;
   bool _updatingTier = false;
+  bool _uploadingAvatar = false;
+  bool _deletingAccount = false;
   String? _error;
 
   @override
@@ -141,17 +143,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final picked = await picker.pickImage(source: ImageSource.gallery, maxWidth: 512, maxHeight: 512, imageQuality: 80);
       if (picked == null) return;
 
-      setState(() => _loading = true);
+      setState(() => _uploadingAvatar = true);
       final updated = await UserService.uploadAvatar(File(picked.path));
       if (!mounted) return;
       setState(() {
         _profile = updated;
-        _loading = false;
+        _uploadingAvatar = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Photo updated')));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() => _uploadingAvatar = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Upload failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
       );
@@ -239,7 +241,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     AppSound.selectionClick();
                     _showAvatarOptions();
                   },
-                  child: hasAvatar ? _NetworkAvatar(url: profile.avatarUrl!) : _BouncyAvatar(initial: _initial(profile.email)),
+                  child: Stack(
+                    children: [
+                      hasAvatar ? _NetworkAvatar(url: profile.avatarUrl!) : _BouncyAvatar(initial: _initial(profile.email)),
+                      if (_uploadingAvatar)
+                        Positioned.fill(
+                          child: Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.black.withValues(alpha: 0.4),
+                            ),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 28,
+                                height: 28,
+                                child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 14),
                 Text(
@@ -376,10 +398,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Card(
             child: ListTile(
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              leading: const Icon(Icons.delete_forever_rounded, color: AppColors.error),
+              leading: _deletingAccount
+                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.error))
+                  : const Icon(Icons.delete_forever_rounded, color: AppColors.error),
               title: const Text('Delete account', style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600)),
               subtitle: const Text('Permanently delete your account and all data'),
-              onTap: _confirmDeleteAccount,
+              onTap: _deletingAccount ? null : _confirmDeleteAccount,
             ),
           ),
           const SizedBox(height: 12),
@@ -653,6 +677,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
     if (doubleConfirm != true) return;
 
+    setState(() => _deletingAccount = true);
     try {
       await UserService.deleteAccount();
       if (!mounted) return;
@@ -661,6 +686,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (_) => false);
     } catch (e) {
       if (!mounted) return;
+      setState(() => _deletingAccount = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
       );

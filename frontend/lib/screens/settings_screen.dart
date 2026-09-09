@@ -120,14 +120,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     value: _prefs!.memoryEnabled,
                     onChanged: (value) async {
                       AppSound.lightImpact();
-                      final messenger = ScaffoldMessenger.of(context);
+                      final previous = _prefs!.memoryEnabled;
+                      setState(() => _prefs!.memoryEnabled = value);
                       try {
-                        final updated = await _prefsService.updatePreferences(memoryEnabled: value);
+                        await _prefsService.updatePreferences(memoryEnabled: value);
                         if (!mounted) return;
-                        setState(() => _prefs = updated);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Saved'), duration: Duration(seconds: 1)),
+                        );
                       } catch (e) {
                         if (!mounted) return;
-                        messenger.showSnackBar(
+                        setState(() => _prefs!.memoryEnabled = previous);
+                        ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
                         );
                       }
@@ -207,6 +211,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final updated = await _prefsService.updatePreferences(preferredName: result.isEmpty ? null : result);
       if (!mounted) return;
       setState(() => _prefs = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved'), duration: Duration(seconds: 1)),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -240,6 +247,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final updated = await _prefsService.updatePreferences(communicationStyle: selected);
       if (!mounted) return;
       setState(() => _prefs = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved'), duration: Duration(seconds: 1)),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -273,6 +283,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final updated = await _prefsService.updatePreferences(responseLength: selected);
       if (!mounted) return;
       setState(() => _prefs = updated);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Saved'), duration: Duration(seconds: 1)),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

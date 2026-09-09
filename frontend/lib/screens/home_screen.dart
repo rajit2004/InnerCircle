@@ -209,12 +209,17 @@ class _HomeScreenState extends State<HomeScreen>
     );
     if (confirmed != true) return;
 
+    final removedPersona = persona;
+    setState(() => _personas.removeWhere((p) => p.id == persona.id));
     try {
       await PersonaService.deletePersona(persona.id);
       if (!mounted) return;
-      _fetchPersonas();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Companion deleted')),
+      );
     } catch (e) {
       if (!mounted) return;
+      setState(() => _personas.add(removedPersona));
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
