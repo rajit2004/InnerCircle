@@ -231,7 +231,6 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     final titles = ['InnerCircle', 'Memories', 'Profile'];
-    final greeting = _getGreeting();
 
     return ExitConfirmationWrapper(
       child: Scaffold(
@@ -484,7 +483,7 @@ class _HomeScreenState extends State<HomeScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  greeting,
+                  _getGreeting(),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.w800,
                         fontSize: 28,
