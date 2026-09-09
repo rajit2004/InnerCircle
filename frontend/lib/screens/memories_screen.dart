@@ -41,20 +41,66 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
     }
   }
 
-  Future<void> _deleteMemory(Memory memory) async {
+  Future<void> _deleteMemory(Memory memory, {bool showUndo = true}) async {
     AppSound.lightImpact();
+    final index = _memories.indexOf(memory);
     try {
       await MemoryService.deleteMemory(memory.id);
       if (!mounted) return;
       setState(() => _memories.removeWhere((item) => item.id == memory.id));
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Memory forgotten')),
-      );
+      if (showUndo) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Memory forgotten'),
+            action: SnackBarAction(
+              label: 'Undo',
+              onPressed: () async {
+                try {
+                  final restored = await MemoryService.createMemory(memory.fact,
+                      personaId: memory.personaId);
+                  if (!mounted) return;
+                  setState(() {
+                    _memories.insert(index.clamp(0, _memories.length), restored);
+                  });
+                } catch (_) {}
+              },
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Memory forgotten')),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Delete failed: $e')));
     }
+  }
+
+  Future<bool> _confirmDelete(Memory memory) async {
+    AppSound.selectionClick();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        title: const Text('Forget this?'),
+        content: Text('"${memory.fact}" will be permanently deleted.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    return confirmed == true;
   }
 
   @override
@@ -167,32 +213,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
             child: Dismissible(
               key: ValueKey(memory.id),
               direction: DismissDirection.endToStart,
-              confirmDismiss: (_) async {
-                AppSound.selectionClick();
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(18)),
-                    title: const Text('Forget this?'),
-                    content: Text(
-                        '"${memory.fact}" will be permanently deleted.'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx, false),
-                        child: const Text('Cancel'),
-                      ),
-                      FilledButton(
-                        style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.error),
-                        onPressed: () => Navigator.pop(ctx, true),
-                        child: const Text('Delete'),
-                      ),
-                    ],
-                  ),
-                );
-                return confirmed == true;
-              },
+              confirmDismiss: (_) async => await _confirmDelete(memory),
               onDismissed: (_) => _deleteMemory(memory),
               background: Container(
                 alignment: Alignment.centerRight,
@@ -249,7 +270,11 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                           color: Theme.of(context)
                               .colorScheme
                               .onSurfaceVariant),
-                      onPressed: () => _deleteMemory(memory),
+                      onPressed: () async {
+                        if (await _confirmDelete(memory)) {
+                          _deleteMemory(memory);
+                        }
+                      },
                     ),
                   ],
                 ),

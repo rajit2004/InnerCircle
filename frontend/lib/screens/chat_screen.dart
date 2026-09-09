@@ -281,8 +281,9 @@ class _ChatScreenState extends State<ChatScreen> {
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
               child: const Text('Cancel')),
-          TextButton(
+          FilledButton(
               onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.error),
               child: const Text('Clear')),
         ],
       ),
