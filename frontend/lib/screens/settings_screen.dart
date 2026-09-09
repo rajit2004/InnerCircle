@@ -47,7 +47,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: ListView(
+      body: RefreshIndicator(
+        onRefresh: _loadPreferences,
+        child: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _buildSectionHeader(context, 'Appearance', Icons.palette_outlined),
@@ -169,6 +171,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

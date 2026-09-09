@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/user_profile.dart';
@@ -208,18 +209,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return const Center(child: ShimmerPlaceholder(width: 200, height: 200));
     }
     if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.cloud_off_outlined, size: 40, color: Theme.of(context).colorScheme.onSurfaceVariant),
-              const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center),
-              const SizedBox(height: 16),
-              FilledButton.icon(onPressed: _loadProfile, icon: const Icon(Icons.refresh), label: const Text('Retry')),
-            ],
+      return RefreshIndicator(
+        onRefresh: _loadProfile,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.cloud_off_outlined, size: 40, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(height: 12),
+                Text(_error!, textAlign: TextAlign.center),
+                const SizedBox(height: 16),
+                FilledButton.icon(onPressed: _loadProfile, icon: const Icon(Icons.refresh), label: const Text('Retry')),
+              ],
+            ),
           ),
         ),
       );
@@ -321,7 +325,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const Divider(height: 1, indent: 56),
                 _DetailTile(icon: Icons.calendar_today_outlined, label: 'Member since', value: _formatDate(profile.memberSince)),
                 const Divider(height: 1, indent: 56),
-                _DetailTile(icon: Icons.fingerprint_rounded, label: 'Account ID', value: profile.id),
+                GestureDetector(
+                  onLongPress: () {
+                    Clipboard.setData(ClipboardData(text: profile.id));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Account ID copied'), duration: Duration(seconds: 1)),
+                    );
+                  },
+                  child: _DetailTile(icon: Icons.fingerprint_rounded, label: 'Account ID', value: profile.id),
+                ),
               ],
             ),
           ),
