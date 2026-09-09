@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../models/chat_message.dart';
 import '../models/persona.dart';
 import '../services/chat_service.dart';
+import '../services/error_mapper.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../services/sound_service.dart';
@@ -94,6 +95,53 @@ class _ChatScreenState extends State<ChatScreen> {
     });
   }
 
+  Widget _buildEmptyChat() {
+    final gradient = AppColors.personaGradient(widget.persona.name);
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: gradient,
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: gradient.first.withValues(alpha: 0.3),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Icon(
+              AppColors.personaIcon(widget.persona.name),
+              size: 36,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Text(
+            'Say hello to ${widget.persona.name}!',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Start a conversation',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -108,8 +156,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
     AppSound.lightImpact();
     _controller.clear();
+    final userMessage = ChatMessage(role: 'user', content: content, timestamp: DateTime.now());
     setState(() {
-      _messages.add(ChatMessage(role: 'user', content: content, timestamp: DateTime.now()));
+      _messages.add(userMessage);
       _isTyping = true;
       _hasText = false;
       _animationKey++;
@@ -142,10 +191,74 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       AppSound.lightImpact();
-      setState(() => _isTyping = false);
+      setState(() {
+        userMessage.failed = true;
+        _isTyping = false;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_friendlyError(e)),
+          content: Text(ErrorMapper.map(e)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: () {
+              _controller.text = content;
+              setState(() => _hasText = true);
+              _retryMessage(userMessage);
+            },
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _retryMessage(ChatMessage failedMessage) async {
+    if (_isTyping) return;
+    final content = failedMessage.content;
+    setState(() {
+      _messages.remove(failedMessage);
+      _isTyping = true;
+      _animationKey++;
+    });
+    _scrollToBottom();
+
+    try {
+      final response = await ChatService.sendMessage(
+        widget.persona.id,
+        content,
+        conversationId: _conversationId,
+      );
+      final reply = (response['reply'] as String? ?? '').trim();
+      final conversationId = response['conversationId'] as String?;
+      final messageId = response['messageId'] as String?;
+      if (!mounted) return;
+
+      setState(() {
+        if (conversationId != null && conversationId.isNotEmpty) {
+          _conversationId = conversationId;
+        }
+        _messages.add(ChatMessage(role: 'user', content: content, timestamp: DateTime.now()));
+        if (reply.isNotEmpty) {
+          _messages.add(
+              ChatMessage(id: messageId, role: 'assistant', content: reply, timestamp: DateTime.now()));
+        }
+        _isTyping = false;
+        _animationKey++;
+      });
+      _scrollToBottom();
+    } catch (e) {
+      if (!mounted) return;
+      AppSound.lightImpact();
+      final retryMessage = ChatMessage(role: 'user', content: content, timestamp: DateTime.now(), failed: true);
+      setState(() {
+        _messages.add(retryMessage);
+        _isTyping = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ErrorMapper.map(e)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -180,7 +293,7 @@ class _ChatScreenState extends State<ChatScreen> {
       AppSound.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed to clear chat: $e'),
+          content: Text(ErrorMapper.map(e)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -198,6 +311,12 @@ class _ChatScreenState extends State<ChatScreen> {
       _conversationId = null;
       _isTyping = false;
     });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Chat cleared'),
+        duration: Duration(seconds: 1),
+      ),
+    );
   }
 
   static const List<String> _reactionOptions = [
@@ -228,6 +347,13 @@ class _ChatScreenState extends State<ChatScreen> {
       if (!mounted) return;
       setState(() => message.reaction = previousReaction);
       AppSound.lightImpact();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(ErrorMapper.map(e)),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -338,19 +464,12 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() => _isTyping = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(_friendlyError(e)),
+          content: Text(ErrorMapper.map(e)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
       );
     }
-  }
-
-  String _friendlyError(Object error) {
-    final text = error.toString().replaceFirst('Exception: ', '').trim();
-    return text.isEmpty
-        ? 'Something went wrong while sending the message.'
-        : text;
   }
 
   @override
@@ -405,33 +524,38 @@ class _ChatScreenState extends State<ChatScreen> {
                     Column(
                       children: [
                         Expanded(
-                          child: ListView.builder(
-                            controller: _scrollController,
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                            itemCount:
-                                _messages.length + (_isTyping ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (_isTyping && index == _messages.length) {
-                                return _TypingBubble(
-                                  gradient: gradient,
-                                  key: ValueKey('typing-$_animationKey'),
-                                );
-                              }
-                              final message = _messages[index];
-                              return _AnimatedMessageBubble(
-                                key: ValueKey(
-                                    'msg-${message.content.hashCode}-$index'),
-                                message: message,
-                                gradient: gradient,
-                                personaName: widget.persona.name,
-                                onLongPress: () =>
-                                    _showReactionPicker(message),
-                                onTap: message.role == 'assistant'
-                                    ? () => _showMessageActions(message)
-                                    : null,
-                              );
-                            },
-                          ),
+                          child: _messages.isEmpty && !_isTyping
+                              ? _buildEmptyChat()
+                              : ListView.builder(
+                                  controller: _scrollController,
+                                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                                  itemCount:
+                                      _messages.length + (_isTyping ? 1 : 0),
+                                  itemBuilder: (context, index) {
+                                    if (_isTyping && index == _messages.length) {
+                                      return _TypingBubble(
+                                        gradient: gradient,
+                                        key: ValueKey('typing-$_animationKey'),
+                                      );
+                                    }
+                                    final message = _messages[index];
+                                    return _AnimatedMessageBubble(
+                                      key: ValueKey(
+                                          'msg-${message.content.hashCode}-$index'),
+                                      message: message,
+                                      gradient: gradient,
+                                      personaName: widget.persona.name,
+                                      onLongPress: () =>
+                                          _showReactionPicker(message),
+                                      onTap: message.role == 'assistant'
+                                          ? () => _showMessageActions(message)
+                                          : null,
+                                      onRetry: message.failed
+                                          ? () => _retryMessage(message)
+                                          : null,
+                                    );
+                                  },
+                                ),
                         ),
                         if (!_isTyping && _messages.isNotEmpty &&
                             _messages.last.role == 'assistant')
@@ -442,6 +566,7 @@ class _ChatScreenState extends State<ChatScreen> {
                             onSelected: (text) {
                               _controller.text = text;
                               setState(() => _hasText = true);
+                              _sendMessage();
                             },
                           ),
                         _ChatInputBar(
@@ -533,6 +658,7 @@ class _AnimatedMessageBubble extends StatefulWidget {
   final String personaName;
   final VoidCallback? onLongPress;
   final VoidCallback? onTap;
+  final VoidCallback? onRetry;
 
   const _AnimatedMessageBubble({
     super.key,
@@ -541,6 +667,7 @@ class _AnimatedMessageBubble extends StatefulWidget {
     required this.personaName,
     this.onLongPress,
     this.onTap,
+    this.onRetry,
   });
 
   @override
@@ -613,6 +740,7 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
     final isUser = widget.message.role == 'user';
     final maxWidth = MediaQuery.sizeOf(context).width * 0.78;
     final gradient = widget.gradient;
+    final isFailed = widget.message.failed;
 
     return SlideTransition(
       position: _slideAnim,
@@ -740,6 +868,29 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                             ),
                           ],
                           ),
+                          if (isFailed && widget.onRetry != null)
+                            GestureDetector(
+                              onTap: widget.onRetry,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 4, left: 4),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.error_outline_rounded,
+                                        size: 14, color: AppColors.error),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Failed. Tap to retry',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: AppColors.error,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           if (widget.message.timestamp != null)
                             Padding(
                               padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
@@ -1110,8 +1261,14 @@ class _ChatInputBar extends StatelessWidget {
                 controller: controller,
                 minLines: 1,
                 maxLines: 4,
+                maxLength: 2000,
                 textInputAction: TextInputAction.send,
                 textCapitalization: TextCapitalization.sentences,
+                buildCounter: (context,
+                        {required currentLength,
+                        required isFocused,
+                        required maxLength}) =>
+                    null,
                 decoration: InputDecoration(
                   hintText: 'Message ${personaName ?? ''}...',
                   hintStyle: TextStyle(

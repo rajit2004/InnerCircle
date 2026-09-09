@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'api_client.dart';
 
 class ChatService {
+  static const Duration _chatTimeout = Duration(seconds: 60);
+
   static Future<Map<String, dynamic>> sendMessage(
       String personaId,
       String content, {
@@ -12,7 +15,7 @@ class ChatService {
     }
 
     return await ApiClient.post('/api/chat', body: body)
-    as Map<String, dynamic>;
+        .timeout(_chatTimeout) as Map<String, dynamic>;
   }
 
   // FEATURE (chat history, 2026-07-02): fetches the most recent conversation
