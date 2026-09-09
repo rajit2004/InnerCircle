@@ -123,17 +123,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (value) async {
                       AppSound.lightImpact();
                       final previous = _prefs!.memoryEnabled;
+                      final messenger = ScaffoldMessenger.of(context);
                       setState(() => _prefs!.memoryEnabled = value);
                       try {
                         await _prefsService.updatePreferences(memoryEnabled: value);
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           const SnackBar(content: Text('Saved'), duration: Duration(seconds: 1)),
                         );
                       } catch (e) {
                         if (!mounted) return;
                         setState(() => _prefs!.memoryEnabled = previous);
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
                         );
                       }
