@@ -35,7 +35,6 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _fabController;
   late Animation<double> _fabScale;
   bool _fabOpen = false;
-  String _greeting = '';
   String _userName = '';
 
   @override

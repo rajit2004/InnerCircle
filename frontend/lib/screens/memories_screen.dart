@@ -43,31 +43,11 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
 
   Future<void> _deleteMemory(Memory memory, {bool showUndo = true}) async {
     AppSound.lightImpact();
-    final index = _memories.indexOf(memory);
     try {
       await MemoryService.deleteMemory(memory.id);
       if (!mounted) return;
       setState(() => _memories.removeWhere((item) => item.id == memory.id));
       if (showUndo) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Memory forgotten'),
-            action: SnackBarAction(
-              label: 'Undo',
-              onPressed: () async {
-                try {
-                  final restored = await MemoryService.createMemory(memory.fact,
-                      personaId: memory.personaId);
-                  if (!mounted) return;
-                  setState(() {
-                    _memories.insert(index.clamp(0, _memories.length), restored);
-                  });
-                } catch (_) {}
-              },
-            ),
-          ),
-        );
-      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Memory forgotten')),
         );

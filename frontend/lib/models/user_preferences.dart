@@ -5,7 +5,7 @@ class UserPreferences {
   final String responseLength;
   final String interests;
   final String goals;
-  final bool memoryEnabled;
+  bool memoryEnabled;
 
   UserPreferences({
     required this.userId,
