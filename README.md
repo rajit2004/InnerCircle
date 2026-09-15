@@ -64,10 +64,13 @@ Built with **Flutter** for mobile, **Spring Boot** for backend services, **Postg
   Users can create their own companions by choosing a relationship type, writing a personality description, and picking an avatar. The app uses a stepped flow with live preview to make creation feel tangible. Custom personas can be marked as unrestricted for NSFW content.
 
 * **Suggested Follow-ups**
-  After each assistant response, the app suggests contextual follow-up messages based on the conversation. Tapping a suggestion populates the input field so the user can edit or send it directly.
+  After each assistant response, the app suggests contextual follow-up messages based on the conversation. Tapping a suggestion sends the message immediately, making quick replies feel natural.
 
 * **Message Actions**
   Tap any assistant message to reveal a bottom sheet with options to copy the text, regenerate the response, or share it. The regenerate feature re-runs the AI with the full conversation context for a fresh take.
+
+* **Failed Message Retry**
+  When a message fails to send (network error, timeout, server issue), the user message stays in the chat with a red error indicator. Tapping it or the SnackBar retry button resends the message without retyping.
 
 * **Message Reactions**
   Long-press any message to add an emoji reaction. The reaction picker appears with a staggered spring animation, and the selected reaction lands with a satisfying scale bounce.
@@ -86,7 +89,60 @@ Built with **Flutter** for mobile, **Spring Boot** for backend services, **Postg
   Full dark mode support across every screen. The transition between light and dark uses a smooth crossfade instead of an instant swap.
 
 * **Chat Preferences**
-  Users can customize their experience from the Settings screen. Set a preferred name that personas use when talking to you, choose a communication style (casual, formal, playful, or direct), adjust response length, and toggle memory on or off.
+  Users can customize their experience from the Settings screen. Set a preferred name that personas use when talking to you, choose a communication style (casual, formal, playful, or direct), adjust response length, and toggle memory on or off. All preference changes save instantly with a "Saved" confirmation.
+
+### Reliability and Error Handling
+
+* **API Timeouts**
+  All network requests use a 30-second timeout. Chat messages use a 60-second timeout to account for LLM response time. The app never hangs indefinitely on a slow or unresponsive server.
+
+* **Centralized Error Mapping**
+  A single ErrorMapper utility translates every exception type into a user-friendly message. SocketException becomes "No internet connection." TimeoutException becomes "Request timed out." Server errors show human-readable text instead of raw JSON payloads.
+
+* **Session Expiry Handling**
+  When a JWT expires or becomes invalid (401/403), the app clears the session and redirects to the login screen automatically. The redirect fires cleanly without throwing leftover exceptions that could crash the UI.
+
+* **Form Validation**
+  Email fields use proper regex validation (`user@domain.tld`) instead of just checking for an `@` symbol. Password minimum is 6 characters everywhere (registration and password change). Display name fields enforce a 50-character maximum. Change password validates the current password field before submitting.
+
+### Keyboard and Focus Management
+
+* **Keyboard Dismiss on Scroll**
+  Scrolling through chat messages automatically dismisses the keyboard, so reading old messages is never blocked by an open input.
+
+* **Keyboard Dismiss on Tab Switch**
+  Switching between Chat, Memories, and Profile tabs dismisses any open keyboard.
+
+* **Tap Outside to Dismiss**
+  Tapping outside a text field on the login and register screens dismisses the keyboard.
+
+### Confirmation and Safety
+
+* **Logout Confirmation**
+  Both the home screen AppBar logout button and the profile screen logout button show a confirmation dialog before logging out.
+
+* **Destructive Action Styling**
+  Destructive buttons (Clear chat, Delete memory, Delete account) are styled in red so the user knows the action is permanent.
+
+* **Memory Delete Confirmation**
+  Deleting a memory via the icon button shows the same confirmation dialog as swiping, so there is no accidental deletion path.
+
+### Loading and Optimistic Updates
+
+* **Optimistic Persona Deletion**
+  Deleting a persona removes it from the list immediately. If the server call fails, the persona reappears with an error SnackBar.
+
+* **Optimistic Memory Toggle**
+  Toggling the memory switch in Settings updates the UI instantly. If the API call fails, the toggle reverts to its previous state.
+
+* **Avatar Upload Progress**
+  Uploading a new profile photo shows a circular progress overlay on the avatar itself instead of replacing the entire screen with a shimmer.
+
+* **Delete Account Loading**
+  The delete account button shows a spinner while the deletion is in progress and prevents double-taps.
+
+* **Settings Save Feedback**
+  Every preference change (name, style, response length, memory toggle) shows a brief "Saved" SnackBar so the user knows it worked.
 
 ### Design and Motion
 
@@ -97,7 +153,7 @@ Built with **Flutter** for mobile, **Spring Boot** for backend services, **Postg
   A small, consistent vocabulary of haptics: selection clicks for pickers and scrolling, light impacts for sending messages and toggling switches, and medium impacts for completing actions like reactions or upgrades.
 
 * **Shimmer Loading**
-  Every loading state uses shaped shimmer placeholders instead of bare spinners. The persona list shows card-shaped shimmers, the chat shows alternating left-right message bubble shimmers, and memories show card shimmers.
+  Every loading state uses shaped shimmer placeholders instead of bare spinners. The persona list shows card-shaped shimmers, the chat shows alternating left-right message bubble shimmers, and memories show card shimmers. The shimmer animation loops smoothly from left to right without a jarring reverse bounce.
 
 * **Staggered Entrances**
   Lists do not just appear all at once. Persona cards, memory cards, and notification cards fade and slide up one by one with a small delay between each, making the content feel like it is arriving rather than just existing.
@@ -114,31 +170,31 @@ Built with **Flutter** for mobile, **Spring Boot** for backend services, **Postg
   First-time users see four animated screens that introduce the app's core value. Each page has its own persona color, an animated icon, and a staggered text reveal. Users can skip or swipe through, and progress dots at the bottom show where they are in the flow.
 
 * **Login and Register**
-  The logo scales in with a spring, then the title, fields, and button each slide up with increasing delay. On invalid input, the entire form shakes horizontally with a heavy haptic, clearly communicating "no" without being harsh. Registration now collects your display name and date of birth upfront so personas can personalize responses from the start.
+  The logo scales in with a spring, then the title, fields, and button each slide up with increasing delay. On invalid input, the entire form shakes horizontally with a heavy haptic, clearly communicating "no" without being harsh. Registration now collects your display name and date of birth upfront so personas can personalize responses from the start. Email validation uses proper regex. Tapping outside the form dismisses the keyboard.
 
 * **Home Screen**
-  Persona cards stagger in from bottom to top. Pressing a card gives it a subtle scale-down plus a glow pulse in that persona's gradient color with haptic feedback. The greeting header shows a time-of-day message with your name highlighted in the brand color. The create-persona FAB morphs from a plus to an X when tapped. Pull to refresh reloads everything.
+  Persona cards stagger in from bottom to top. Pressing a card gives it a subtle scale-down plus a glow pulse in that persona's gradient color with haptic feedback. The greeting header shows a time-of-day message that updates live as the hour changes. The create-persona FAB morphs from a plus to an X when tapped. Pull to refresh reloads everything. The empty state shows persona preview chips and a call to action.
 
 * **Chat Screen**
-  The persona avatar in the appbar has a subtle breathing animation and shows "typing..." or "online" status. New messages slide in from the side with a spring overshoot. Assistant messages show the persona's name above the bubble in their signature color. The typing indicator has three bouncing dots with a soft persona-colored glow behind them. After each response, contextual suggestion chips appear below the message. The reaction picker opens with each emoji scaling in one after another. A small FAB appears when you scroll up, letting you jump back to the bottom. The entire chat background has a very low-opacity tint of the current persona's color. The input field shows "Message [PersonaName]..." as placeholder text.
+  The persona avatar in the appbar has a subtle breathing animation and shows "typing..." or "online" status. New messages slide in from the side with a spring overshoot. Assistant messages show the persona's name above the bubble in their signature color. The typing indicator has three bouncing dots with a soft persona-colored glow behind them. After each response, contextual suggestion chips appear below the message and send immediately on tap. Failed messages show a red error indicator with a retry option. The reaction picker opens with each emoji scaling in one after another. A small FAB appears when you scroll up, letting you jump back to the bottom. The entire chat background has a very low-opacity tint of the current persona's color. The input field shows "Message [PersonaName]..." as placeholder text and limits input to 2000 characters. Scrolling dismisses the keyboard. Clear chat shows a "Chat cleared" confirmation. The empty chat state shows the persona avatar with a "Say hello" prompt.
 
 * **Upgrade Screen**
   A full-screen modal with an animated gradient that slowly rotates through all four persona colors. Free and premium comparison cards sit side by side, and the premium checkmarks animate in one at a time. The CTA button has a continuous shimmer sweep. On successful upgrade, a celebratory checkmark draws in with a scale animation.
 
 * **Create Persona**
-  A four-step flow (Name, Relationship, Personality, Avatar) with progress dots at the top. Each step slides in horizontally. The emoji picker has a spring scale on selection, and a live preview bubble updates as you type. The personality step includes an NSFW toggle for unrestricted content on custom personas.
+  A four-step flow (Name, Relationship, Personality, Avatar) with progress dots at the top. Each step slides in horizontally. The emoji picker has a spring scale on selection, and a live preview bubble updates as you type. The personality step includes an NSFW toggle for unrestricted content on custom personas. Inline validation errors appear below fields when they are empty. A success SnackBar confirms creation.
 
 * **Memories Screen**
-  Cards fade and slide up with staggered timing. Swipe left to delete with a red reveal. The loading state uses a shaped shimmer placeholder.
+  Cards fade and slide up with staggered timing. Swipe left to delete with a red reveal. The icon button delete now shows the same confirmation dialog. The loading state uses a shaped shimmer placeholder. The empty state guides users to start chatting to create memories.
 
 * **Profile Screen**
-  The avatar bounces on tap with a three-stage scale animation. Navigation rows have a chevron that nudges right on press. The upgrade button opens the full-screen Upgrade modal. Account details show your display name, email, date of birth, language, and timezone.
+  The avatar bounces on tap with a three-stage scale animation. Uploading a new photo shows a progress overlay on the avatar. Navigation rows have a chevron that nudges right on press. The upgrade button opens the full-screen Upgrade modal. Account details show your display name, email, date of birth, language, and timezone. Long-press the Account ID to copy it to the clipboard. The error state supports pull-to-refresh. Delete account shows a loading spinner. Password change validates the current password is non-empty and uses a consistent 6-character minimum.
 
 * **Notifications Screen**
   Each scheduled card uses a custom animated toggle with a smooth thumb slide and color morph. Cards stagger in on load.
 
 * **Settings Screen**
-  The dark mode toggle uses an animated icon switcher that crossfades between sun and moon icons. Section headers have icons and bolder typography for better visual hierarchy. Chat preferences let you control how personas communicate with you.
+  The dark mode toggle uses an animated icon switcher that crossfades between sun and moon icons. Section headers have icons and bolder typography for better visual hierarchy. Chat preferences let you control how personas communicate with you. All preference changes show a "Saved" SnackBar. The memory toggle updates optimistically. The entire screen supports pull-to-refresh.
 
 ---
 
@@ -228,7 +284,7 @@ innercircle/
 │   ├── lib/
 │   │   ├── models/                   # Data classes (User, Persona, ChatMessage, Memory, UserPreferences, etc.)
 │   │   ├── screens/                  # UI screens (Home, Chat, Login, Register, Profile, Settings, Onboarding, etc.)
-│   │   ├── services/                 # API client, auth, chat, preferences, push notifications, haptics
+│   │   ├── services/                 # API client, auth, chat, error mapper, preferences, push notifications, haptics
 │   │   ├── theme/                    # Colors, typography, motion design tokens
 │   │   └── widgets/                  # Shared widgets, splash screen, persona avatar
 │   ├── android/                      # Android-specific config (Gradle, manifest, Firebase)
