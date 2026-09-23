@@ -68,9 +68,4 @@ public class ChatController {
         return ResponseEntity.ok(chatService.regenerate(
                 request.getConversationId(), request.getPersonaId(), user));
     }
-
-    @GetMapping("/test")
-    public String test() {
-        return "ChatController is alive!";
-    }
 }

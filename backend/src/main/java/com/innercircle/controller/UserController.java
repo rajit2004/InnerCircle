@@ -5,12 +5,14 @@ import com.innercircle.dto.SubscriptionUpdateRequest;
 import com.innercircle.dto.UpdateProfileRequest;
 import com.innercircle.dto.UserProfileResponse;
 import com.innercircle.exception.BadRequestException;
+import com.innercircle.exception.ForbiddenException;
 import com.innercircle.model.SubscriptionTier;
 import com.innercircle.model.User;
 import com.innercircle.service.ChatService;
 import com.innercircle.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,6 +35,9 @@ public class UserController {
 
     private static final String AVATAR_DIR = "uploads/avatars/";
     private static final long MAX_AVATAR_SIZE = 5 * 1024 * 1024; // 5MB
+
+    @Value("${subscription.self-serve:false}")
+    private boolean selfServeSubscriptions;
 
     @GetMapping("/me")
     public UserProfileResponse me(@AuthenticationPrincipal User user) {
@@ -107,6 +112,13 @@ public class UserController {
     @PostMapping("/subscription")
     public UserProfileResponse updateSubscription(@AuthenticationPrincipal User user,
                                                   @Valid @RequestBody SubscriptionUpdateRequest request) {
+        // SECURITY: self-serve tier changes are off by default — without a
+        // payment gateway, an open endpoint lets any user grant themselves
+        // premium for free. Gated behind subscription.self-serve (env
+        // SUBSCRIPTION_SELF_SERVE) for local UI testing only.
+        if (!selfServeSubscriptions) {
+            throw new ForbiddenException("Subscription changes are not available");
+        }
         User updated = userService.updateSubscriptionTier(user, request.getTier());
         return toResponse(updated);
     }
