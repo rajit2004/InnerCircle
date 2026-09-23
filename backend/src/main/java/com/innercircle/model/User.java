@@ -51,6 +51,11 @@ public class User {
     @JsonIgnore
     private Instant lockedUntil;
 
+    // SECURITY: incremented on password change/reset; JWTs carrying an older
+    // tokenVersion are rejected by JwtAuthFilter (revokes stolen tokens).
+    @JsonIgnore
+    private int tokenVersion = 0;
+
     @CreationTimestamp
     private Instant createdAt;
 

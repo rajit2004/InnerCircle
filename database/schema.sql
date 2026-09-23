@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS profiles (
                                         reset_token_expires_at TIMESTAMPTZ,
                                         failed_login_attempts INT DEFAULT 0,
                                         locked_until TIMESTAMPTZ,
+                                        -- SECURITY: bumped on password change/reset so outstanding JWTs are revoked
+                                        token_version INT DEFAULT 0,
                                         version BIGINT DEFAULT 0,
                                         created_at TIMESTAMPTZ DEFAULT NOW(),
                                         updated_at TIMESTAMPTZ DEFAULT NOW()

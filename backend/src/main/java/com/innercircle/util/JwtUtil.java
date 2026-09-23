@@ -48,14 +48,25 @@ public class JwtUtil {
     }
 
     public String generateToken(UUID userId, String email, String role) {
+        return generateToken(userId, email, role, 0);
+    }
+
+    public String generateToken(UUID userId, String email, String role, int tokenVersion) {
         return Jwts.builder()
                 .subject(userId.toString())
                 .claim("email", email)
                 .claim("role", role != null ? role : "USER")
+                .claim("tv", tokenVersion)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    public int extractTokenVersion(String token) {
+        Object tv = extractAllClaims(token).get("tv");
+        if (tv instanceof Number n) return n.intValue();
+        return 0;
     }
 
     public Claims extractAllClaims(String token) {

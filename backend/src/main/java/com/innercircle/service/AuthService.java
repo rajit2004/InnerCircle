@@ -59,12 +59,13 @@ public class AuthService {
 
         userRepository.save(user);
 
-        log.info("SECURITY: new user registered: {}", user.getEmail());
+        log.info("SECURITY: new user registered: {}", maskEmail(user.getEmail()));
 
         String token = jwtUtil.generateToken(
                 user.getId(),
                 user.getEmail(),
-                "USER"
+                "USER",
+                user.getTokenVersion()
         );
 
         return new AuthResponse(token, user.getEmail(), "USER", user.getSubscriptionTier().name());
@@ -76,20 +77,20 @@ public class AuthService {
 
         // SECURITY: check rate-limit before attempting authentication (does not increment)
         if (!rateLimiter.isLoginAllowed(email)) {
-            log.warn("SECURITY: rate-limited login attempt for: {}", email);
+            log.warn("SECURITY: rate-limited login attempt for: {}", maskEmail(email));
             throw new TooManyRequestsException("Too many login attempts. Try again in 15 minutes.");
         }
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
                     rateLimiter.recordLoginFailure(email);
-                    log.warn("SECURITY: failed login — unknown email: {}", email);
+                    log.warn("SECURITY: failed login — unknown email: {}", maskEmail(email));
                     return new UnauthorizedException("Invalid credentials");
                 });
 
         // SECURITY: check account lockout
         if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(Instant.now())) {
-            log.warn("SECURITY: locked account login attempt: {}", email);
+            log.warn("SECURITY: locked account login attempt: {}", maskEmail(email));
             throw new UnauthorizedException("Account temporarily locked. Try again later.");
         }
 
@@ -102,9 +103,9 @@ public class AuthService {
 
             if (attempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
                 user.setLockedUntil(Instant.now().plus(LOCKOUT_MINUTES, ChronoUnit.MINUTES));
-                log.warn("SECURITY: account locked after {} failed attempts: {}", attempts, email);
+                log.warn("SECURITY: account locked after {} failed attempts: {}", attempts, maskEmail(email));
             } else {
-                log.warn("SECURITY: failed login attempt {}/{} for: {}", attempts, MAX_FAILED_LOGIN_ATTEMPTS, email);
+                log.warn("SECURITY: failed login attempt {}/{} for: {}", attempts, MAX_FAILED_LOGIN_ATTEMPTS, maskEmail(email));
             }
 
             userRepository.save(user);
@@ -117,12 +118,13 @@ public class AuthService {
         user.setLockedUntil(null);
         userRepository.save(user);
 
-        log.info("SECURITY: successful login: {}", email);
+        log.info("SECURITY: successful login: {}", maskEmail(email));
 
         String token = jwtUtil.generateToken(
                 user.getId(),
                 user.getEmail(),
-                "USER"
+                "USER",
+                user.getTokenVersion()
         );
 
         return new AuthResponse(token, user.getEmail(), "USER", user.getSubscriptionTier().name());
@@ -137,7 +139,7 @@ public class AuthService {
         String normalized = email.toLowerCase().trim();
 
         if (!rateLimiter.allowPasswordReset(normalized)) {
-            log.warn("SECURITY: rate-limited password reset for: {}", normalized);
+            log.warn("SECURITY: rate-limited password reset for: {}", maskEmail(normalized));
             throw new TooManyRequestsException("Too many reset requests. Try again in 15 minutes.");
         }
 
@@ -146,7 +148,7 @@ public class AuthService {
             user.setResetToken(token);
             user.setResetTokenExpiresAt(Instant.now().plus(RESET_TOKEN_VALID_MINUTES, ChronoUnit.MINUTES));
             userRepository.save(user);
-            log.info("SECURITY: password reset requested for: {}", normalized);
+            log.info("SECURITY: password reset requested for {}", maskEmail(normalized));
             emailService.sendPasswordResetEmail(user.getEmail(), token);
         });
     }
@@ -160,11 +162,13 @@ public class AuthService {
             user.setResetToken(null);
             user.setResetTokenExpiresAt(null);
             userRepository.save(user);
-            log.warn("SECURITY: expired reset token used for: {}", user.getEmail());
+            log.warn("SECURITY: expired reset token used for {}", maskEmail(user.getEmail()));
             throw new UnauthorizedException("Invalid or expired reset code");
         }
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        // SECURITY: revoke all outstanding JWTs for this user
+        user.setTokenVersion(user.getTokenVersion() + 1);
         user.setResetToken(null);
         user.setResetTokenExpiresAt(null);
         // SECURITY: reset failed login attempts on password change
@@ -172,7 +176,15 @@ public class AuthService {
         user.setLockedUntil(null);
         userRepository.save(user);
 
-        log.info("SECURITY: password reset completed for: {}", user.getEmail());
+        log.info("SECURITY: password reset completed for {}", maskEmail(user.getEmail()));
+    }
+
+    // GDPR: never log raw emails — mask local part, keep domain for debugging.
+    private static String maskEmail(String email) {
+        if (email == null || email.isBlank()) return "***";
+        int at = email.indexOf('@');
+        if (at <= 0) return "***";
+        return email.charAt(0) + "***" + email.substring(at);
     }
 
     private String generateResetToken() {

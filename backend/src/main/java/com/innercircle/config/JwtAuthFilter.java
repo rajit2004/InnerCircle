@@ -49,12 +49,18 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
                 UUID userId = UUID.fromString(jwtUtil.extractUserId(token));
                 String role = jwtUtil.extractRole(token);
+                int tokenVersion = jwtUtil.extractTokenVersion(token);
 
                 // Load the real User entity so @AuthenticationPrincipal User user
                 // resolves correctly downstream -- a bare String/UUID principal
                 // would silently inject null wherever a User is expected.
                 User user = userRepository.findById(userId)
                         .orElseThrow(() -> new IllegalArgumentException("Token references a user that no longer exists"));
+
+                // SECURITY: reject tokens issued before the last password change/reset
+                if (tokenVersion != user.getTokenVersion()) {
+                    throw new IllegalArgumentException("Token revoked (password changed)");
+                }
 
                 List<SimpleGrantedAuthority> authorities = List.of(
                         new SimpleGrantedAuthority("ROLE_" + (role != null ? role : "USER"))

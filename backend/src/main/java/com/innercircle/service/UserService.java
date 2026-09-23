@@ -1,5 +1,6 @@
 package com.innercircle.service;
 
+import com.innercircle.exception.BadRequestException;
 import com.innercircle.model.SubscriptionTier;
 import com.innercircle.model.User;
 import com.innercircle.repository.UserRepository;
@@ -46,9 +47,16 @@ public class UserService {
     @Transactional
     public void changePassword(User user, String currentPassword, String newPassword) {
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
-            throw new IllegalArgumentException("Current password is incorrect");
+            throw new BadRequestException("Current password is incorrect");
+        }
+        // SECURITY: same strength policy as register/reset
+        String passwordError = InputSanitizer.validatePasswordStrength(newPassword);
+        if (passwordError != null) {
+            throw new BadRequestException(passwordError);
         }
         user.setPasswordHash(passwordEncoder.encode(newPassword));
+        // SECURITY: revoke all outstanding JWTs so a stolen token dies with the old password
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
     }
 
