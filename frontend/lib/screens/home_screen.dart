@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/persona.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/error_mapper.dart';
 import '../services/persona_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
@@ -75,10 +76,19 @@ class _HomeScreenState extends State<HomeScreen>
     });
 
     try {
-      final data = await ApiClient.get('/api/personas');
-      final list = (data as List).map((p) => Persona.fromJson(p)).toList();
-      final profileData = await ApiClient.get('/api/users/me') as Map<String, dynamic>;
-      final isPremium = (profileData['subscriptionTier'] ?? 'free').toString().toLowerCase() == 'premium';
+      // Fetch personas and profile in parallel — sequential awaits made
+      // every cold start wait on two round-trips instead of one.
+      final results = await Future.wait([
+        ApiClient.get('/api/personas'),
+        ApiClient.get('/api/users/me'),
+      ]);
+      final list =
+          (results[0] as List).map((p) => Persona.fromJson(p)).toList();
+      final profileData = results[1] as Map<String, dynamic>;
+      final isPremium = (profileData['subscriptionTier'] ?? 'free')
+          .toString()
+          .toLowerCase() ==
+          'premium';
       final displayName = profileData['displayName'] ?? '';
       await ApiClient.setSubscriptionTier(profileData['subscriptionTier'] ?? 'free');
       if (!mounted) return;
@@ -92,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen>
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = ErrorMapper.map(e);
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to load personas: $_error')),
@@ -221,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Failed to delete: ${e.toString().replaceFirst('Exception: ', '')}',
+            'Failed to delete: ${ErrorMapper.map(e)}',
           ),
         ),
       );
@@ -291,14 +301,16 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildCurrentTab() {
-    switch (_selectedIndex) {
-      case 1:
-        return const MemoriesScreen(showAppBar: false);
-      case 2:
-        return const ProfileScreen(showAppBar: false);
-      default:
-        return _buildPersonaList();
-    }
+    // IndexedStack keeps tab state (scroll position, form state) when
+    // switching tabs instead of rebuilding from scratch each time.
+    return IndexedStack(
+      index: _selectedIndex,
+      children: [
+        _buildPersonaList(),
+        const MemoriesScreen(showAppBar: false),
+        const ProfileScreen(showAppBar: false),
+      ],
+    );
   }
 
   Widget _buildPersonaPreviewChips() {
