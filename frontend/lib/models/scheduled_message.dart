@@ -35,7 +35,9 @@ class ScheduledMessage {
     // value threw and took down the entire reminders list. Parse defensively.
     TimeOfDay parseTime(dynamic raw) {
       final str = raw?.toString();
-      if (str == null || str.isEmpty) return const TimeOfDay(hour: 0, minute: 0);
+      if (str == null || str.isEmpty) {
+        return const TimeOfDay(hour: 0, minute: 0);
+      }
       final parts = str.split(':');
       final hour = int.tryParse(parts[0]) ?? 0;
       final minute = parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0;
@@ -68,12 +70,13 @@ class ScheduledMessage {
     7: 'Sat',
   };
 
-  List<int> get selectedDays => daysOfWeek
-      .split(',')
-      .where((s) => s.trim().isNotEmpty)
-      .map((s) => int.parse(s.trim()))
-      .toList()
-    ..sort();
+  List<int> get selectedDays =>
+      daysOfWeek
+          .split(',')
+          .where((s) => s.trim().isNotEmpty)
+          .map((s) => int.parse(s.trim()))
+          .toList()
+        ..sort();
 
   String get daysLabel {
     final days = selectedDays;

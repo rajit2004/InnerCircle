@@ -6,8 +6,7 @@ class UserPreferencesService extends ChangeNotifier {
   UserPreferences? _preferences;
 
   UserPreferences get preferences =>
-      _preferences ??
-      UserPreferences(userId: '');
+      _preferences ?? UserPreferences(userId: '');
 
   Future<UserPreferences> getPreferences() async {
     final response = await ApiClient.get('/api/user-preferences');

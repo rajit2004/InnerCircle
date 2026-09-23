@@ -113,7 +113,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (confirmed != true) return;
 
     setState(
-        () => _scheduled = _scheduled.where((s) => s.id != sm.id).toList());
+      () => _scheduled = _scheduled.where((s) => s.id != sm.id).toList(),
+    );
     try {
       await NotificationService.cancel(sm.id);
     } catch (e) {
@@ -171,8 +172,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.cloud_off_outlined, size: 42,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.cloud_off_outlined,
+                size: 42,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(height: 12),
               Text(_error!, textAlign: TextAlign.center),
               const SizedBox(height: 16),
@@ -201,10 +205,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 builder: (context, value, child) {
                   return Transform.scale(
                     scale: 0.8 + 0.2 * value,
-                    child: Opacity(
-                      opacity: value,
-                      child: child,
-                    ),
+                    child: Opacity(opacity: value, child: child),
                   );
                 },
                 child: Container(
@@ -241,8 +242,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               child: Text(
                 'No check-ins scheduled',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -253,12 +254,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   'Set up reminders so a persona checks in on you',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant
-                            .withValues(alpha: 0.7),
-                        height: 1.5,
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -322,16 +322,17 @@ class _ScheduleCard extends StatelessWidget {
         children: [
           Opacity(
             opacity: scheduled.active ? 1 : 0.4,
-            child: PersonaAvatar(
-                personaName: scheduled.personaName, size: 46),
+            child: PersonaAvatar(personaName: scheduled.personaName, size: 46),
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(scheduled.personaName,
-                    style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  scheduled.personaName,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 2),
                 Text(
                   '${scheduled.timeLabel} \u00b7 ${scheduled.daysLabel}',
@@ -341,10 +342,7 @@ class _ScheduleCard extends StatelessWidget {
             ),
           ),
           // Custom animated toggle
-          _AnimatedToggle(
-            value: scheduled.active,
-            onChanged: onToggle,
-          ),
+          _AnimatedToggle(value: scheduled.active, onChanged: onToggle),
           IconButton(
             tooltip: 'Cancel',
             icon: const Icon(Icons.delete_outline_rounded, size: 20),
@@ -444,9 +442,9 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
 
   Future<void> _save() async {
     if (_selectedDays.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Pick at least one day.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Pick at least one day.')));
       return;
     }
     setState(() => _saving = true);
@@ -464,11 +462,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
       if (!mounted) return;
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to schedule: ${ErrorMapper.map(e)}',
-          ),
-        ),
+        SnackBar(content: Text('Failed to schedule: ${ErrorMapper.map(e)}')),
       );
     }
   }
@@ -477,12 +471,12 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom),
+        bottom: MediaQuery.of(context).viewInsets.bottom,
+      ),
       child: Container(
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
         child: Column(
@@ -500,8 +494,10 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
                 ),
               ),
             ),
-            Text('New check-in reminder',
-                style: Theme.of(context).textTheme.titleLarge),
+            Text(
+              'New check-in reminder',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
             const SizedBox(height: 20),
             Text('Who', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 10),
@@ -513,8 +509,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
                 separatorBuilder: (_, _) => const SizedBox(width: 10),
                 itemBuilder: (context, index) {
                   final persona = widget.personas[index];
-                  final selected =
-                      persona.id == _selectedPersona.id;
+                  final selected = persona.id == _selectedPersona.id;
                   return GestureDetector(
                     onTap: () {
                       AppSound.selectionClick();
@@ -527,16 +522,19 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             border: selected
-                                ? Border.all(
-                                    color: AppColors.primary, width: 2)
+                                ? Border.all(color: AppColors.primary, width: 2)
                                 : null,
                           ),
                           child: PersonaAvatar(
-                              personaName: persona.name, size: 48),
+                            personaName: persona.name,
+                            size: 48,
+                          ),
                         ),
                         const SizedBox(height: 4),
-                        Text(persona.name,
-                            style: Theme.of(context).textTheme.bodySmall),
+                        Text(
+                          persona.name,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
                       ],
                     ),
                   );
@@ -552,14 +550,12 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
               label: Text(_time.format(context)),
             ),
             const SizedBox(height: 20),
-            Text('Which days',
-                style: Theme.of(context).textTheme.titleSmall),
+            Text('Which days', style: Theme.of(context).textTheme.titleSmall),
             const SizedBox(height: 10),
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children:
-                  ScheduledMessage.weekdayLabels.entries.map((entry) {
+              children: ScheduledMessage.weekdayLabels.entries.map((entry) {
                 final selected = _selectedDays.contains(entry.key);
                 return FilterChip(
                   label: Text(entry.value),
@@ -587,7 +583,9 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
                         width: 20,
                         height: 20,
                         child: CircularProgressIndicator(
-                            strokeWidth: 2, color: Colors.white),
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
                       )
                     : const Text('Schedule it'),
               ),

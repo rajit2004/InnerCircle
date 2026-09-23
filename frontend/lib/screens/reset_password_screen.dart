@@ -66,9 +66,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(ErrorMapper.map(e))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(ErrorMapper.map(e))));
     }
   }
 
@@ -113,7 +113,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                       prefixIcon: Icon(Icons.vpn_key_outlined),
                     ),
                     validator: (v) =>
-                    (v != null && v.trim().isNotEmpty) ? null : 'Required',
+                        (v != null && v.trim().isNotEmpty) ? null : 'Required',
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -151,13 +151,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     onPressed: _loading ? null : _submit,
                     child: _loading
                         ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.2,
-                        color: Colors.white,
-                      ),
-                    )
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Text('Update password'),
                   ),
                   const SizedBox(height: 14),
@@ -165,7 +165,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                     onPressed: () => Navigator.pushNamedAndRemoveUntil(
                       context,
                       '/login',
-                          (_) => false,
+                      (_) => false,
                     ),
                     child: const Text('Back to log in'),
                   ),

@@ -32,8 +32,8 @@ class DefaultFirebaseOptions {
     if (kIsWeb) {
       throw UnsupportedError(
         'DefaultFirebaseOptions have not been configured for web -- '
-            'this app targets Android. Run `flutterfire configure` if you '
-            'need web support too.',
+        'this app targets Android. Run `flutterfire configure` if you '
+        'need web support too.',
       );
     }
     switch (defaultTargetPlatform) {
@@ -42,7 +42,7 @@ class DefaultFirebaseOptions {
       default:
         throw UnsupportedError(
           'DefaultFirebaseOptions are only configured for Android in this '
-              'project. Run `flutterfire configure` to add iOS/other platforms.',
+          'project. Run `flutterfire configure` to add iOS/other platforms.',
         );
     }
   }

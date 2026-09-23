@@ -52,6 +52,10 @@ jobs:
         working-directory: frontend
         run: flutter analyze
 
+      - name: Format check
+        working-directory: frontend
+        run: dart format --output=none --set-exit-if-changed lib test
+
       - name: Test
         working-directory: frontend
         run: flutter test

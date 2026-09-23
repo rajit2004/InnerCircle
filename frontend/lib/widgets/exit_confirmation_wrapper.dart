@@ -45,9 +45,7 @@ class ExitConfirmationWrapper extends StatelessWidget {
     return showDialog<bool>(
       context: context,
       builder: (dialogContext) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 20),
           child: Column(
@@ -91,7 +89,9 @@ class ExitConfirmationWrapper extends StatelessWidget {
                         // on this BorderSide -- Theme.of(context) is a
                         // runtime lookup, not a compile-time constant.
                         side: BorderSide(color: Theme.of(context).dividerColor),
-                        foregroundColor: Theme.of(context).colorScheme.onSurface,
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurface,
                       ),
                       onPressed: () => Navigator.of(dialogContext).pop(false),
                       child: const Text('Stay'),

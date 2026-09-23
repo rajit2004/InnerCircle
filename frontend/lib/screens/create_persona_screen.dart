@@ -27,8 +27,18 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
   ];
 
   static const _emojiOptions = [
-    '🙂', '😊', '😎', '🥰', '🤗', '😏',
-    '💪', '🌟', '💕', '🤝', '👋', '🎉',
+    '🙂',
+    '😊',
+    '😎',
+    '🥰',
+    '🤗',
+    '😏',
+    '💪',
+    '🌟',
+    '💕',
+    '🤝',
+    '👋',
+    '🎉',
   ];
 
   final _nameController = TextEditingController();
@@ -51,16 +61,14 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.3, 0.0),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _slideController,
-      curve: Curves.easeOutCubic,
-    ));
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _slideController, curve: Curves.easeOut),
-    );
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.3, 0.0), end: Offset.zero).animate(
+          CurvedAnimation(parent: _slideController, curve: Curves.easeOutCubic),
+        );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
     _slideController.forward();
   }
 
@@ -142,10 +150,7 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
         title: Text('Step ${_currentStep + 1} of 4'),
         actions: [
           if (_currentStep > 0)
-            TextButton(
-              onPressed: _prevStep,
-              child: const Text('Back'),
-            ),
+            TextButton(onPressed: _prevStep, child: const Text('Back')),
         ],
       ),
       body: SafeArea(
@@ -167,9 +172,9 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
                     decoration: BoxDecoration(
                       color: isActive
                           ? AppColors.primary
-                          : Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
+                          : Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   );
@@ -208,8 +213,9 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                    strokeWidth: 2.2,
-                                    color: Colors.white),
+                                  strokeWidth: 2.2,
+                                  color: Colors.white,
+                                ),
                               )
                             : const Text('Create'),
                       ),
@@ -242,11 +248,15 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('What should we call them?',
-              style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'What should we call them?',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 8),
-          Text('Pick something you\'d naturally text.',
-              style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            'Pick something you\'d naturally text.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 32),
           TextField(
             controller: _nameController,
@@ -272,11 +282,15 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('What are they to you?',
-              style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'What are they to you?',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 8),
-          Text('This shapes how they talk to you.',
-              style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            'This shapes how they talk to you.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 32),
           Wrap(
             spacing: 10,
@@ -292,18 +306,17 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
                 child: AnimatedContainer(
                   duration: AppMotion.micro,
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 10),
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.primary
-                        : Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(12),
                     border: selected
                         ? null
-                        : Border.all(
-                            color: Theme.of(context).dividerColor),
+                        : Border.all(color: Theme.of(context).dividerColor),
                     boxShadow: selected
                         ? [
                             BoxShadow(
@@ -317,14 +330,19 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, size: 18,
-                          color: selected ? Colors.white : null),
+                      Icon(
+                        icon,
+                        size: 18,
+                        color: selected ? Colors.white : null,
+                      ),
                       const SizedBox(width: 6),
-                      Text(label,
-                          style: TextStyle(
-                            color: selected ? Colors.white : null,
-                            fontWeight: FontWeight.w600,
-                          )),
+                      Text(
+                        label,
+                        style: TextStyle(
+                          color: selected ? Colors.white : null,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -342,11 +360,15 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Describe their personality',
-              style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Describe their personality',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 8),
-          Text('A sentence or two about how they text.',
-              style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            'A sentence or two about how they text.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 32),
           TextField(
             controller: _descriptionController,
@@ -379,11 +401,15 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Unrestricted content',
-                          style: Theme.of(context).textTheme.titleSmall),
+                      Text(
+                        'Unrestricted content',
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
                       const SizedBox(height: 4),
-                      Text('Allow explicit and adult conversations',
-                          style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        'Allow explicit and adult conversations',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ],
                   ),
                 ),
@@ -408,11 +434,15 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Pick their avatar',
-              style: Theme.of(context).textTheme.headlineSmall),
+          Text(
+            'Pick their avatar',
+            style: Theme.of(context).textTheme.headlineSmall,
+          ),
           const SizedBox(height: 8),
-          Text('They\'ll show up with this everywhere.',
-              style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            'They\'ll show up with this everywhere.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
           const SizedBox(height: 32),
           Wrap(
             spacing: 12,
@@ -433,26 +463,24 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
                     shape: BoxShape.circle,
                     color: selected
                         ? AppColors.primary.withValues(alpha: 0.15)
-                        : Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
+                        : Theme.of(context).colorScheme.surfaceContainerHighest,
                     border: selected
                         ? Border.all(color: AppColors.primary, width: 2.5)
                         : null,
                     boxShadow: selected
                         ? [
                             BoxShadow(
-                              color:
-                                  AppColors.primary.withValues(alpha: 0.3),
+                              color: AppColors.primary.withValues(alpha: 0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
                           ]
                         : null,
                   ),
-                  child: Text(emoji,
-                      style: TextStyle(
-                          fontSize: selected ? 26 : 24)),
+                  child: Text(
+                    emoji,
+                    style: TextStyle(fontSize: selected ? 26 : 24),
+                  ),
                 ),
               );
             }).toList(),
@@ -486,7 +514,9 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: LinearGradient(
-                colors: AppColors.personaGradient(name.isNotEmpty ? name : 'default'),
+                colors: AppColors.personaGradient(
+                  name.isNotEmpty ? name : 'default',
+                ),
               ),
             ),
             child: Center(

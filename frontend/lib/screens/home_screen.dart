@@ -82,15 +82,19 @@ class _HomeScreenState extends State<HomeScreen>
         ApiClient.get('/api/personas'),
         ApiClient.get('/api/users/me'),
       ]);
-      final list =
-          (results[0] as List).map((p) => Persona.fromJson(p)).toList();
+      final list = (results[0] as List)
+          .map((p) => Persona.fromJson(p))
+          .toList();
       final profileData = results[1] as Map<String, dynamic>;
-      final isPremium = (profileData['subscriptionTier'] ?? 'free')
-          .toString()
-          .toLowerCase() ==
+      final isPremium =
+          (profileData['subscriptionTier'] ?? 'free')
+              .toString()
+              .toLowerCase() ==
           'premium';
       final displayName = profileData['displayName'] ?? '';
-      await ApiClient.setSubscriptionTier(profileData['subscriptionTier'] ?? 'free');
+      await ApiClient.setSubscriptionTier(
+        profileData['subscriptionTier'] ?? 'free',
+      );
       if (!mounted) return;
       setState(() {
         _personas = list;
@@ -117,7 +121,9 @@ class _HomeScreenState extends State<HomeScreen>
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text('Log out?'),
-        content: const Text('You\'ll need to log in again to access your companions.'),
+        content: const Text(
+          'You\'ll need to log in again to access your companions.',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -151,10 +157,7 @@ class _HomeScreenState extends State<HomeScreen>
           );
           return FadeTransition(
             opacity: fadeAnim,
-            child: ScaleTransition(
-              scale: scaleAnim,
-              child: child,
-            ),
+            child: ScaleTransition(scale: scaleAnim, child: child),
           );
         },
       ),
@@ -191,7 +194,11 @@ class _HomeScreenState extends State<HomeScreen>
                 color: AppColors.error.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 18),
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                color: AppColors.error,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             const Flexible(
@@ -222,18 +229,14 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       await PersonaService.deletePersona(persona.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Companion deleted')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Companion deleted')));
     } catch (e) {
       if (!mounted) return;
       setState(() => _personas.add(removedPersona));
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to delete: ${ErrorMapper.map(e)}',
-          ),
-        ),
+        SnackBar(content: Text('Failed to delete: ${ErrorMapper.map(e)}')),
       );
     }
   }
@@ -315,10 +318,30 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildPersonaPreviewChips() {
     final personas = [
-      ('Mom', AppColors.momLight, AppColors.momDark, Icons.volunteer_activism_rounded),
-      ('Best Friend', AppColors.bestFriendLight, AppColors.bestFriendDark, Icons.celebration_rounded),
-      ('Girlfriend', AppColors.girlfriendLight, AppColors.girlfriendDark, Icons.favorite_rounded),
-      ('Big Sister', AppColors.bigSisterLight, AppColors.bigSisterDark, Icons.shield_rounded),
+      (
+        'Mom',
+        AppColors.momLight,
+        AppColors.momDark,
+        Icons.volunteer_activism_rounded,
+      ),
+      (
+        'Best Friend',
+        AppColors.bestFriendLight,
+        AppColors.bestFriendDark,
+        Icons.celebration_rounded,
+      ),
+      (
+        'Girlfriend',
+        AppColors.girlfriendLight,
+        AppColors.girlfriendDark,
+        Icons.favorite_rounded,
+      ),
+      (
+        'Big Sister',
+        AppColors.bigSisterLight,
+        AppColors.bigSisterDark,
+        Icons.shield_rounded,
+      ),
     ];
 
     return Padding(
@@ -378,11 +401,17 @@ class _HomeScreenState extends State<HomeScreen>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.cloud_off_outlined, size: 42,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+              Icon(
+                Icons.cloud_off_outlined,
+                size: 42,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
               const SizedBox(height: 12),
-              Text(_error!, textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: _fetchPersonas,
@@ -410,10 +439,7 @@ class _HomeScreenState extends State<HomeScreen>
                 builder: (context, value, child) {
                   return Transform.scale(
                     scale: 0.8 + 0.2 * value,
-                    child: Opacity(
-                      opacity: value,
-                      child: child,
-                    ),
+                    child: Opacity(opacity: value, child: child),
                   );
                 },
                 child: Container(
@@ -450,9 +476,9 @@ class _HomeScreenState extends State<HomeScreen>
               child: Text(
                 'Your circle is empty',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
-                    ),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                ),
               ),
             ),
             const SizedBox(height: 10),
@@ -463,12 +489,11 @@ class _HomeScreenState extends State<HomeScreen>
                   'Tap + to create your first companion\nand start a meaningful conversation',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant
-                            .withValues(alpha: 0.7),
-                        height: 1.5,
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -497,19 +522,19 @@ class _HomeScreenState extends State<HomeScreen>
                 Text(
                   _getGreeting(),
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 28,
-                        letterSpacing: -0.5,
-                      ),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 28,
+                    letterSpacing: -0.5,
+                  ),
                 ),
                 if (_userName.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
                     _userName,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
                 const SizedBox(height: 6),
@@ -518,8 +543,8 @@ class _HomeScreenState extends State<HomeScreen>
                       ? '1 companion in your circle'
                       : '${_personas.length} companions in your circle',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),
@@ -527,7 +552,8 @@ class _HomeScreenState extends State<HomeScreen>
           // Persona cards
           ...List.generate(_personas.length, (index) {
             final persona = _personas[index];
-            final isLocked = !_isPremium &&
+            final isLocked =
+                !_isPremium &&
                 persona.subscriptionTier.toLowerCase() == 'premium';
             return Padding(
               padding: const EdgeInsets.only(bottom: 12),
@@ -545,34 +571,43 @@ class _HomeScreenState extends State<HomeScreen>
                         context,
                         PageRouteBuilder(
                           transitionDuration: const Duration(milliseconds: 400),
-                          reverseTransitionDuration: const Duration(milliseconds: 300),
-                          pageBuilder: (context, animation, secondaryAnimation) =>
-                              ChatScreen(persona: persona),
-                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                            final fadeAnim = CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOutCubic,
-                            );
-                            final slideAnim = Tween<Offset>(
-                              begin: const Offset(0.05, 0),
-                              end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOutCubic,
-                            ));
-                            return FadeTransition(
-                              opacity: fadeAnim,
-                              child: SlideTransition(
-                                position: slideAnim,
-                                child: child,
-                              ),
-                            );
-                          },
+                          reverseTransitionDuration: const Duration(
+                            milliseconds: 300,
+                          ),
+                          pageBuilder:
+                              (context, animation, secondaryAnimation) =>
+                                  ChatScreen(persona: persona),
+                          transitionsBuilder:
+                              (context, animation, secondaryAnimation, child) {
+                                final fadeAnim = CurvedAnimation(
+                                  parent: animation,
+                                  curve: Curves.easeOutCubic,
+                                );
+                                final slideAnim =
+                                    Tween<Offset>(
+                                      begin: const Offset(0.05, 0),
+                                      end: Offset.zero,
+                                    ).animate(
+                                      CurvedAnimation(
+                                        parent: animation,
+                                        curve: Curves.easeOutCubic,
+                                      ),
+                                    );
+                                return FadeTransition(
+                                  opacity: fadeAnim,
+                                  child: SlideTransition(
+                                    position: slideAnim,
+                                    child: child,
+                                  ),
+                                );
+                              },
                         ),
                       );
                     }
                   },
-                  onDelete: persona.isOwned ? () => _deletePersona(persona) : null,
+                  onDelete: persona.isOwned
+                      ? () => _deletePersona(persona)
+                      : null,
                 ),
               ),
             );
@@ -598,8 +633,11 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.workspace_premium_rounded,
-                  color: Colors.white, size: 18),
+              child: const Icon(
+                Icons.workspace_premium_rounded,
+                color: Colors.white,
+                size: 18,
+              ),
             ),
             const SizedBox(width: 10),
             const Flexible(
@@ -622,8 +660,10 @@ class _HomeScreenState extends State<HomeScreen>
           FilledButton(
             onPressed: () async {
               Navigator.pop(context);
-              await Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const UpgradeScreen()));
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const UpgradeScreen()),
+              );
               if (mounted) _fetchPersonas();
             },
             child: const Text('Upgrade'),
@@ -697,7 +737,7 @@ class _PersonaCardState extends State<_PersonaCard>
           final t = _glowAnim.value;
           return Transform.scale(
             scale: 1.0 - 0.03 * t,
-              child: Container(
+            child: Container(
               height: 140,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
@@ -743,7 +783,9 @@ class _PersonaCardState extends State<_PersonaCard>
                         height: 90,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: locked ? 0.05 : 0.1),
+                          color: Colors.white.withValues(
+                            alpha: locked ? 0.05 : 0.1,
+                          ),
                         ),
                       ),
                     ),
@@ -755,7 +797,9 @@ class _PersonaCardState extends State<_PersonaCard>
                         height: 70,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: Colors.white.withValues(alpha: locked ? 0.03 : 0.07),
+                          color: Colors.white.withValues(
+                            alpha: locked ? 0.03 : 0.07,
+                          ),
                         ),
                       ),
                     ),
@@ -806,7 +850,9 @@ class _PersonaCardState extends State<_PersonaCard>
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.w700,
-                                          color: Colors.white.withValues(alpha: locked ? 0.7 : 1.0),
+                                          color: Colors.white.withValues(
+                                            alpha: locked ? 0.7 : 1.0,
+                                          ),
                                           letterSpacing: -0.3,
                                         ),
                                       ),
@@ -826,7 +872,9 @@ class _PersonaCardState extends State<_PersonaCard>
                                   overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.white.withValues(alpha: locked ? 0.5 : 0.85),
+                                    color: Colors.white.withValues(
+                                      alpha: locked ? 0.5 : 0.85,
+                                    ),
                                     height: 1.35,
                                   ),
                                 ),
@@ -858,12 +906,16 @@ class _PersonaCardState extends State<_PersonaCard>
                                     padding: const EdgeInsets.all(6),
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: Colors.white.withValues(alpha: 0.2),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.2,
+                                      ),
                                     ),
                                     child: Icon(
                                       Icons.delete_outline_rounded,
                                       size: 18,
-                                      color: Colors.white.withValues(alpha: 0.9),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.9,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -873,7 +925,9 @@ class _PersonaCardState extends State<_PersonaCard>
                                     ? Icons.arrow_forward_ios_rounded
                                     : Icons.arrow_forward_ios_rounded,
                                 size: 16,
-                                color: Colors.white.withValues(alpha: locked ? 0.4 : 0.6),
+                                color: Colors.white.withValues(
+                                  alpha: locked ? 0.4 : 0.6,
+                                ),
                               ),
                             ],
                           ),

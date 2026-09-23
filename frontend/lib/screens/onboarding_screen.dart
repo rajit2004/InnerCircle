@@ -23,7 +23,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       icon: Icons.favorite_rounded,
       gradient: [Color(0xFFF08CA0), Color(0xFFE85D75)],
       title: 'Someone who\nunderstands',
-      subtitle: 'Not a chatbot. Not a therapist.\nReal companions who text like people who care.',
+      subtitle:
+          'Not a chatbot. Not a therapist.\nReal companions who text like people who care.',
     ),
     _OnboardingPageData(
       icon: Icons.chat_bubble_rounded,
@@ -126,7 +127,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           child: Text(
                             'Skip',
                             style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                             ),
                           ),
                         )
@@ -163,9 +166,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                           decoration: BoxDecoration(
                             color: isActive
                                 ? _pages[_currentPage].gradient.first
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .surfaceContainerHighest,
+                                : Theme.of(
+                                    context,
+                                  ).colorScheme.surfaceContainerHighest,
                             borderRadius: BorderRadius.circular(4),
                           ),
                         );
@@ -217,10 +220,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             builder: (context, value, child) {
               return Transform.scale(
                 scale: 0.6 + 0.4 * value,
-                child: Opacity(
-                  opacity: value.clamp(0.0, 1.0),
-                  child: child,
-                ),
+                child: Opacity(opacity: value.clamp(0.0, 1.0), child: child),
               );
             },
             child: Container(
@@ -244,11 +244,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   ),
                 ],
               ),
-              child: Icon(
-                page.icon,
-                size: 52,
-                color: page.gradient.first,
-              ),
+              child: Icon(page.icon, size: 52, color: page.gradient.first),
             ),
           ),
           const SizedBox(height: 48),
@@ -260,21 +256,18 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             builder: (context, value, child) {
               return Transform.translate(
                 offset: Offset(0, 20 * (1 - value)),
-                child: Opacity(
-                  opacity: value,
-                  child: child,
-                ),
+                child: Opacity(opacity: value, child: child),
               );
             },
             child: Text(
               page.title,
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 30,
-                    height: 1.2,
-                    letterSpacing: -0.5,
-                  ),
+                fontWeight: FontWeight.w800,
+                fontSize: 30,
+                height: 1.2,
+                letterSpacing: -0.5,
+              ),
             ),
           ),
           const SizedBox(height: 20),
@@ -285,18 +278,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               duration: const Duration(milliseconds: 600),
               curve: Curves.easeOutCubic,
               builder: (context, value, child) {
-                return Opacity(
-                  opacity: value,
-                  child: child,
-                );
+                return Opacity(opacity: value, child: child);
               },
               child: Text(
                 page.subtitle!,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      height: 1.6,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  height: 1.6,
+                ),
               ),
             )
           else if (page.shortSubtitles != null)
@@ -308,10 +298,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                 builder: (context, value, child) {
                   return Transform.translate(
                     offset: Offset(0, 12 * (1 - value)),
-                    child: Opacity(
-                      opacity: value,
-                      child: child,
-                    ),
+                    child: Opacity(opacity: value, child: child),
                   );
                 },
                 child: Padding(
@@ -331,10 +318,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                       Text(
                         page.shortSubtitles![i],
                         style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurfaceVariant,
-                            ),
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                       ),
                     ],
                   ),

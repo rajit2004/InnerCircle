@@ -40,7 +40,7 @@ class PushNotificationService {
       'Notifications when a persona checks in on you';
 
   static final FlutterLocalNotificationsPlugin _localNotifications =
-  FlutterLocalNotificationsPlugin();
+      FlutterLocalNotificationsPlugin();
 
   static bool _initialized = false;
 
@@ -63,10 +63,13 @@ class PushNotificationService {
       await _registerCurrentToken();
 
       FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
-        NotificationService.registerToken(newToken, _platformName())
-            .catchError((e) {
-          debugPrint('PushNotificationService: token refresh registration failed: $e');
-        });
+        NotificationService.registerToken(newToken, _platformName()).catchError(
+          (e) {
+            debugPrint(
+              'PushNotificationService: token refresh registration failed: $e',
+            );
+          },
+        );
       });
 
       FirebaseMessaging.onMessage.listen(_showForegroundNotification);
@@ -81,7 +84,9 @@ class PushNotificationService {
   }
 
   static Future<void> _createNotificationChannel() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const initSettings = InitializationSettings(android: androidSettings);
     await _localNotifications.initialize(initSettings);
 
@@ -94,7 +99,8 @@ class PushNotificationService {
 
     await _localNotifications
         .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()
+          AndroidFlutterLocalNotificationsPlugin
+        >()
         ?.createNotificationChannel(channel);
   }
 

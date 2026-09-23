@@ -72,8 +72,11 @@ class _UpgradeScreenState extends State<UpgradeScreen>
       return Tween<double>(begin: 0.0, end: 1.0).animate(
         CurvedAnimation(
           parent: _checkController,
-          curve: Interval(delay, (delay + 0.4).clamp(0.0, 1.0),
-              curve: Curves.elasticOut),
+          curve: Interval(
+            delay,
+            (delay + 0.4).clamp(0.0, 1.0),
+            curve: Curves.elasticOut,
+          ),
         ),
       );
     });
@@ -301,7 +304,10 @@ class _UpgradeScreenState extends State<UpgradeScreen>
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.2),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.5),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,8 +347,11 @@ class _UpgradeScreenState extends State<UpgradeScreen>
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
-                        const Icon(Icons.check_circle_rounded,
-                            size: 16, color: AppColors.success),
+                        const Icon(
+                          Icons.check_circle_rounded,
+                          size: 16,
+                          color: AppColors.success,
+                        ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(

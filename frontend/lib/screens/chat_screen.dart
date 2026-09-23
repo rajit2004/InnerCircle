@@ -47,7 +47,8 @@ class _ChatScreenState extends State<ChatScreen> {
     if (_scrollController.position.isScrollingNotifier.value) {
       FocusManager.instance.primaryFocus?.unfocus();
     }
-    final atBottom = _scrollController.position.pixels >=
+    final atBottom =
+        _scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 80;
     if (atBottom != _showScrollToBottom) {
       setState(() => _showScrollToBottom = !atBottom);
@@ -68,7 +69,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
       setState(() {
         _conversationId = conversationId;
-        _messages.addAll(rawMessages.map((m) => ChatMessage(
+        _messages.addAll(
+          rawMessages.map(
+            (m) => ChatMessage(
               id: m['id'] as String?,
               role: m['role'] as String,
               content: m['content'] as String,
@@ -76,7 +79,9 @@ class _ChatScreenState extends State<ChatScreen> {
               timestamp: m['createdAt'] != null
                   ? DateTime.tryParse(m['createdAt'] as String)
                   : null,
-            )));
+            ),
+          ),
+        );
         _loadingHistory = false;
       });
       _scrollToBottom();
@@ -91,7 +96,13 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() {
       _messages.clear();
       if (greeting != null && greeting.isNotEmpty) {
-        _messages.add(ChatMessage(role: 'assistant', content: greeting, timestamp: DateTime.now()));
+        _messages.add(
+          ChatMessage(
+            role: 'assistant',
+            content: greeting,
+            timestamp: DateTime.now(),
+          ),
+        );
       }
       _conversationId = null;
       _loadingHistory = false;
@@ -132,8 +143,8 @@ class _ChatScreenState extends State<ChatScreen> {
           Text(
             'Say hello to ${widget.persona.name}!',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
           const SizedBox(height: 8),
           Text(
@@ -159,7 +170,11 @@ class _ChatScreenState extends State<ChatScreen> {
 
     AppSound.lightImpact();
     _controller.clear();
-    final userMessage = ChatMessage(role: 'user', content: content, timestamp: DateTime.now());
+    final userMessage = ChatMessage(
+      role: 'user',
+      content: content,
+      timestamp: DateTime.now(),
+    );
     setState(() {
       _messages.add(userMessage);
       _isTyping = true;
@@ -185,7 +200,13 @@ class _ChatScreenState extends State<ChatScreen> {
         }
         if (reply.isNotEmpty) {
           _messages.add(
-              ChatMessage(id: messageId, role: 'assistant', content: reply, timestamp: DateTime.now()));
+            ChatMessage(
+              id: messageId,
+              role: 'assistant',
+              content: reply,
+              timestamp: DateTime.now(),
+            ),
+          );
         }
         _isTyping = false;
         _animationKey++;
@@ -242,10 +263,22 @@ class _ChatScreenState extends State<ChatScreen> {
         if (conversationId != null && conversationId.isNotEmpty) {
           _conversationId = conversationId;
         }
-        _messages.add(ChatMessage(role: 'user', content: content, timestamp: DateTime.now()));
+        _messages.add(
+          ChatMessage(
+            role: 'user',
+            content: content,
+            timestamp: DateTime.now(),
+          ),
+        );
         if (reply.isNotEmpty) {
           _messages.add(
-              ChatMessage(id: messageId, role: 'assistant', content: reply, timestamp: DateTime.now()));
+            ChatMessage(
+              id: messageId,
+              role: 'assistant',
+              content: reply,
+              timestamp: DateTime.now(),
+            ),
+          );
         }
         _isTyping = false;
         _animationKey++;
@@ -254,7 +287,12 @@ class _ChatScreenState extends State<ChatScreen> {
     } catch (e) {
       if (!mounted) return;
       AppSound.lightImpact();
-      final retryMessage = ChatMessage(role: 'user', content: content, timestamp: DateTime.now(), failed: true);
+      final retryMessage = ChatMessage(
+        role: 'user',
+        content: content,
+        timestamp: DateTime.now(),
+        failed: true,
+      );
       setState(() {
         _messages.add(retryMessage);
         _isTyping = false;
@@ -279,12 +317,14 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-              child: const Text('Clear')),
+            onPressed: () => Navigator.pop(ctx, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: const Text('Clear'),
+          ),
         ],
       ),
     );
@@ -310,7 +350,13 @@ class _ChatScreenState extends State<ChatScreen> {
       _messages.clear();
       final greeting = widget.persona.greeting?.trim();
       if (greeting != null && greeting.isNotEmpty) {
-        _messages.add(ChatMessage(role: 'assistant', content: greeting, timestamp: DateTime.now()));
+        _messages.add(
+          ChatMessage(
+            role: 'assistant',
+            content: greeting,
+            timestamp: DateTime.now(),
+          ),
+        );
       }
       _conversationId = null;
       _isTyping = false;
@@ -324,7 +370,12 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   static const List<String> _reactionOptions = [
-    '❤️', '😂', '😮', '😢', '👍', '🔥'
+    '❤️',
+    '😂',
+    '😮',
+    '😢',
+    '👍',
+    '🔥',
   ];
 
   Future<void> _showReactionPicker(ChatMessage message) async {
@@ -455,7 +506,12 @@ class _ChatScreenState extends State<ChatScreen> {
         }
         if (reply.isNotEmpty) {
           _messages.add(
-            ChatMessage(id: messageId, role: 'assistant', content: reply, timestamp: DateTime.now()),
+            ChatMessage(
+              id: messageId,
+              role: 'assistant',
+              content: reply,
+              timestamp: DateTime.now(),
+            ),
           );
         }
         _isTyping = false;
@@ -486,22 +542,26 @@ class _ChatScreenState extends State<ChatScreen> {
         titleSpacing: 8,
         title: Row(
           children: [
-            _BreathingAvatar(
-              personaName: widget.persona.name,
-              size: 36,
-            ),
+            _BreathingAvatar(personaName: widget.persona.name, size: 36),
             const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(widget.persona.name,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+                Text(
+                  widget.persona.name,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 Text(
                   _isTyping ? 'typing...' : 'online',
                   style: TextStyle(
                     fontSize: 11,
-                    color: _isTyping ? gradient.first : Theme.of(context).colorScheme.onSurfaceVariant,
+                    color: _isTyping
+                        ? gradient.first
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: _isTyping ? FontWeight.w500 : FontWeight.w400,
                   ),
                 ),
@@ -513,8 +573,9 @@ class _ChatScreenState extends State<ChatScreen> {
           IconButton(
             tooltip: 'Clear chat',
             icon: const Icon(Icons.delete_outline_rounded),
-            onPressed:
-                _messages.isEmpty && _conversationId == null ? null : _clearConversation,
+            onPressed: _messages.isEmpty && _conversationId == null
+                ? null
+                : _clearConversation,
           ),
         ],
       ),
@@ -532,11 +593,17 @@ class _ChatScreenState extends State<ChatScreen> {
                               ? _buildEmptyChat()
                               : ListView.builder(
                                   controller: _scrollController,
-                                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    8,
+                                    16,
+                                    12,
+                                  ),
                                   itemCount:
                                       _messages.length + (_isTyping ? 1 : 0),
                                   itemBuilder: (context, index) {
-                                    if (_isTyping && index == _messages.length) {
+                                    if (_isTyping &&
+                                        index == _messages.length) {
                                       return _TypingBubble(
                                         gradient: gradient,
                                         key: ValueKey('typing-$_animationKey'),
@@ -545,7 +612,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                     final message = _messages[index];
                                     return _AnimatedMessageBubble(
                                       key: ValueKey(
-                                          'msg-${message.content.hashCode}-$index'),
+                                        'msg-${message.content.hashCode}-$index',
+                                      ),
                                       message: message,
                                       gradient: gradient,
                                       personaName: widget.persona.name,
@@ -561,7 +629,8 @@ class _ChatScreenState extends State<ChatScreen> {
                                   },
                                 ),
                         ),
-                        if (!_isTyping && _messages.isNotEmpty &&
+                        if (!_isTyping &&
+                            _messages.isNotEmpty &&
                             _messages.last.role == 'assistant')
                           _SuggestionChips(
                             personaName: widget.persona.name,
@@ -634,9 +703,10 @@ class _BreathingAvatarState extends State<_BreathingAvatar>
       vsync: this,
       duration: const Duration(milliseconds: 4000),
     )..repeat(reverse: true);
-    _scale = Tween<double>(begin: 1.0, end: 1.04).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 1.04,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -675,8 +745,7 @@ class _AnimatedMessageBubble extends StatefulWidget {
   });
 
   @override
-  State<_AnimatedMessageBubble> createState() =>
-      _AnimatedMessageBubbleState();
+  State<_AnimatedMessageBubble> createState() => _AnimatedMessageBubbleState();
 }
 
 class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
@@ -695,14 +764,12 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
     );
 
     final isUser = widget.message.role == 'user';
-    final beginOffset =
-        isUser ? const Offset(0.2, 0.0) : const Offset(-0.2, 0.0);
+    final beginOffset = isUser
+        ? const Offset(0.2, 0.0)
+        : const Offset(-0.2, 0.0);
 
     _slideAnim = Tween<Offset>(begin: beginOffset, end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: AppMotion.easeOutCubic,
-      ),
+      CurvedAnimation(parent: _controller, curve: AppMotion.easeOutCubic),
     );
 
     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -732,7 +799,8 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final msgDate = DateTime(dt.year, dt.month, dt.day);
-    final time = '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    final time =
+        '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
     if (msgDate == today) return time;
     final yesterday = today.subtract(const Duration(days: 1));
     if (msgDate == yesterday) return 'Yesterday $time';
@@ -794,12 +862,17 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                     ],
                     Flexible(
                       child: Column(
-                        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                        crossAxisAlignment: isUser
+                            ? CrossAxisAlignment.end
+                            : CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (!isUser)
                             Padding(
-                              padding: const EdgeInsets.only(left: 4, bottom: 3),
+                              padding: const EdgeInsets.only(
+                                left: 4,
+                                bottom: 3,
+                              ),
                               child: Text(
                                 widget.personaName,
                                 style: TextStyle(
@@ -813,64 +886,76 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                           Stack(
                             clipBehavior: Clip.none,
                             children: [
-                          Container(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: isUser
-                                  ? LinearGradient(
-                                      colors: gradient,
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    )
-                                  : null,
-                              color: isUser
-                                  ? null
-                                  : Theme.of(context).colorScheme.surface,
-                              borderRadius: BorderRadius.only(
-                                topLeft: const Radius.circular(20),
-                                topRight: const Radius.circular(20),
-                                bottomLeft: Radius.circular(isUser ? 20 : 4),
-                                bottomRight: Radius.circular(isUser ? 4 : 20),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isUser
-                                      ? gradient.first.withValues(alpha: 0.25)
-                                      : Colors.black.withValues(alpha: 0.06),
-                                  blurRadius: isUser ? 10 : 8,
-                                  offset: Offset(0, isUser ? 3 : 2),
+                              Container(
+                                margin: const EdgeInsets.symmetric(vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
                                 ),
-                              ],
-                              border: isUser
-                                  ? null
-                                  : Border.all(
-                                      color: Theme.of(context).dividerColor,
-                                      width: 0.5,
+                                decoration: BoxDecoration(
+                                  gradient: isUser
+                                      ? LinearGradient(
+                                          colors: gradient,
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                        )
+                                      : null,
+                                  color: isUser
+                                      ? null
+                                      : Theme.of(context).colorScheme.surface,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(20),
+                                    topRight: const Radius.circular(20),
+                                    bottomLeft: Radius.circular(
+                                      isUser ? 20 : 4,
                                     ),
-                            ),
-                            child: Text(
-                              widget.message.content,
-                              style: TextStyle(
-                                color: isUser
-                                    ? Colors.white
-                                    : Theme.of(context).colorScheme.onSurface,
-                                fontSize: 15,
-                                height: 1.45,
+                                    bottomRight: Radius.circular(
+                                      isUser ? 4 : 20,
+                                    ),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: isUser
+                                          ? gradient.first.withValues(
+                                              alpha: 0.25,
+                                            )
+                                          : Colors.black.withValues(
+                                              alpha: 0.06,
+                                            ),
+                                      blurRadius: isUser ? 10 : 8,
+                                      offset: Offset(0, isUser ? 3 : 2),
+                                    ),
+                                  ],
+                                  border: isUser
+                                      ? null
+                                      : Border.all(
+                                          color: Theme.of(context).dividerColor,
+                                          width: 0.5,
+                                        ),
+                                ),
+                                child: Text(
+                                  widget.message.content,
+                                  style: TextStyle(
+                                    color: isUser
+                                        ? Colors.white
+                                        : Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                    fontSize: 15,
+                                    height: 1.45,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          if (widget.message.reaction != null)
-                            Positioned(
-                              bottom: -8,
-                              right: -4,
-                              child: _ReactionBadge(
-                                reaction: widget.message.reaction!,
-                                gradient: gradient,
-                              ),
-                            ),
-                          ],
+                              if (widget.message.reaction != null)
+                                Positioned(
+                                  bottom: -8,
+                                  right: -4,
+                                  child: _ReactionBadge(
+                                    reaction: widget.message.reaction!,
+                                    gradient: gradient,
+                                  ),
+                                ),
+                            ],
                           ),
                           if (isFailed && widget.onRetry != null)
                             GestureDetector(
@@ -880,8 +965,11 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.error_outline_rounded,
-                                        size: 14, color: AppColors.error),
+                                    Icon(
+                                      Icons.error_outline_rounded,
+                                      size: 14,
+                                      color: AppColors.error,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Failed. Tap to retry',
@@ -897,12 +985,19 @@ class _AnimatedMessageBubbleState extends State<_AnimatedMessageBubble>
                             ),
                           if (widget.message.timestamp != null)
                             Padding(
-                              padding: const EdgeInsets.only(top: 2, left: 4, right: 4),
+                              padding: const EdgeInsets.only(
+                                top: 2,
+                                left: 4,
+                                right: 4,
+                              ),
                               child: Text(
                                 _formatTime(widget.message.timestamp!),
                                 style: TextStyle(
                                   fontSize: 10,
-                                  color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant
+                                      .withValues(alpha: 0.6),
                                 ),
                               ),
                             ),
@@ -945,13 +1040,12 @@ class _ReactionBadgeState extends State<_ReactionBadge>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _scale = TweenSequence<double>([
-      TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.3), weight: 30),
-      TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 70),
-    ]).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeOutCubic,
-    ));
+    _scale = TweenSequence<double>(
+      [
+        TweenSequenceItem(tween: Tween(begin: 0.0, end: 1.3), weight: 30),
+        TweenSequenceItem(tween: Tween(begin: 1.3, end: 1.0), weight: 70),
+      ],
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic));
     _controller.forward();
   }
 
@@ -1018,13 +1112,13 @@ class _TypingBubbleState extends State<_TypingBubble>
   @override
   Widget build(BuildContext context) {
     return SlideTransition(
-      position: Tween<Offset>(
-        begin: const Offset(-0.15, 0.0),
-        end: Offset.zero,
-      ).animate(CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.3, curve: Curves.easeOutCubic),
-      )),
+      position: Tween<Offset>(begin: const Offset(-0.15, 0.0), end: Offset.zero)
+          .animate(
+            CurvedAnimation(
+              parent: _controller,
+              curve: const Interval(0.0, 0.3, curve: Curves.easeOutCubic),
+            ),
+          ),
       child: FadeTransition(
         opacity: Tween<double>(begin: 0.0, end: 1.0).animate(
           CurvedAnimation(
@@ -1059,8 +1153,10 @@ class _TypingBubbleState extends State<_TypingBubble>
                   mainAxisSize: MainAxisSize.min,
                   children: List.generate(3, (i) {
                     final delay = i * 0.15;
-                    final t = ((_controller.value - delay) % 1.0)
-                        .clamp(0.0, 1.0);
+                    final t = ((_controller.value - delay) % 1.0).clamp(
+                      0.0,
+                      1.0,
+                    );
                     final bounce = (t < 0.5)
                         ? Curves.easeOut.transform(t * 2)
                         : Curves.easeIn.transform((1 - t) * 2);
@@ -1078,16 +1174,19 @@ class _TypingBubbleState extends State<_TypingBubble>
                               shape: BoxShape.circle,
                               gradient: LinearGradient(
                                 colors: [
-                                  widget.gradient.first
-                                      .withValues(alpha: 0.5 + 0.5 * bounce),
-                                  widget.gradient.last
-                                      .withValues(alpha: 0.5 + 0.5 * bounce),
+                                  widget.gradient.first.withValues(
+                                    alpha: 0.5 + 0.5 * bounce,
+                                  ),
+                                  widget.gradient.last.withValues(
+                                    alpha: 0.5 + 0.5 * bounce,
+                                  ),
                                 ],
                               ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: widget.gradient.last
-                                      .withValues(alpha: 0.25 * bounce),
+                                  color: widget.gradient.last.withValues(
+                                    alpha: 0.25 * bounce,
+                                  ),
                                   blurRadius: 4 * bounce,
                                 ),
                               ],
@@ -1155,15 +1254,21 @@ class _ReactionSheetState extends State<_ReactionSheet>
           final scaleAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
             CurvedAnimation(
               parent: _controller,
-              curve: Interval(delay, (delay + 0.4).clamp(0.0, 1.0),
-                  curve: Curves.elasticOut),
+              curve: Interval(
+                delay,
+                (delay + 0.4).clamp(0.0, 1.0),
+                curve: Curves.elasticOut,
+              ),
             ),
           );
           final fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
             CurvedAnimation(
               parent: _controller,
-              curve: Interval(delay, (delay + 0.3).clamp(0.0, 1.0),
-                  curve: Curves.easeOut),
+              curve: Interval(
+                delay,
+                (delay + 0.3).clamp(0.0, 1.0),
+                curve: Curves.easeOut,
+              ),
             ),
           );
           final isSelected = widget.currentReaction == emoji;
@@ -1183,8 +1288,7 @@ class _ReactionSheetState extends State<_ReactionSheet>
                           shape: BoxShape.circle,
                         )
                       : null,
-                  child: Text(emoji,
-                      style: const TextStyle(fontSize: 28)),
+                  child: Text(emoji, style: const TextStyle(fontSize: 28)),
                 ),
               ),
             ),
@@ -1222,10 +1326,7 @@ class _ChatInputBar extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         border: Border(
-          top: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 0.5,
-          ),
+          top: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
         ),
         boxShadow: [
           BoxShadow(
@@ -1235,7 +1336,12 @@ class _ChatInputBar extends StatelessWidget {
           ),
         ],
       ),
-      padding: EdgeInsets.fromLTRB(12, 10, 12, MediaQuery.of(context).padding.bottom + 8),
+      padding: EdgeInsets.fromLTRB(
+        12,
+        10,
+        12,
+        MediaQuery.of(context).padding.bottom + 8,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -1268,11 +1374,13 @@ class _ChatInputBar extends StatelessWidget {
                 maxLength: 2000,
                 textInputAction: TextInputAction.send,
                 textCapitalization: TextCapitalization.sentences,
-                buildCounter: (context,
-                        {required currentLength,
-                        required isFocused,
-                        required maxLength}) =>
-                    null,
+                buildCounter:
+                    (
+                      context, {
+                      required currentLength,
+                      required isFocused,
+                      required maxLength,
+                    }) => null,
                 decoration: InputDecoration(
                   hintText: 'Message ${personaName ?? ''}...',
                   hintStyle: TextStyle(
@@ -1281,8 +1389,10 @@ class _ChatInputBar extends StatelessWidget {
                   border: InputBorder.none,
                   isDense: true,
                   filled: false,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 18,
+                    vertical: 12,
+                  ),
                 ),
                 onSubmitted: (_) => onSend(),
               ),
@@ -1303,7 +1413,9 @@ class _ChatInputBar extends StatelessWidget {
                       end: Alignment.bottomRight,
                     )
                   : null,
-              color: active ? null : Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: active
+                  ? null
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
               boxShadow: active
                   ? [
                       BoxShadow(
@@ -1319,7 +1431,9 @@ class _ChatInputBar extends StatelessWidget {
               icon: AnimatedSwitcher(
                 duration: AppMotion.micro,
                 child: Icon(
-                  isTyping ? Icons.hourglass_top_rounded : Icons.arrow_upward_rounded,
+                  isTyping
+                      ? Icons.hourglass_top_rounded
+                      : Icons.arrow_upward_rounded,
                   key: ValueKey(isTyping),
                   color: active
                       ? Colors.white
@@ -1356,12 +1470,13 @@ class _ActionTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, size: 22, color: Theme.of(context).colorScheme.onSurface),
-            const SizedBox(width: 14),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.bodyLarge,
+            Icon(
+              icon,
+              size: 22,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
+            const SizedBox(width: 14),
+            Text(label, style: Theme.of(context).textTheme.bodyLarge),
           ],
         ),
       ),
@@ -1387,45 +1502,29 @@ class _SuggestionChips extends StatelessWidget {
   List<String> _generateSuggestions() {
     final lower = lastMessage.toLowerCase();
     if (lower.contains('?')) {
-      return [
-        'Tell me more',
-        'What do you think?',
-        'I agree',
-      ];
+      return ['Tell me more', 'What do you think?', 'I agree'];
     }
-    if (lower.contains('love') || lower.contains('miss') || lower.contains('cute')) {
-      return [
-        'Aww thanks',
-        'You\'re sweet',
-        'Same here',
-      ];
+    if (lower.contains('love') ||
+        lower.contains('miss') ||
+        lower.contains('cute')) {
+      return ['Aww thanks', 'You\'re sweet', 'Same here'];
     }
-    if (lower.contains('sorry') || lower.contains('sad') || lower.contains('bad')) {
-      return [
-        'It\'s okay',
-        'Thanks for listening',
-        'I appreciate you',
-      ];
+    if (lower.contains('sorry') ||
+        lower.contains('sad') ||
+        lower.contains('bad')) {
+      return ['It\'s okay', 'Thanks for listening', 'I appreciate you'];
     }
-    if (lower.contains('haha') || lower.contains('lol') || lower.contains('funny')) {
-      return [
-        'Right??',
-        'I know',
-        'So true',
-      ];
+    if (lower.contains('haha') ||
+        lower.contains('lol') ||
+        lower.contains('funny')) {
+      return ['Right??', 'I know', 'So true'];
     }
-    if (lower.contains('food') || lower.contains('eat') || lower.contains('hungry')) {
-      return [
-        'I\'m starving',
-        'What should I get?',
-        'Good idea',
-      ];
+    if (lower.contains('food') ||
+        lower.contains('eat') ||
+        lower.contains('hungry')) {
+      return ['I\'m starving', 'What should I get?', 'Good idea'];
     }
-    return [
-      'Tell me more',
-      'That\'s interesting',
-      'What do you think?',
-    ];
+    return ['Tell me more', 'That\'s interesting', 'What do you think?'];
   }
 
   @override

@@ -39,62 +39,74 @@ class _RegisterScreenState extends State<RegisterScreen>
   void initState() {
     super.initState();
     _animController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
     _shakeController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 500));
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
 
-    _logoScale = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 0.4, curve: Curves.elasticOut),
-    ));
-    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
-    ));
+    _logoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.0, 0.4, curve: Curves.elasticOut),
+      ),
+    );
+    _logoFade = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _animController,
+        curve: const Interval(0.0, 0.3, curve: Curves.easeOut),
+      ),
+    );
     _titleSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
-        .animate(CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.15, 0.5, curve: Curves.easeOutCubic),
-    ));
-    _field1Slide =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+        .animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.15, 0.5, curve: Curves.easeOutCubic),
+          ),
+        );
+    _field1Slide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.3, 0.6, curve: Curves.easeOutCubic),
+          ),
+        );
+    _field2Slide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.4, 0.7, curve: Curves.easeOutCubic),
+          ),
+        );
+    _field3Slide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.45, 0.75, curve: Curves.easeOutCubic),
+          ),
+        );
+    _field4Slide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.5, 0.8, curve: Curves.easeOutCubic),
+          ),
+        );
+    _buttonSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _animController,
+            curve: const Interval(0.55, 0.85, curve: Curves.easeOutCubic),
+          ),
+        );
+    _allFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animController,
-        curve: const Interval(0.3, 0.6, curve: Curves.easeOutCubic),
+        curve: const Interval(0.3, 0.7, curve: Curves.easeOut),
       ),
     );
-    _field2Slide =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.4, 0.7, curve: Curves.easeOutCubic),
-      ),
-    );
-    _field3Slide =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.45, 0.75, curve: Curves.easeOutCubic),
-      ),
-    );
-    _field4Slide =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.5, 0.8, curve: Curves.easeOutCubic),
-      ),
-    );
-    _buttonSlide =
-        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _animController,
-        curve: const Interval(0.55, 0.85, curve: Curves.easeOutCubic),
-      ),
-    );
-    _allFade = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
-      parent: _animController,
-      curve: const Interval(0.3, 0.7, curve: Curves.easeOut),
-    ));
     _shakeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _shakeController, curve: Curves.elasticOut),
     );
@@ -136,9 +148,9 @@ class _RegisterScreenState extends State<RegisterScreen>
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: Theme.of(context).colorScheme.copyWith(
-              primary: AppColors.bestFriendDark,
-            ),
+            colorScheme: Theme.of(
+              context,
+            ).colorScheme.copyWith(primary: AppColors.bestFriendDark),
           ),
           child: child!,
         );
@@ -194,322 +206,349 @@ class _RegisterScreenState extends State<RegisterScreen>
         onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
         behavior: HitTestBehavior.translucent,
         child: Stack(
-        children: [
-          // ── Gradient hero section ──
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: screenHeight * 0.42,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.bestFriendDark,
-                    AppColors.momDark,
-                    Color(0xFF8B5E3C),
+          children: [
+            // ── Gradient hero section ──
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: screenHeight * 0.42,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.bestFriendDark,
+                      AppColors.momDark,
+                      Color(0xFF8B5E3C),
+                    ],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      top: -40,
+                      left: -30,
+                      child: Container(
+                        width: 150,
+                        height: 150,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.08),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -20,
+                      right: -40,
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.05),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      top: 80,
+                      right: 30,
+                      child: Container(
+                        width: 70,
+                        height: 70,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.04),
+                        ),
+                      ),
+                    ),
+                    SafeArea(
+                      child: Column(
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Padding(
+                              padding: const EdgeInsets.only(left: 4, top: 4),
+                              child: IconButton(
+                                onPressed: () => Navigator.pop(context),
+                                icon: const Icon(
+                                  Icons.arrow_back_rounded,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          ScaleTransition(
+                            scale: _logoScale,
+                            child: FadeTransition(
+                              opacity: _logoFade,
+                              child: Container(
+                                width: 84,
+                                height: 84,
+                                alignment: Alignment.center,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.25),
+                                    width: 2,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      blurRadius: 28,
+                                      offset: const Offset(0, 10),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.celebration_rounded,
+                                  color: Colors.white,
+                                  size: 38,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          SlideTransition(
+                            position: _titleSlide,
+                            child: const Text(
+                              'Join InnerCircle',
+                              style: TextStyle(
+                                fontSize: 30,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white,
+                                letterSpacing: -0.8,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          SlideTransition(
+                            position: _titleSlide,
+                            child: Text(
+                              'Four companions, always in your corner.',
+                              style: TextStyle(
+                                fontSize: 15,
+                                color: Colors.white.withValues(alpha: 0.8),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    top: -40,
-                    left: -30,
-                    child: Container(
-                      width: 150,
-                      height: 150,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.08),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: -20,
-                    right: -40,
-                    child: Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.05),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 80,
-                    right: 30,
-                    child: Container(
-                      width: 70,
-                      height: 70,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.white.withValues(alpha: 0.04),
-                      ),
-                    ),
-                  ),
-                  SafeArea(
-                    child: Column(
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Padding(
-                            padding: const EdgeInsets.only(left: 4, top: 4),
-                            child: IconButton(
-                              onPressed: () => Navigator.pop(context),
-                              icon: const Icon(Icons.arrow_back_rounded,
-                                  color: Colors.white),
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        ScaleTransition(
-                          scale: _logoScale,
-                          child: FadeTransition(
-                            opacity: _logoFade,
-                            child: Container(
-                              width: 84,
-                              height: 84,
-                              alignment: Alignment.center,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withValues(alpha: 0.18),
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.25),
-                                  width: 2,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.2),
-                                    blurRadius: 28,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: const Icon(Icons.celebration_rounded,
-                                  color: Colors.white, size: 38),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 22),
-                        SlideTransition(
-                          position: _titleSlide,
-                          child: const Text(
-                            'Join InnerCircle',
-                            style: TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.white,
-                              letterSpacing: -0.8,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        SlideTransition(
-                          position: _titleSlide,
-                          child: Text(
-                            'Four companions, always in your corner.',
-                            style: TextStyle(
-                              fontSize: 15,
-                              color: Colors.white.withValues(alpha: 0.8),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
             ),
-          ),
-          // ── Form card ──
-          Positioned(
-            top: screenHeight * 0.36,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 20,
-                    offset: const Offset(0, -4),
+            // ── Form card ──
+            Positioned(
+              top: screenHeight * 0.36,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
                   ),
-                ],
-              ),
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
-                child: AnimatedBuilder(
-                  animation: _shakeAnim,
-                  builder: (context, child) {
-                    final shakeOffset =
-                        _shakeAnim.status == AnimationStatus.forward ||
-                                _shakeAnim.status == AnimationStatus.completed
-                            ? (1 - _shakeAnim.value) *
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 20,
+                      offset: const Offset(0, -4),
+                    ),
+                  ],
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
+                  child: AnimatedBuilder(
+                    animation: _shakeAnim,
+                    builder: (context, child) {
+                      final shakeOffset =
+                          _shakeAnim.status == AnimationStatus.forward ||
+                              _shakeAnim.status == AnimationStatus.completed
+                          ? (1 - _shakeAnim.value) *
                                 6 *
                                 ((_shakeController.value * 4).toInt() % 2 == 0
                                     ? 1.0
                                     : -1.0)
-                            : 0.0;
-                    return Transform.translate(
-                      offset: Offset(shakeOffset, 0),
-                      child: child,
-                    );
-                  },
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        SlideTransition(
-                          position: _field1Slide,
-                          child: FadeTransition(
-                            opacity: _allFade,
-                            child: TextFormField(
-                              controller: _emailController,
-                              keyboardType: TextInputType.emailAddress,
-                              decoration: const InputDecoration(
-                                labelText: 'Email',
-                                prefixIcon: Icon(Icons.mail_outline_rounded),
-                              ),
-                              validator: (v) => (v != null && RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(v))
-                                  ? null
-                                  : 'Enter a valid email',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SlideTransition(
-                          position: _field2Slide,
-                          child: FadeTransition(
-                            opacity: _allFade,
-                            child: TextFormField(
-                              controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              decoration: InputDecoration(
-                                labelText: 'Password',
-                                helperText: '8+ chars with upper, lower, number',
-                                prefixIcon:
-                                    const Icon(Icons.lock_outline_rounded),
-                                suffixIcon: IconButton(
-                                  icon: Icon(_obscurePassword
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined),
-                                  onPressed: () => setState(() =>
-                                      _obscurePassword = !_obscurePassword),
-                                ),
-                              ),
-                              validator: _validatePassword,
-                              onFieldSubmitted: (_) => _register(),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SlideTransition(
-                          position: _field3Slide,
-                          child: FadeTransition(
-                            opacity: _allFade,
-                            child: TextFormField(
-                              controller: _nameController,
-                              textCapitalization: TextCapitalization.words,
-                              maxLength: 50,
-                              decoration: const InputDecoration(
-                                labelText: 'Your name',
-                                helperText: 'How should we call you?',
-                                prefixIcon: Icon(Icons.person_outline_rounded),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        SlideTransition(
-                          position: _field4Slide,
-                          child: FadeTransition(
-                            opacity: _allFade,
-                            child: InkWell(
-                              onTap: _pickDateOfBirth,
-                              borderRadius: BorderRadius.circular(12),
-                              child: InputDecorator(
+                          : 0.0;
+                      return Transform.translate(
+                        offset: Offset(shakeOffset, 0),
+                        child: child,
+                      );
+                    },
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          SlideTransition(
+                            position: _field1Slide,
+                            child: FadeTransition(
+                              opacity: _allFade,
+                              child: TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
                                 decoration: const InputDecoration(
-                                  labelText: 'Date of birth',
-                                  helperText: 'For personalized experiences',
-                                  prefixIcon: Icon(Icons.cake_outlined),
-                                  suffixIcon: Icon(Icons.calendar_today_rounded),
+                                  labelText: 'Email',
+                                  prefixIcon: Icon(Icons.mail_outline_rounded),
                                 ),
-                                child: Text(
-                                  _dateOfBirth != null
-                                      ? '${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}'
-                                      : 'Select your birthday',
-                                  style: TextStyle(
-                                    color: _dateOfBirth != null
-                                        ? Theme.of(context).colorScheme.onSurface
-                                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                                validator: (v) =>
+                                    (v != null &&
+                                        RegExp(
+                                          r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                                        ).hasMatch(v))
+                                    ? null
+                                    : 'Enter a valid email',
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SlideTransition(
+                            position: _field2Slide,
+                            child: FadeTransition(
+                              opacity: _allFade,
+                              child: TextFormField(
+                                controller: _passwordController,
+                                obscureText: _obscurePassword,
+                                decoration: InputDecoration(
+                                  labelText: 'Password',
+                                  helperText:
+                                      '8+ chars with upper, lower, number',
+                                  prefixIcon: const Icon(
+                                    Icons.lock_outline_rounded,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                    ),
+                                    onPressed: () => setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    ),
+                                  ),
+                                ),
+                                validator: _validatePassword,
+                                onFieldSubmitted: (_) => _register(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          SlideTransition(
+                            position: _field3Slide,
+                            child: FadeTransition(
+                              opacity: _allFade,
+                              child: TextFormField(
+                                controller: _nameController,
+                                textCapitalization: TextCapitalization.words,
+                                maxLength: 50,
+                                decoration: const InputDecoration(
+                                  labelText: 'Your name',
+                                  helperText: 'How should we call you?',
+                                  prefixIcon: Icon(
+                                    Icons.person_outline_rounded,
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        SlideTransition(
-                          position: _buttonSlide,
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            height: 54,
-                            child: FilledButton(
-                              onPressed: _loading ? null : _register,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.bestFriendDark,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                elevation: _loading ? 0 : 2,
-                              ),
-                              child: _loading
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2.5,
-                                          color: Colors.white),
-                                    )
-                                  : const Text(
-                                      'Create account',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                          const SizedBox(height: 16),
+                          SlideTransition(
+                            position: _field4Slide,
+                            child: FadeTransition(
+                              opacity: _allFade,
+                              child: InkWell(
+                                onTap: _pickDateOfBirth,
+                                borderRadius: BorderRadius.circular(12),
+                                child: InputDecorator(
+                                  decoration: const InputDecoration(
+                                    labelText: 'Date of birth',
+                                    helperText: 'For personalized experiences',
+                                    prefixIcon: Icon(Icons.cake_outlined),
+                                    suffixIcon: Icon(
+                                      Icons.calendar_today_rounded,
                                     ),
+                                  ),
+                                  child: Text(
+                                    _dateOfBirth != null
+                                        ? '${_dateOfBirth!.day}/${_dateOfBirth!.month}/${_dateOfBirth!.year}'
+                                        : 'Select your birthday',
+                                    style: TextStyle(
+                                      color: _dateOfBirth != null
+                                          ? Theme.of(
+                                              context,
+                                            ).colorScheme.onSurface
+                                          : Theme.of(
+                                              context,
+                                            ).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 16),
-                        FadeTransition(
-                          opacity: _allFade,
-                          child: TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text(
-                                'Already have an account? Log in'),
+                          const SizedBox(height: 24),
+                          SlideTransition(
+                            position: _buttonSlide,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              height: 54,
+                              child: FilledButton(
+                                onPressed: _loading ? null : _register,
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: AppColors.bestFriendDark,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  elevation: _loading ? 0 : 2,
+                                ),
+                                child: _loading
+                                    ? const SizedBox(
+                                        width: 22,
+                                        height: 22,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Create account',
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 16),
+                          FadeTransition(
+                            opacity: _allFade,
+                            child: TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text(
+                                'Already have an account? Log in',
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }

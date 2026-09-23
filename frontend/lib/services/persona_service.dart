@@ -19,20 +19,20 @@ class PersonaService {
     bool nsfwEnabled = false,
   }) async {
     final data =
-    await ApiClient.post(
-      '/api/personas',
-      body: {
-        'name': name,
-        'relationshipType': relationshipType,
-        'personalityDescription': personalityDescription,
-        if (avatarEmoji != null && avatarEmoji.isNotEmpty)
-          'avatarEmoji': avatarEmoji,
-        if (personality != null) 'personality': personality,
-        if (voice != null) 'voice': voice,
-        'nsfwEnabled': nsfwEnabled,
-      },
-    )
-    as Map<String, dynamic>;
+        await ApiClient.post(
+              '/api/personas',
+              body: {
+                'name': name,
+                'relationshipType': relationshipType,
+                'personalityDescription': personalityDescription,
+                if (avatarEmoji != null && avatarEmoji.isNotEmpty)
+                  'avatarEmoji': avatarEmoji,
+                if (personality != null) 'personality': personality,
+                if (voice != null) 'voice': voice,
+                'nsfwEnabled': nsfwEnabled,
+              },
+            )
+            as Map<String, dynamic>;
     return Persona.fromJson(data);
   }
 

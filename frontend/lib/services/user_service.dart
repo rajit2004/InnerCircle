@@ -24,7 +24,9 @@ class UserService {
     if (language != null) body['language'] = language;
     if (timezone != null) body['timezone'] = timezone;
 
-    final data = await ApiClient.put('/api/users/me', body: body) as Map<String, dynamic>;
+    final data =
+        await ApiClient.put('/api/users/me', body: body)
+            as Map<String, dynamic>;
     return UserProfile.fromJson(data);
   }
 
@@ -37,18 +39,21 @@ class UserService {
       request.headers['Authorization'] = 'Bearer $token';
     }
 
-    request.files.add(await http.MultipartFile.fromPath(
-      'file',
-      imageFile.path,
-      filename: p.basename(imageFile.path),
-    ));
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'file',
+        imageFile.path,
+        filename: p.basename(imageFile.path),
+      ),
+    );
 
     final streamedResponse = await request.send();
     final response = await http.Response.fromStream(streamedResponse);
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isNotEmpty) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+        final data =
+            jsonDecode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
         return UserProfile.fromJson(data);
       }
       return getProfile();
@@ -57,7 +62,9 @@ class UserService {
   }
 
   static Future<UserProfile> updateSubscription(String tier) async {
-    final data = await ApiClient.post('/api/users/subscription', body: {'tier': tier}) as Map<String, dynamic>;
+    final data =
+        await ApiClient.post('/api/users/subscription', body: {'tier': tier})
+            as Map<String, dynamic>;
     final profile = UserProfile.fromJson(data);
     await ApiClient.setSubscriptionTier(profile.subscriptionTier);
     return profile;
@@ -67,10 +74,10 @@ class UserService {
     required String currentPassword,
     required String newPassword,
   }) async {
-    await ApiClient.put('/api/users/me/password', body: {
-      'currentPassword': currentPassword,
-      'newPassword': newPassword,
-    });
+    await ApiClient.put(
+      '/api/users/me/password',
+      body: {'currentPassword': currentPassword, 'newPassword': newPassword},
+    );
   }
 
   static Future<void> deleteAccount() async {

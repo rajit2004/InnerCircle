@@ -62,16 +62,17 @@ class _SplashScreenState extends State<SplashScreen>
         curve: const Interval(0.45, 0.75, curve: Curves.easeOut),
       ),
     );
-    _subtitleSlide = Tween<Offset>(
-      begin: const Offset(0, 0.4),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _mainController,
-      curve: const Interval(0.45, 0.75, curve: Curves.easeOutCubic),
-    ));
-    _bgProgress = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _bgController, curve: Curves.linear),
-    );
+    _subtitleSlide =
+        Tween<Offset>(begin: const Offset(0, 0.4), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _mainController,
+            curve: const Interval(0.45, 0.75, curve: Curves.easeOutCubic),
+          ),
+        );
+    _bgProgress = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _bgController, curve: Curves.linear));
 
     _mainController.forward();
     _bgController.repeat();
@@ -93,9 +94,7 @@ class _SplashScreenState extends State<SplashScreen>
         animation: Listenable.merge([_mainController, _bgController]),
         builder: (context, _) {
           return Container(
-            decoration: BoxDecoration(
-              gradient: _buildAnimatedGradient(),
-            ),
+            decoration: BoxDecoration(gradient: _buildAnimatedGradient()),
             child: Stack(
               children: [
                 // Decorative floating particles
@@ -161,14 +160,8 @@ class _SplashScreenState extends State<SplashScreen>
     final localT = (t * colors.length) % 1.0;
 
     return LinearGradient(
-      begin: Alignment(
-        cos(angle),
-        sin(angle),
-      ),
-      end: Alignment(
-        -cos(angle),
-        -sin(angle),
-      ),
+      begin: Alignment(cos(angle), sin(angle)),
+      end: Alignment(-cos(angle), -sin(angle)),
       colors: [
         Color.lerp(colors[index], colors[nextIndex], localT)!,
         Color.lerp(
@@ -188,12 +181,20 @@ class _SplashScreenState extends State<SplashScreen>
       final top = random.nextDouble() * MediaQuery.sizeOf(context).height;
       final delay = i * 0.08;
 
-      final fadeAnim = Tween<double>(begin: 0.0, end: 0.15 + random.nextDouble() * 0.15).animate(
-        CurvedAnimation(
-          parent: _particleController,
-          curve: Interval(delay, (delay + 0.3).clamp(0.0, 1.0), curve: Curves.easeOut),
-        ),
-      );
+      final fadeAnim =
+          Tween<double>(
+            begin: 0.0,
+            end: 0.15 + random.nextDouble() * 0.15,
+          ).animate(
+            CurvedAnimation(
+              parent: _particleController,
+              curve: Interval(
+                delay,
+                (delay + 0.3).clamp(0.0, 1.0),
+                curve: Curves.easeOut,
+              ),
+            ),
+          );
 
       return Positioned(
         left: left,
@@ -238,11 +239,7 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ],
       ),
-      child: const Icon(
-        Icons.favorite_rounded,
-        color: Colors.white,
-        size: 50,
-      ),
+      child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 50),
     );
   }
 
@@ -292,9 +289,7 @@ class _SplashScreenState extends State<SplashScreen>
       height: 28,
       child: CircularProgressIndicator(
         strokeWidth: 2.5,
-        valueColor: AlwaysStoppedAnimation(
-          Colors.white.withValues(alpha: 0.9),
-        ),
+        valueColor: AlwaysStoppedAnimation(Colors.white.withValues(alpha: 0.9)),
       ),
     );
   }

@@ -103,10 +103,10 @@ class ApiClient {
   }
 
   static Future<dynamic> post(
-      String endpoint, {
-        dynamic body,
-        bool auth = true,
-      }) async {
+    String endpoint, {
+    dynamic body,
+    bool auth = true,
+  }) async {
     final uri = Uri.parse('$baseUrl$endpoint');
     final response = await http
         .post(
@@ -121,10 +121,7 @@ class ApiClient {
   static Future<dynamic> delete(String endpoint, {bool auth = true}) async {
     final uri = Uri.parse('$baseUrl$endpoint');
     final response = await http
-        .delete(
-          uri,
-          headers: await _headers(auth: auth),
-        )
+        .delete(uri, headers: await _headers(auth: auth))
         .timeout(_timeout);
     return _handleResponse(response);
   }
@@ -133,10 +130,10 @@ class ApiClient {
   // added alongside get/post/delete rather than reusing post, since the
   // reaction endpoint is a genuine update-in-place, not a create.
   static Future<dynamic> put(
-      String endpoint, {
-        dynamic body,
-        bool auth = true,
-      }) async {
+    String endpoint, {
+    dynamic body,
+    bool auth = true,
+  }) async {
     final uri = Uri.parse('$baseUrl$endpoint');
     final response = await http
         .put(
@@ -159,7 +156,8 @@ class ApiClient {
           ? ModalRoute.of(navigatorKey.currentContext!)
           : null;
       final path = currentRoute?.settings.name ?? '';
-      final onAuthScreen = path == '/' || path == '/login' || path == '/register';
+      final onAuthScreen =
+          path == '/' || path == '/login' || path == '/register';
 
       if (!onAuthScreen) {
         clearToken();
@@ -194,17 +192,17 @@ class ApiClient {
     return body;
   }
 
-// BUG FIX (frontend, 2026-06-30): streamChat() removed entirely.
-// It was implemented as an SSE client (filtering for "data: " lines,
-// expecting {"content": ..., "done": ...} per chunk), but the backend's
-// POST /api/chat endpoint no longer streams -- per the backend's own
-// FIXES.md (Round 4 and Round 6), it was deliberately changed to return
-// one plain JSON object {"reply": "...", "conversationId": "..."} in a
-// single response, because SSE on the backend's Tomcat servlet stack was
-// causing Spring Security to 403 the client's automatic SSE reconnect
-// request. Since the backend doesn't send SSE anymore, this method could
-// never produce any chunks -- every chat message would hang forever with
-// the typing indicator on screen and no reply ever arriving.
-// Use ApiClient.post('/api/chat', ...) directly instead, which the
-// existing _handleResponse() above already supports correctly.
+  // BUG FIX (frontend, 2026-06-30): streamChat() removed entirely.
+  // It was implemented as an SSE client (filtering for "data: " lines,
+  // expecting {"content": ..., "done": ...} per chunk), but the backend's
+  // POST /api/chat endpoint no longer streams -- per the backend's own
+  // FIXES.md (Round 4 and Round 6), it was deliberately changed to return
+  // one plain JSON object {"reply": "...", "conversationId": "..."} in a
+  // single response, because SSE on the backend's Tomcat servlet stack was
+  // causing Spring Security to 403 the client's automatic SSE reconnect
+  // request. Since the backend doesn't send SSE anymore, this method could
+  // never produce any chunks -- every chat message would hang forever with
+  // the typing indicator on screen and no reply ever arriving.
+  // Use ApiClient.post('/api/chat', ...) directly instead, which the
+  // existing _handleResponse() above already supports correctly.
 }

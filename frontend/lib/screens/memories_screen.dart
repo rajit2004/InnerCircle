@@ -38,7 +38,10 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load memories: ${ErrorMapper.map(e)}')));
+        SnackBar(
+          content: Text('Failed to load memories: ${ErrorMapper.map(e)}'),
+        ),
+      );
     }
   }
 
@@ -49,14 +52,15 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
       if (!mounted) return;
       setState(() => _memories.removeWhere((item) => item.id == memory.id));
       if (showUndo) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Memory forgotten')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Memory forgotten')));
       }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Delete failed: ${ErrorMapper.map(e)}')));
+        SnackBar(content: Text('Delete failed: ${ErrorMapper.map(e)}')),
+      );
     }
   }
 
@@ -115,10 +119,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                 builder: (context, value, child) {
                   return Transform.scale(
                     scale: 0.8 + 0.2 * value,
-                    child: Opacity(
-                      opacity: value,
-                      child: child,
-                    ),
+                    child: Opacity(opacity: value, child: child),
                   );
                 },
                 child: Container(
@@ -155,8 +156,8 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
               child: Text(
                 'No memories yet',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
             const SizedBox(height: 8),
@@ -167,12 +168,11 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                   'Start a conversation and share something important -- your companions will remember it.',
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .onSurfaceVariant
-                            .withValues(alpha: 0.7),
-                        height: 1.5,
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+                    height: 1.5,
+                  ),
                 ),
               ),
             ),
@@ -204,15 +204,20 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                   color: AppColors.error,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.delete_outline_rounded,
-                    color: Colors.white),
+                child: const Icon(
+                  Icons.delete_outline_rounded,
+                  color: Colors.white,
+                ),
               ),
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: Theme.of(context).dividerColor, width: 0.5),
+                  border: Border.all(
+                    color: Theme.of(context).dividerColor,
+                    width: 0.5,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.04),
@@ -241,16 +246,18 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.only(top: 6),
-                        child: Text(memory.fact,
-                            style: Theme.of(context).textTheme.bodyLarge),
+                        child: Text(
+                          memory.fact,
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
                       ),
                     ),
                     IconButton(
                       tooltip: 'Delete memory',
-                      icon: Icon(Icons.delete_outline_rounded,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant),
+                      icon: Icon(
+                        Icons.delete_outline_rounded,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                       onPressed: () async {
                         if (await _confirmDelete(memory)) {
                           _deleteMemory(memory);

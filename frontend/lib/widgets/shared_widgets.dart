@@ -32,9 +32,10 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
       duration: const Duration(milliseconds: 1400),
       vsync: this,
     )..repeat();
-    _animation = Tween<double>(begin: -1.0, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _animation = Tween<double>(
+      begin: -1.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -64,7 +65,11 @@ class _ShimmerPlaceholderState extends State<ShimmerPlaceholder>
               stops: const [0.0, 0.5, 1.0],
             ).createShader(
               Rect.fromLTWH(
-                  dx - bounds.width / 2, 0, bounds.width, bounds.height),
+                dx - bounds.width / 2,
+                0,
+                bounds.width,
+                bounds.height,
+              ),
             );
           },
           child: Container(
@@ -174,9 +179,10 @@ class _AnimatedPressButtonState extends State<AnimatedPressButton>
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: AppMotion.micro);
-    _scaleAnim = Tween<double>(begin: 1.0, end: widget.scale).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeOut),
-    );
+    _scaleAnim = Tween<double>(
+      begin: 1.0,
+      end: widget.scale,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOut));
   }
 
   @override
@@ -303,7 +309,10 @@ class _PulseDotState extends State<PulseDot>
         child: Container(
           width: widget.size,
           height: widget.size,
-          decoration: BoxDecoration(color: widget.color, shape: BoxShape.circle),
+          decoration: BoxDecoration(
+            color: widget.color,
+            shape: BoxShape.circle,
+          ),
         ),
       ),
     );
@@ -433,24 +442,26 @@ class _StaggeredEntranceState extends State<StaggeredEntrance>
     super.initState();
     _controller = AnimationController(vsync: this, duration: widget.duration);
 
-    final delay =
-        (widget.index * widget.staggerDelay.inMilliseconds / 1000.0)
-            .clamp(0.0, 0.6);
+    final delay = (widget.index * widget.staggerDelay.inMilliseconds / 1000.0)
+        .clamp(0.0, 0.6);
     final end = (delay + 0.5).clamp(0.0, 1.0);
 
-    _slide = Tween<Offset>(
-      begin: const Offset(0, 0.12),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _controller,
-      curve: Interval(delay, end, curve: Curves.easeOutCubic),
-    ));
+    _slide = Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _controller,
+            curve: Interval(delay, end, curve: Curves.easeOutCubic),
+          ),
+        );
 
     _fade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _controller,
-        curve: Interval(delay, (delay + 0.4).clamp(0.0, 1.0),
-            curve: Curves.easeOut),
+        curve: Interval(
+          delay,
+          (delay + 0.4).clamp(0.0, 1.0),
+          curve: Curves.easeOut,
+        ),
       ),
     );
 

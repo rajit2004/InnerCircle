@@ -5,17 +5,17 @@ class ChatService {
   static const Duration _chatTimeout = Duration(seconds: 60);
 
   static Future<Map<String, dynamic>> sendMessage(
-      String personaId,
-      String content, {
-        String? conversationId,
-      }) async {
+    String personaId,
+    String content, {
+    String? conversationId,
+  }) async {
     final body = <String, dynamic>{'personaId': personaId, 'content': content};
     if (conversationId != null) {
       body['conversationId'] = conversationId;
     }
 
-    return await ApiClient.post('/api/chat', body: body)
-        .timeout(_chatTimeout) as Map<String, dynamic>;
+    return await ApiClient.post('/api/chat', body: body).timeout(_chatTimeout)
+        as Map<String, dynamic>;
   }
 
   // FEATURE (chat history, 2026-07-02): fetches the most recent conversation
@@ -27,7 +27,7 @@ class ChatService {
   // existed.
   static Future<Map<String, dynamic>> getHistory(String personaId) async {
     return await ApiClient.get('/api/chat/history?personaId=$personaId')
-    as Map<String, dynamic>;
+        as Map<String, dynamic>;
   }
 
   // FEATURE (message reactions, round 12): sets or clears (reaction == null)
@@ -52,13 +52,13 @@ class ChatService {
   // re-runs the LLM to get a fresh reply. Returns the same shape as
   // sendMessage: {reply, conversationId, messageId}.
   static Future<Map<String, dynamic>> regenerate(
-      String personaId, String conversationId) async {
+    String personaId,
+    String conversationId,
+  ) async {
     return await ApiClient.post(
-      '/api/chat/regenerate',
-      body: {
-        'personaId': personaId,
-        'conversationId': conversationId,
-      },
-    ) as Map<String, dynamic>;
+          '/api/chat/regenerate',
+          body: {'personaId': personaId, 'conversationId': conversationId},
+        )
+        as Map<String, dynamic>;
   }
 }
