@@ -3,6 +3,10 @@ import 'package:frontend/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() {
+    resetInitCache();
+  });
+
   testWidgets('shows onboarding screen when no session is saved', (
     WidgetTester tester,
   ) async {

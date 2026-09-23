@@ -25,7 +25,20 @@ import 'widgets/splash_screen.dart';
 /// without needing a BuildContext.
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-Future<Map<String, dynamic>> _initApp() async {
+/// Cached so FutureBuilder does not re-run on every rebuild (which used to
+/// re-await SharedPreferences + login check on each MaterialApp rebuild).
+/// Also surfaces init errors instead of hanging forever on the splash.
+Future<Map<String, dynamic>>? _initFuture;
+
+/// Test-only: clears the cached init future so each widget test starts fresh.
+@visibleForTesting
+void resetInitCache() => _initFuture = null;
+
+Future<Map<String, dynamic>> _initApp() {
+  return _initFuture ??= _doInit();
+}
+
+Future<Map<String, dynamic>> _doInit() async {
   final results = await Future.wait([
     AuthService.isLoggedIn(),
     SharedPreferences.getInstance(),
@@ -97,6 +110,10 @@ class InnerCircleApp extends StatelessWidget {
             '/': (context) => FutureBuilder(
               future: _initApp(),
               builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  debugPrint('App init failed: ${snapshot.error}');
+                  return const LoginScreen();
+                }
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SplashScreen();
                 }

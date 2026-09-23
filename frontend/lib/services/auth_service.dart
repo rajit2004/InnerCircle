@@ -44,7 +44,20 @@ class AuthService {
   }
 
   static Future<bool> isLoggedIn() async {
-    return await ApiClient.getToken() != null;
+    final token = await ApiClient.getToken();
+    if (token == null || token.isEmpty) return false;
+    // SECURITY: treat expired JWTs as logged-out client-side so we don't
+    // open HomeScreen only to bounce on the first API 401.
+    final claims = _decodeJwtPayload(token);
+    final exp = claims['exp'];
+    if (exp is num) {
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(exp.toInt() * 1000);
+      if (expiresAt.isBefore(DateTime.now())) {
+        await ApiClient.clearToken();
+        return false;
+      }
+    }
+    return true;
   }
 
   // FEATURE (forgot password, 2026-07-06): both calls are unauthenticated
@@ -99,7 +112,9 @@ class AuthService {
 
   static Future<void> _saveSession(Map<String, dynamic> response) async {
     final token = response['token'] as String?;
-    if (token == null || token.isEmpty) return;
+    if (token == null || token.isEmpty) {
+      throw Exception('Login response missing auth token');
+    }
 
     final claims = _decodeJwtPayload(token);
     final subscriptionTier = _asString(
