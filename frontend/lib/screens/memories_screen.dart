@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/memory.dart';
+import '../services/error_mapper.dart';
 import '../services/memory_service.dart';
 import '../theme/app_theme.dart';
 import '../services/sound_service.dart';
@@ -37,7 +38,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load memories: $e')));
+          SnackBar(content: Text('Failed to load memories: ${ErrorMapper.map(e)}')));
     }
   }
 
@@ -55,7 +56,7 @@ class _MemoriesScreenState extends State<MemoriesScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Delete failed: $e')));
+          SnackBar(content: Text('Delete failed: ${ErrorMapper.map(e)}')));
     }
   }
 

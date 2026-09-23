@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/error_mapper.dart';
 import '../theme/app_theme.dart';
 
 /// FEATURE (forgot password, 2026-07-06): asks for an email, then navigates
@@ -44,7 +45,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(content: Text(ErrorMapper.map(e))),
       );
       setState(() => _loading = false);
     }

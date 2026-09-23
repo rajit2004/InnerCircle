@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
+import '../services/error_mapper.dart';
 import '../services/user_service.dart';
 import '../services/api_client.dart';
 import '../theme/app_theme.dart';
@@ -53,7 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = ErrorMapper.map(e);
       });
     }
   }
@@ -111,7 +112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() => _updatingTier = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}')),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}')),
       );
     }
   }
@@ -156,7 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() => _uploadingAvatar = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Upload failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Upload failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -436,34 +437,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _editDisplayName(UserProfile profile) async {
     AppSound.selectionClick();
     final controller = TextEditingController(text: profile.displayName ?? '');
-    final newName = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          decoration: BoxDecoration(
-            color: Theme.of(ctx).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Theme.of(ctx).dividerColor, borderRadius: BorderRadius.circular(2)))),
-              Text('Edit display name', style: Theme.of(ctx).textTheme.titleLarge),
-              const SizedBox(height: 16),
-              TextField(controller: controller, autofocus: true, maxLength: 50, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Display name', hintText: 'How should we call you?', prefixIcon: Icon(Icons.person_outline_rounded))),
-              const SizedBox(height: 20),
-              SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Save'))),
-            ],
+    String? newName;
+    try {
+      newName = await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            decoration: BoxDecoration(
+              color: Theme.of(ctx).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Theme.of(ctx).dividerColor, borderRadius: BorderRadius.circular(2)))),
+                Text('Edit display name', style: Theme.of(ctx).textTheme.titleLarge),
+                const SizedBox(height: 16),
+                TextField(controller: controller, autofocus: true, maxLength: 50, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Display name', hintText: 'How should we call you?', prefixIcon: Icon(Icons.person_outline_rounded))),
+                const SizedBox(height: 20),
+                SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Save'))),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } finally {
+      controller.dispose();
+    }
     if (newName == null) return;
     try {
       final updated = await UserService.updateProfile(displayName: newName.isEmpty ? null : newName);
@@ -473,7 +479,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -497,7 +503,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -536,7 +542,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -545,36 +551,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _editTimezone(UserProfile profile) async {
     AppSound.selectionClick();
     final controller = TextEditingController(text: profile.timezone ?? 'UTC');
-    final newTz = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          decoration: BoxDecoration(
-            color: Theme.of(ctx).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Theme.of(ctx).dividerColor, borderRadius: BorderRadius.circular(2)))),
-              Text('Edit timezone', style: Theme.of(ctx).textTheme.titleLarge),
-              const SizedBox(height: 8),
-              Text('Common: UTC, America/New_York, Asia/Kolkata, Europe/London', style: Theme.of(ctx).textTheme.bodySmall),
-              const SizedBox(height: 16),
-              TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'Timezone', hintText: 'e.g. UTC, America/New_York', prefixIcon: Icon(Icons.access_time_rounded))),
-              const SizedBox(height: 20),
-              SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Save'))),
-            ],
+    String? newTz;
+    try {
+      newTz = await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            decoration: BoxDecoration(
+              color: Theme.of(ctx).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Theme.of(ctx).dividerColor, borderRadius: BorderRadius.circular(2)))),
+                Text('Edit timezone', style: Theme.of(ctx).textTheme.titleLarge),
+                const SizedBox(height: 8),
+                Text('Common: UTC, America/New_York, Asia/Kolkata, Europe/London', style: Theme.of(ctx).textTheme.bodySmall),
+                const SizedBox(height: 16),
+                TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'Timezone', hintText: 'e.g. UTC, America/New_York', prefixIcon: Icon(Icons.access_time_rounded))),
+                const SizedBox(height: 20),
+                SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Save'))),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } finally {
+      controller.dispose();
+    }
     if (newTz == null || newTz.isEmpty) return;
     try {
       final updated = await UserService.updateProfile(timezone: newTz);
@@ -584,7 +595,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -596,54 +607,69 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final newCtrl = TextEditingController();
     final confirmCtrl = TextEditingController();
 
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-        title: const Text('Change password'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: currentCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Current password', prefixIcon: Icon(Icons.lock_outline_rounded))),
-              const SizedBox(height: 12),
-              TextField(controller: newCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'New password', prefixIcon: Icon(Icons.lock_rounded))),
-              const SizedBox(height: 12),
-              TextField(controller: confirmCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm new password', prefixIcon: Icon(Icons.lock_rounded))),
-            ],
+    bool? result;
+    String current = '';
+    String next = '';
+    String confirm = '';
+    try {
+      result = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: const Text('Change password'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(controller: currentCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Current password', prefixIcon: Icon(Icons.lock_outline_rounded))),
+                const SizedBox(height: 12),
+                TextField(controller: newCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'New password', prefixIcon: Icon(Icons.lock_rounded))),
+                const SizedBox(height: 12),
+                TextField(controller: confirmCtrl, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm new password', prefixIcon: Icon(Icons.lock_rounded))),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Update')),
+          ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Update')),
-        ],
-      ),
-    );
+      );
+      if (result == true) {
+        current = currentCtrl.text;
+        next = newCtrl.text;
+        confirm = confirmCtrl.text;
+      }
+    } finally {
+      currentCtrl.dispose();
+      newCtrl.dispose();
+      confirmCtrl.dispose();
+    }
 
     if (result != true) return;
     if (!mounted) return;
 
-    if (currentCtrl.text.isEmpty) {
+    if (current.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter your current password'), backgroundColor: AppColors.error));
       return;
     }
-    if (newCtrl.text != confirmCtrl.text) {
+    if (next != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Passwords do not match'), backgroundColor: AppColors.error));
       return;
     }
-    if (newCtrl.text.length < 6) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password must be at least 6 characters'), backgroundColor: AppColors.error));
+    if (next.length < 8) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password must be at least 8 characters'), backgroundColor: AppColors.error));
       return;
     }
 
     try {
-      await UserService.changePassword(currentPassword: currentCtrl.text, newPassword: newCtrl.text);
+      await UserService.changePassword(currentPassword: current, newPassword: next);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated')));
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -700,7 +726,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       if (!mounted) return;
       setState(() => _deletingAccount = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -739,6 +765,7 @@ class _NetworkAvatar extends StatelessWidget {
       child: Image.network(
         fullUrl,
         fit: BoxFit.cover,
+        cacheWidth: 168,
         errorBuilder: (_, _, _) => Container(
           decoration: const BoxDecoration(
             shape: BoxShape.circle,

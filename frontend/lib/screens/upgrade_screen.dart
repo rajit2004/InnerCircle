@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
 
+import '../services/error_mapper.dart';
 import '../services/user_service.dart';
 import '../theme/app_theme.dart';
 import '../services/sound_service.dart';
@@ -138,7 +139,7 @@ class _UpgradeScreenState extends State<UpgradeScreen>
       setState(() => _upgrading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          content: Text(ErrorMapper.map(e)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -282,11 +283,11 @@ class _UpgradeScreenState extends State<UpgradeScreen>
             ),
           ),
           const SizedBox(height: 12),
-          _BenefitCheck(text: '2 personas', included: true),
+          _BenefitCheck(text: '2 free personas', included: true),
           const SizedBox(height: 8),
           _BenefitCheck(text: '50 messages/day', included: true),
           const SizedBox(height: 8),
-          _BenefitCheck(text: 'All personas', included: false),
+          _BenefitCheck(text: 'All 4 personas', included: false),
           const SizedBox(height: 8),
           _BenefitCheck(text: 'Unlimited messages', included: false),
         ],

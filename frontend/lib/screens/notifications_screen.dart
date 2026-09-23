@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/persona.dart';
 import '../models/scheduled_message.dart';
 import '../services/api_client.dart';
+import '../services/error_mapper.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
@@ -54,7 +55,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString().replaceFirst('Exception: ', '');
+        _error = ErrorMapper.map(e);
       });
     }
   }
@@ -141,7 +142,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (created == true) _load();
   }
 
-  String _friendly(Object e) => e.toString().replaceFirst('Exception: ', '');
+  String _friendly(Object e) => ErrorMapper.map(e);
 
   @override
   Widget build(BuildContext context) {
@@ -465,7 +466,7 @@ class _AddScheduleSheetState extends State<_AddScheduleSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Failed to schedule: ${e.toString().replaceFirst('Exception: ', '')}',
+            'Failed to schedule: ${ErrorMapper.map(e)}',
           ),
         ),
       );

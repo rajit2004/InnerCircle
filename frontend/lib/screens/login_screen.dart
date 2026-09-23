@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/error_mapper.dart';
 import '../theme/app_theme.dart';
 import '../services/sound_service.dart';
 
@@ -113,7 +114,7 @@ class _LoginScreenState extends State<LoginScreen>
       _shakeController.forward(from: 0.0);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          content: Text(ErrorMapper.map(e)),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.error,
         ),

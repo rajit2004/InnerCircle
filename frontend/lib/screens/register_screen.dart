@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/error_mapper.dart';
 import '../theme/app_theme.dart';
 import '../services/sound_service.dart';
 
@@ -111,6 +112,20 @@ class _RegisterScreenState extends State<RegisterScreen>
     super.dispose();
   }
 
+  // Mirrors backend InputSanitizer.validatePasswordStrength so users see
+  // the rule before hitting the API (8+, upper, lower, digit).
+  String? _validatePassword(String? v) {
+    if (v == null || v.length < 8) return 'At least 8 characters';
+    if (v.length > 128) return 'At most 128 characters';
+    final hasUpper = v.contains(RegExp(r'[A-Z]'));
+    final hasLower = v.contains(RegExp(r'[a-z]'));
+    final hasDigit = v.contains(RegExp(r'[0-9]'));
+    if (!hasUpper || !hasLower || !hasDigit) {
+      return 'Needs uppercase, lowercase, and a number';
+    }
+    return null;
+  }
+
   Future<void> _pickDateOfBirth() async {
     final now = DateTime.now();
     final picked = await showDatePicker(
@@ -160,7 +175,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _shakeController.forward(from: 0.0);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          content: Text(ErrorMapper.map(e)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -382,7 +397,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                               obscureText: _obscurePassword,
                               decoration: InputDecoration(
                                 labelText: 'Password',
-                                helperText: 'At least 6 characters',
+                                helperText: '8+ chars with upper, lower, number',
                                 prefixIcon:
                                     const Icon(Icons.lock_outline_rounded),
                                 suffixIcon: IconButton(
@@ -393,9 +408,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                                       _obscurePassword = !_obscurePassword),
                                 ),
                               ),
-                              validator: (v) => (v != null && v.length >= 6)
-                                  ? null
-                                  : 'At least 6 characters',
+                              validator: _validatePassword,
                               onFieldSubmitted: (_) => _register(),
                             ),
                           ),

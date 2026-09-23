@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/user_preferences.dart';
+import '../services/error_mapper.dart';
 import '../services/user_preferences_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/theme_controller.dart';
@@ -36,6 +37,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       });
     } catch (e) {
       if (!mounted) return;
+      // Preferences failing to load is non-fatal (UI falls back to defaults);
+      // still surface it in debug for diagnosis instead of swallowing silently.
+      debugPrint('Failed to load preferences: ${ErrorMapper.map(e)}');
       setState(() {
         _prefs = null;
         _loadingPrefs = false;
@@ -135,7 +139,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         if (!mounted) return;
                         setState(() => _prefs!.memoryEnabled = previous);
                         messenger.showSnackBar(
-                          SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+                          SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
                         );
                       }
                     },
@@ -180,36 +184,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _editPreferredName() async {
     AppSound.selectionClick();
     final controller = TextEditingController(text: _prefs?.preferredName ?? '');
-    final result = await showModalBottomSheet<String>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
-        child: Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-          decoration: BoxDecoration(
-            color: Theme.of(ctx).colorScheme.surface,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Theme.of(ctx).dividerColor, borderRadius: BorderRadius.circular(2)))),
-              Text('Preferred name', style: Theme.of(ctx).textTheme.titleLarge),
-              const SizedBox(height: 4),
-              Text('How personas should address you', style: Theme.of(ctx).textTheme.bodySmall),
-              const SizedBox(height: 16),
-              TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'Name', hintText: 'What should they call you?', prefixIcon: Icon(Icons.badge_outlined))),
-              const SizedBox(height: 20),
-              SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Save'))),
-            ],
+    String? result;
+    try {
+      result = await showModalBottomSheet<String>(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (ctx) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+          child: Container(
+            margin: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            decoration: BoxDecoration(
+              color: Theme.of(ctx).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(width: 36, height: 4, margin: const EdgeInsets.only(bottom: 16), decoration: BoxDecoration(color: Theme.of(ctx).dividerColor, borderRadius: BorderRadius.circular(2)))),
+                Text('Preferred name', style: Theme.of(ctx).textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text('How personas should address you', style: Theme.of(ctx).textTheme.bodySmall),
+                const SizedBox(height: 16),
+                TextField(controller: controller, autofocus: true, decoration: const InputDecoration(labelText: 'Name', hintText: 'What should they call you?', prefixIcon: Icon(Icons.badge_outlined))),
+                const SizedBox(height: 20),
+                SizedBox(width: double.infinity, child: FilledButton(onPressed: () => Navigator.pop(ctx, controller.text.trim()), child: const Text('Save'))),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } finally {
+      controller.dispose();
+    }
     if (result == null) return;
     try {
       final updated = await _prefsService.updatePreferences(preferredName: result.isEmpty ? null : result);
@@ -221,7 +230,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -257,7 +266,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }
@@ -293,7 +302,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed: ${e.toString().replaceFirst('Exception: ', '')}'), backgroundColor: AppColors.error),
+        SnackBar(content: Text('Failed: ${ErrorMapper.map(e)}'), backgroundColor: AppColors.error),
       );
     }
   }

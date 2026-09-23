@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/auth_service.dart';
+import '../services/error_mapper.dart';
 import '../theme/app_theme.dart';
 
 /// FEATURE (forgot password, 2026-07-06): takes the reset code (emailed by
@@ -33,6 +34,19 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     super.dispose();
   }
 
+  // Mirrors backend InputSanitizer.validatePasswordStrength.
+  String? _validatePassword(String? v) {
+    if (v == null || v.length < 8) return 'At least 8 characters';
+    if (v.length > 128) return 'At most 128 characters';
+    final hasUpper = v.contains(RegExp(r'[A-Z]'));
+    final hasLower = v.contains(RegExp(r'[a-z]'));
+    final hasDigit = v.contains(RegExp(r'[0-9]'));
+    if (!hasUpper || !hasLower || !hasDigit) {
+      return 'Needs uppercase, lowercase, and a number';
+    }
+    return null;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _loading = true);
@@ -53,7 +67,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       if (!mounted) return;
       setState(() => _loading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(content: Text(ErrorMapper.map(e))),
       );
     }
   }
@@ -117,9 +131,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                         onPressed: () => setState(() => _obscure = !_obscure),
                       ),
                     ),
-                    validator: (v) => (v != null && v.length >= 6)
-                        ? null
-                        : 'At least 6 characters',
+                    validator: _validatePassword,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

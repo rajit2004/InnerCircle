@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/error_mapper.dart';
 import '../services/persona_service.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
@@ -126,7 +127,7 @@ class _CreatePersonaScreenState extends State<CreatePersonaScreen>
       setState(() => _saving = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          content: Text(ErrorMapper.map(e)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
