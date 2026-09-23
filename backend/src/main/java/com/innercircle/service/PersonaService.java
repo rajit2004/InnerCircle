@@ -86,9 +86,11 @@ public class PersonaService {
                         ? request.getAvatarEmoji().trim()
                         : defaultEmojiFor(relationshipType)
         );
-        persona.setPersonality(request.getPersonality());
-        persona.setVoice(request.getVoice());
-        persona.setSystemPrompt(buildSystemPrompt(relationshipType, InputSanitizer.sanitizeText(request.getPersonalityDescription()), request.isNsfwEnabled()));
+        // SECURITY: personality/voice are persisted and may be rendered —
+        // strip HTML/null bytes like every other user-facing text field.
+        persona.setPersonality(InputSanitizer.sanitizeText(request.getPersonality()));
+        persona.setVoice(InputSanitizer.sanitizeText(request.getVoice()));
+        persona.setSystemPrompt(buildSystemPrompt(relationshipType, InputSanitizer.sanitizeText(request.getPersonalityDescription(), 300), request.isNsfwEnabled()));
         persona.setGreeting(buildGreeting(relationshipType, InputSanitizer.sanitizeText(request.getName())));
         persona.setSubscriptionTier(SubscriptionTier.free);
         persona.setActive(true);
@@ -128,7 +130,9 @@ public class PersonaService {
                 persona.getRole(),
                 persona.getAvatarEmoji(),
                 persona.getPersonality(),
-                persona.getSystemPrompt(),
+                // SECURITY: never expose the full system prompt to non-owners —
+                // it hands free users a blueprint for crafting jailbreaks.
+                owned ? persona.getSystemPrompt() : null,
                 persona.getGreeting(),
                 persona.getVoice(),
                 persona.isActive(),
@@ -162,8 +166,14 @@ public class PersonaService {
                     : "";
         }
 
+        // SECURITY: escape quotes/backslashes so an embedded " in the user's
+        // personality description cannot break out of the woven-in frame.
+        String safeDescription = personalityDescription
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"");
+
         return relationshipFrame + ". Specifically, they described your personality like this: \""
-                + personalityDescription + "\". Bring that personality through in how you talk, "
+                + safeDescription + "\". Bring that personality through in how you talk, "
                 + "but always reply the way a real person would text back: short, natural, 1 to 3 "
                 + "sentences usually, never an essay. Never use bullet points, numbered lists, headers, "
                 + "or bold/italic markdown (no **, ##, or -) -- just talk normally like you're texting "

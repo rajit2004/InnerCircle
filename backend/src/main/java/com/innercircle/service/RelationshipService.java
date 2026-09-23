@@ -1,5 +1,7 @@
 package com.innercircle.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.innercircle.model.Persona;
 import com.innercircle.model.Relationship;
 import com.innercircle.model.User;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -24,6 +27,9 @@ import java.util.List;
 public class RelationshipService {
 
     private final RelationshipRepository relationshipRepository;
+    // SECURITY: inject the shared Spring ObjectMapper instead of reflecting
+    // a new instance on every interaction (was ObjectMapper.class.getDeclaredConstructor()).
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * Get or create the relationship between a user and persona.
@@ -72,19 +78,14 @@ public class RelationshipService {
         // Track shared topics (keep last 20 unique topics)
         if (topic != null && !topic.isBlank()) {
             try {
-                List<String> topics = new java.util.ArrayList<>(
-                        (List<String>) com.fasterxml.jackson.databind.ObjectMapper.class
-                                .getDeclaredConstructor()
-                                .newInstance()
-                                .readValue(rel.getSharedTopics(), List.class)
-                );
+                List<String> topics = objectMapper.readValue(
+                        rel.getSharedTopics(), new TypeReference<List<String>>() {});
                 if (!topics.contains(topic)) {
                     topics.add(topic);
                     if (topics.size() > 20) {
-                        topics = topics.subList(topics.size() - 20, topics.size());
+                        topics = new ArrayList<>(topics.subList(topics.size() - 20, topics.size()));
                     }
-                    rel.setSharedTopics(new com.fasterxml.jackson.databind.ObjectMapper()
-                            .writeValueAsString(topics));
+                    rel.setSharedTopics(objectMapper.writeValueAsString(topics));
                 }
             } catch (Exception e) {
                 log.debug("Failed to update shared topics: {}", e.getMessage());

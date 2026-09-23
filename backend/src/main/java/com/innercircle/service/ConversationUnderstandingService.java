@@ -85,6 +85,7 @@ public class ConversationUnderstandingService {
                     .bodyValue(body)
                     .retrieve()
                     .bodyToMono(String.class)
+                    .timeout(java.time.Duration.ofSeconds(15))
                     .block();
 
             if (response == null) return defaultState(userMessage);
