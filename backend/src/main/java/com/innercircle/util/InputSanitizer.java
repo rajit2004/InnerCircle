@@ -29,14 +29,23 @@ public class InputSanitizer {
      * Strips HTML, null bytes, and trims whitespace.
      */
     public static String sanitizeText(String input) {
+        return sanitizeText(input, MAX_NAME_LENGTH);
+    }
+
+    /**
+     * Sanitize with an explicit max length — used for fields whose DTO
+     * allows more than MAX_NAME_LENGTH (e.g. persona personalityDescription
+     * allows 300) so content is not silently truncated to 100 chars.
+     */
+    public static String sanitizeText(String input, int maxLength) {
         if (input == null) return null;
         String result = input;
         result = NULL_BYTES.matcher(result).replaceAll("");
         result = HTML_TAGS.matcher(result).replaceAll("");
         result = result.trim();
         result = MULTI_SPACE.matcher(result).replaceAll(" ");
-        if (result.length() > MAX_NAME_LENGTH) {
-            result = result.substring(0, MAX_NAME_LENGTH);
+        if (result.length() > maxLength) {
+            result = result.substring(0, maxLength);
         }
         return result;
     }

@@ -7,6 +7,7 @@ import lombok.Data;
 @Data
 public class ChangePasswordRequest {
     @NotBlank(message = "Current password is required")
+    @Size(max = 128)
     private String currentPassword;
 
     @NotBlank(message = "New password is required")

@@ -20,14 +20,18 @@ public class CreatePersonaRequest {
     private String name;
 
     @NotBlank
+    @Size(max = 30)
     private String relationshipType;
 
     @NotBlank
     @Size(max = 300)
     private String personalityDescription;
 
+    @Size(max = 8)
     private String avatarEmoji;
+    @Size(max = 300)
     private String personality;
+    @Size(max = 300)
     private String voice;
     private boolean nsfwEnabled = false;
 }

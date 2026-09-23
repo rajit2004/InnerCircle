@@ -1,19 +1,19 @@
 package com.innercircle.dto;
 
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 
 // FEATURE (message reactions, round 12): body for
 // PUT /api/chat/messages/{messageId}/reaction. `reaction` is deliberately
-// nullable and unvalidated on length/content beyond a sane cap -- it's
-// meant to hold a single emoji, but there's no real harm in accepting
-// whatever string the frontend's fixed emoji picker sends, and null clears
-// an existing reaction (used when the user taps the same emoji again to
-// remove it).
+// nullable (clears an existing reaction when the user taps the same emoji
+// again) and capped at 16 chars — enough for any single emoji including
+// ZWJ sequences, without allowing arbitrary-length strings into the DB.
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReactionRequest {
+    @Size(max = 16)
     private String reaction;
 }

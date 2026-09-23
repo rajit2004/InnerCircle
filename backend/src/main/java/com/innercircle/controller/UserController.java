@@ -61,10 +61,10 @@ public class UserController {
     public UserProfileResponse uploadAvatar(@AuthenticationPrincipal User user,
                                             @RequestParam("file") MultipartFile file) throws IOException {
         if (file.isEmpty()) {
-            throw new IllegalArgumentException("File is empty");
+            throw new BadRequestException("File is empty");
         }
         if (file.getSize() > MAX_AVATAR_SIZE) {
-            throw new IllegalArgumentException("File must be under 5MB");
+            throw new BadRequestException("File must be under 5MB");
         }
 
         String originalName = file.getOriginalFilename();

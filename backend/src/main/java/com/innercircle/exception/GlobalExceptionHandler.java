@@ -1,6 +1,7 @@
 package com.innercircle.exception;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -33,6 +34,16 @@ public class GlobalExceptionHandler {
                 : errors.entrySet().iterator().next().getKey() + ": " + errors.entrySet().iterator().next().getValue();
         log.warn("Validation failed: {}", errors);
         return ResponseEntity.badRequest().body(Map.of("error", message));
+    }
+
+    // SECURITY: concurrent duplicate registrations hit the UNIQUE(email)
+    // constraint after the check-then-insert race — map to 409, not 500.
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<Map<String, String>> handleDataIntegrity(DataIntegrityViolationException ex) {
+        log.warn("Data integrity violation: {}", ex.getMessage());
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "An account with this email already exists"));
     }
 
     // Malformed JSON body → 400, not 500
