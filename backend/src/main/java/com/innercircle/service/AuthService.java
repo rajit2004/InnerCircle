@@ -38,12 +38,13 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(AuthRequest request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+        String email = request.getEmail().toLowerCase().trim();
+        if (userRepository.findByEmail(email).isPresent()) {
             throw new DuplicateEmailException("An account with this email already exists");
         }
 
         User user = new User();
-        user.setEmail(request.getEmail());
+        user.setEmail(email);
         user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
         if (request.getDisplayName() != null && !request.getDisplayName().isBlank()) {
             user.setDisplayName(request.getDisplayName().trim());
@@ -73,14 +74,15 @@ public class AuthService {
     public AuthResponse login(AuthRequest request) {
         String email = request.getEmail().toLowerCase().trim();
 
-        // SECURITY: rate-limit login attempts per email
-        if (!rateLimiter.allowLogin(email)) {
+        // SECURITY: check rate-limit before attempting authentication (does not increment)
+        if (!rateLimiter.isLoginAllowed(email)) {
             log.warn("SECURITY: rate-limited login attempt for: {}", email);
             throw new TooManyRequestsException("Too many login attempts. Try again in 15 minutes.");
         }
 
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> {
+                    rateLimiter.recordLoginFailure(email);
                     log.warn("SECURITY: failed login — unknown email: {}", email);
                     return new UnauthorizedException("Invalid credentials");
                 });
@@ -92,6 +94,8 @@ public class AuthService {
         }
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            rateLimiter.recordLoginFailure(email);
+
             // Increment failed attempts
             int attempts = user.getFailedLoginAttempts() + 1;
             user.setFailedLoginAttempts(attempts);
@@ -107,7 +111,8 @@ public class AuthService {
             throw new UnauthorizedException("Invalid credentials");
         }
 
-        // Successful login — reset failed attempts
+        // Successful login — reset rate-limiter counter and failed attempts
+        rateLimiter.recordLoginSuccess(email);
         user.setFailedLoginAttempts(0);
         user.setLockedUntil(null);
         userRepository.save(user);
