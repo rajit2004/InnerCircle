@@ -83,11 +83,19 @@ public class ChatService {
             conversationRepository.save(conversation);
         }
 
+        // SECURITY: sanitize once at entry — use the sanitized value everywhere
+        // (storage, understanding service, memory extraction) so unsanitized
+        // input never reaches the LLM or downstream services.
+        String sanitizedContent = sanitizeChatInput(request.getContent());
+        if (sanitizedContent.isBlank()) {
+            throw new BadRequestException("Message is empty after sanitization");
+        }
+
         // Store user message
         Message userMsg = new Message();
         userMsg.setConversation(conversation);
         userMsg.setRole("user");
-        userMsg.setContent(sanitizeChatInput(request.getContent()));
+        userMsg.setContent(sanitizedContent);
         messageRepository.save(userMsg);
 
         // Get recent message history
@@ -105,7 +113,7 @@ public class ChatService {
 
         // Layer 1: Conversation Understanding
         ConversationUnderstandingService.ConversationState state =
-                understandingService.analyze(request.getContent(), recentMaps);
+                understandingService.analyze(sanitizedContent, recentMaps);
 
         // Layer 2: Relationship Context
         Relationship relationship = relationshipService.getOrCreateRelationship(user, persona);
@@ -116,7 +124,7 @@ public class ChatService {
                 strategyService.determine(state, relationship.getRelationshipStage(), persona);
 
         // Layer 4: Memory + Persona (existing, enhanced)
-        List<Memory> memories = memoryService.findRelevantMemories(user, persona.getId(), request.getContent());
+        List<Memory> memories = memoryService.findRelevantMemories(user, persona.getId(), sanitizedContent);
         String memoryText = memories.stream()
                 .map(Memory::getFact)
                 .reduce((a, b) -> a + "\n" + b)
@@ -224,15 +232,15 @@ public class ChatService {
             // Update relationship
             relationshipService.recordInteraction(user, persona, state.getTopic(), state.getEmotion());
 
-            // Async memory extraction
-            String sanitizedContent = sanitizeChatInput(request.getContent());
+            // Async memory extraction (reuse sanitizedContent from entry)
+            String contentForMemory = sanitizedContent;
             String finalReply = reply;
             Mono.fromRunnable(() -> {
                 try {
                     memoryService.extractAndStoreMemory(
                             user,
                             request.getPersonaId().toString(),
-                            sanitizedContent,
+                            contentForMemory,
                             finalReply
                     );
                 } catch (Exception e) {

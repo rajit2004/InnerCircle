@@ -4,6 +4,7 @@ import com.innercircle.dto.ChangePasswordRequest;
 import com.innercircle.dto.SubscriptionUpdateRequest;
 import com.innercircle.dto.UpdateProfileRequest;
 import com.innercircle.dto.UserProfileResponse;
+import com.innercircle.exception.BadRequestException;
 import com.innercircle.model.SubscriptionTier;
 import com.innercircle.model.User;
 import com.innercircle.service.ChatService;
@@ -20,6 +21,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -62,9 +64,21 @@ public class UserController {
 
         String originalName = file.getOriginalFilename();
         if (originalName == null) originalName = "avatar.jpg";
+
+        // SECURITY: reject path separators to prevent traversal via crafted filenames
+        if (originalName.contains("..") || originalName.contains("/") || originalName.contains("\\")) {
+            throw new BadRequestException("Invalid filename");
+        }
+
         String ext = originalName.contains(".")
-                ? originalName.substring(originalName.lastIndexOf('.') + 1)
+                ? originalName.substring(originalName.lastIndexOf('.') + 1).toLowerCase()
                 : "jpg";
+
+        // SECURITY: whitelist image extensions only — serving .html/.svg from
+        // the unauthenticated /uploads/avatars/** path would be stored XSS
+        if (!Set.of("jpg", "jpeg", "png", "webp").contains(ext)) {
+            throw new BadRequestException("Only JPG, PNG, and WebP images are allowed");
+        }
 
         String filename = user.getId() + "." + ext;
         Path dir = Paths.get(AVATAR_DIR);
