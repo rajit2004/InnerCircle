@@ -350,6 +350,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       : 'Not set',
                   trailing: IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 20),
+                    tooltip: 'Edit display name',
                     onPressed: () => _editDisplayName(profile),
                   ),
                 ),
@@ -368,6 +369,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       : 'Not set',
                   trailing: IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 20),
+                    tooltip: 'Edit date of birth',
                     onPressed: () => _editDateOfBirth(profile),
                   ),
                 ),
@@ -378,6 +380,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   value: profile.language ?? 'en',
                   trailing: IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 20),
+                    tooltip: 'Edit language',
                     onPressed: () => _editLanguage(profile),
                   ),
                 ),
@@ -388,6 +391,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   value: profile.timezone ?? 'UTC',
                   trailing: IconButton(
                     icon: const Icon(Icons.edit_outlined, size: 20),
+                    tooltip: 'Edit timezone',
                     onPressed: () => _editTimezone(profile),
                   ),
                 ),
@@ -1099,6 +1103,7 @@ class _NetworkAvatar extends StatelessWidget {
         fullUrl,
         fit: BoxFit.cover,
         cacheWidth: 168,
+        semanticLabel: 'Profile photo',
         errorBuilder: (_, _, _) => Container(
           decoration: const BoxDecoration(
             shape: BoxShape.circle,

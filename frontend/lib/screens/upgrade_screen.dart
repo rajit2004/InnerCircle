@@ -176,6 +176,7 @@ class _UpgradeScreenState extends State<UpgradeScreen>
                   alignment: Alignment.topLeft,
                   child: IconButton(
                     onPressed: () => Navigator.pop(context, false),
+                    tooltip: 'Close upgrade screen',
                     icon: const Icon(Icons.close_rounded, color: Colors.white),
                   ),
                 ),

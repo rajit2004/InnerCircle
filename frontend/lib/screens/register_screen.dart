@@ -272,6 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                               padding: const EdgeInsets.only(left: 4, top: 4),
                               child: IconButton(
                                 onPressed: () => Navigator.pop(context),
+                                tooltip: 'Back',
                                 icon: const Icon(
                                   Icons.arrow_back_rounded,
                                   color: Colors.white,
@@ -431,6 +432,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                                           ? Icons.visibility_outlined
                                           : Icons.visibility_off_outlined,
                                     ),
+                                    tooltip: _obscurePassword
+                                        ? 'Show password'
+                                        : 'Hide password',
                                     onPressed: () => setState(
                                       () =>
                                           _obscurePassword = !_obscurePassword,
