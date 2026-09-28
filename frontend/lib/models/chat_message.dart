@@ -15,5 +15,21 @@ class ChatMessage {
     this.failed = false,
   });
 
-  Map<String, dynamic> toJson() => {'role': role, 'content': content};
+  factory ChatMessage.fromJson(Map<String, dynamic> json) => ChatMessage(
+    id: json['id'] as String?,
+    role: json['role'] as String,
+    content: json['content'] as String? ?? '',
+    timestamp: json['timestamp'] != null
+        ? DateTime.tryParse(json['timestamp'] as String)
+        : null,
+    reaction: json['reaction'] as String?,
+  );
+
+  Map<String, dynamic> toJson() => {
+    if (id != null) 'id': id,
+    'role': role,
+    'content': content,
+    if (timestamp != null) 'timestamp': timestamp!.toIso8601String(),
+    if (reaction != null) 'reaction': reaction,
+  };
 }

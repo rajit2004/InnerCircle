@@ -4,6 +4,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../models/chat_message.dart';
 import '../models/persona.dart';
+import '../services/chat_cache.dart';
 import '../services/chat_service.dart';
 import '../services/error_mapper.dart';
 import '../theme/app_theme.dart';
@@ -56,6 +57,17 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Future<void> _loadHistory() async {
+    final cached = await ChatCache.load(widget.persona.id);
+    if (!mounted) return;
+    if (cached != null) {
+      setState(() {
+        _conversationId = cached['conversationId'] as String?;
+        _messages.addAll(cached['messages'] as List<ChatMessage>);
+        _loadingHistory = false;
+      });
+      _scrollToBottom();
+    }
+
     try {
       final history = await ChatService.getHistory(widget.persona.id);
       final conversationId = history['conversationId'] as String?;
@@ -69,26 +81,33 @@ class _ChatScreenState extends State<ChatScreen> {
 
       setState(() {
         _conversationId = conversationId;
-        _messages.addAll(
-          rawMessages.map(
-            (m) => ChatMessage(
-              id: m['id'] as String?,
-              role: m['role'] as String,
-              content: m['content'] as String,
-              reaction: m['reaction'] as String?,
-              timestamp: m['createdAt'] != null
-                  ? DateTime.tryParse(m['createdAt'] as String)
-                  : null,
+        _messages
+          ..clear()
+          ..addAll(
+            rawMessages.map(
+              (m) => ChatMessage(
+                id: m['id'] as String?,
+                role: m['role'] as String,
+                content: m['content'] as String,
+                reaction: m['reaction'] as String?,
+                timestamp: m['createdAt'] != null
+                    ? DateTime.tryParse(m['createdAt'] as String)
+                    : null,
+              ),
             ),
-          ),
-        );
+          );
         _loadingHistory = false;
       });
+      _persistCache();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      _showGreetingOnly();
+      if (cached == null) _showGreetingOnly();
     }
+  }
+
+  void _persistCache() {
+    ChatCache.save(widget.persona.id, _conversationId, _messages);
   }
 
   void _showGreetingOnly() {
@@ -211,6 +230,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _isTyping = false;
         _animationKey++;
       });
+      _persistCache();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
@@ -283,6 +303,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _isTyping = false;
         _animationKey++;
       });
+      _persistCache();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
@@ -361,6 +382,7 @@ class _ChatScreenState extends State<ChatScreen> {
       _conversationId = null;
       _isTyping = false;
     });
+    ChatCache.clear(widget.persona.id);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Chat cleared'),
@@ -395,12 +417,14 @@ class _ChatScreenState extends State<ChatScreen> {
     final newReaction = (message.reaction == selected) ? null : selected;
     final previousReaction = message.reaction;
     setState(() => message.reaction = newReaction);
+    _persistCache();
 
     try {
       await ChatService.setReaction(message.id!, newReaction);
     } catch (e) {
       if (!mounted) return;
       setState(() => message.reaction = previousReaction);
+      _persistCache();
       AppSound.lightImpact();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -517,6 +541,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _isTyping = false;
         _animationKey++;
       });
+      _persistCache();
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
