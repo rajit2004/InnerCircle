@@ -192,17 +192,61 @@ class ApiClient {
     return body;
   }
 
-  // BUG FIX (frontend, 2026-06-30): streamChat() removed entirely.
-  // It was implemented as an SSE client (filtering for "data: " lines,
-  // expecting {"content": ..., "done": ...} per chunk), but the backend's
-  // POST /api/chat endpoint no longer streams -- per the backend's own
-  // FIXES.md (Round 4 and Round 6), it was deliberately changed to return
-  // one plain JSON object {"reply": "...", "conversationId": "..."} in a
-  // single response, because SSE on the backend's Tomcat servlet stack was
-  // causing Spring Security to 403 the client's automatic SSE reconnect
-  // request. Since the backend doesn't send SSE anymore, this method could
-  // never produce any chunks -- every chat message would hang forever with
-  // the typing indicator on screen and no reply ever arriving.
-  // Use ApiClient.post('/api/chat', ...) directly instead, which the
-  // existing _handleResponse() above already supports correctly.
+  // FEATURE (streaming, Phase 5): sends a POST and returns the SSE frames
+  // the backend emits on the response body as a lazy Stream of decoded JSON
+  // payloads (each `data:` line). Unlike a browser EventSource, this is a
+  // one-shot authenticated POST that never auto-reconnects, which is what
+  // caused Spring Security to 403 the old SSE implementation (Round 4).
+  // Non-2xx responses are read fully and routed through the same
+  // _handleResponse() error mapping as every other verb, so quota/auth
+  // errors thrown before the stream starts surface identically.
+  static Future<Stream<dynamic>> postStream(
+    String endpoint, {
+    dynamic body,
+    bool auth = true,
+  }) async {
+    final uri = Uri.parse('$baseUrl$endpoint');
+    final headers = await _headers(auth: auth);
+    final client = http.Client();
+    try {
+      final request = http.Request('POST', uri)..headers.addAll(headers);
+      if (body != null) request.body = jsonEncode(body);
+      final streamed = await client
+          .send(request)
+          .timeout(const Duration(seconds: 15));
+      if (streamed.statusCode < 200 || streamed.statusCode >= 300) {
+        final response = await http.Response.fromStream(streamed);
+        client.close();
+        _handleResponse(response);
+        return const Stream<dynamic>.empty();
+      }
+      return _sseLines(streamed.stream, client);
+    } catch (_) {
+      client.close();
+      rethrow;
+    }
+  }
+
+  static Stream<dynamic> _sseLines(
+    http.ByteStream byteStream,
+    http.Client client,
+  ) async* {
+    try {
+      final lines = byteStream
+          .transform(utf8.decoder)
+          .transform(const LineSplitter());
+      await for (final line in lines) {
+        if (!line.startsWith('data: ')) continue;
+        final payload = line.substring(6);
+        if (payload.isEmpty) continue;
+        try {
+          yield jsonDecode(payload);
+        } catch (_) {
+          // Ignore malformed frames rather than killing the stream.
+        }
+      }
+    } finally {
+      client.close();
+    }
+  }
 }

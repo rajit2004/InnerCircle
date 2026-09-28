@@ -18,6 +18,32 @@ class ChatService {
         as Map<String, dynamic>;
   }
 
+  // FEATURE (streaming, Phase 5): sends the message to /api/chat/stream and
+  // yields the SSE events as they arrive:
+  //   {type: token, content: partialText}   incremental reply text
+  //   {type: done, reply, conversationId, messageId}
+  //   {type: error, message}
+  // Throws (via ApiClient.postStream) if the stream cannot be started at
+  // all (HTTP error before any frame), so callers can fall back to the
+  // non-streaming sendMessage().
+  static Stream<Map<String, dynamic>> sendMessageStream(
+    String personaId,
+    String content, {
+    String? conversationId,
+  }) async* {
+    final body = <String, dynamic>{'personaId': personaId, 'content': content};
+    if (conversationId != null) {
+      body['conversationId'] = conversationId;
+    }
+
+    final events = await ApiClient.postStream('/api/chat/stream', body: body);
+    await for (final event in events) {
+      if (event is Map<String, dynamic>) {
+        yield event;
+      }
+    }
+  }
+
   // FEATURE (chat history, 2026-07-02): fetches the most recent conversation
   // (and its messages) for a persona, so ChatScreen can restore where the
   // user left off instead of starting a brand new conversation every time

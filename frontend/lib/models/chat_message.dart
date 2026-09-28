@@ -1,7 +1,10 @@
 class ChatMessage {
-  final String? id;
+  // id/content are mutable so a streaming reply can start as a pending
+  // placeholder (client-generated id) and grow token by token until the
+  // server assigns the final id on the done event.
+  String? id;
   final String role;
-  final String content;
+  String content;
   final DateTime? timestamp;
   String? reaction;
   bool failed;

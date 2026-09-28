@@ -202,31 +202,94 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     _scrollToBottom();
 
+    // Primary path: token-by-token streaming. _sendStreaming only throws
+    // when nothing was received (stream never started), in which case we
+    // fall back to the classic one-shot request so chat keeps working even
+    // if the stream endpoint is unavailable.
     try {
-      final response = await ChatService.sendMessage(
+      await _sendStreaming(userMessage);
+    } catch (_) {
+      if (!mounted) return;
+      try {
+        await _sendLegacy(userMessage);
+      } catch (e) {
+        if (!mounted) return;
+        _handleSendFailure(userMessage, content, e);
+      }
+    }
+  }
+
+  /// Consumes the SSE stream, growing a pending assistant bubble per token.
+  /// Rethrows only if no token and no done event arrived; a mid-stream
+  /// failure keeps the partial reply on screen and shows a snackbar.
+  Future<void> _sendStreaming(ChatMessage userMessage) async {
+    final pending = ChatMessage(
+      id: 'pending-${userMessage.timestamp?.millisecondsSinceEpoch ?? 0}',
+      role: 'assistant',
+      content: '',
+      timestamp: DateTime.now(),
+    );
+    var received = false;
+    var reply = '';
+    String? conversationId;
+    String? messageId;
+
+    try {
+      final stream = ChatService.sendMessageStream(
         widget.persona.id,
-        content,
+        userMessage.content,
         conversationId: _conversationId,
       );
-      final reply = (response['reply'] as String? ?? '').trim();
-      final conversationId = response['conversationId'] as String?;
-      final messageId = response['messageId'] as String?;
+      await for (final event in stream) {
+        if (!mounted) return;
+        final type = event['type'] as String?;
+        if (type == 'token') {
+          final delta = event['content'] as String? ?? '';
+          if (delta.isEmpty) continue;
+          reply += delta;
+          pending.content = reply;
+          if (!received) {
+            received = true;
+            setState(() {
+              _messages.add(pending);
+              _isTyping = false;
+              _animationKey++;
+            });
+          } else {
+            setState(() {});
+          }
+          _scrollToBottom();
+        } else if (type == 'done') {
+          conversationId = event['conversationId'] as String?;
+          messageId = event['messageId'] as String?;
+          final finalReply = (event['reply'] as String? ?? '').trim();
+          if (finalReply.isNotEmpty) {
+            reply = finalReply;
+            pending.content = finalReply;
+            if (!received) {
+              received = true;
+              setState(() {
+                _messages.add(pending);
+                _isTyping = false;
+                _animationKey++;
+              });
+            }
+          }
+          break;
+        } else if (type == 'error') {
+          throw Exception(event['message'] as String? ?? 'Chat stream failed');
+        }
+      }
       if (!mounted) return;
+      if (!received) {
+        throw Exception('Chat stream ended without a reply');
+      }
 
       setState(() {
         if (conversationId != null && conversationId.isNotEmpty) {
           _conversationId = conversationId;
         }
-        if (reply.isNotEmpty) {
-          _messages.add(
-            ChatMessage(
-              id: messageId,
-              role: 'assistant',
-              content: reply,
-              timestamp: DateTime.now(),
-            ),
-          );
-        }
+        pending.id = messageId;
         _isTyping = false;
         _animationKey++;
       });
@@ -234,28 +297,76 @@ class _ChatScreenState extends State<ChatScreen> {
       _scrollToBottom();
     } catch (e) {
       if (!mounted) return;
-      AppSound.lightImpact();
-      setState(() {
-        userMessage.failed = true;
-        _isTyping = false;
-      });
+      if (!received) rethrow;
+      setState(() => _isTyping = false);
+      _persistCache();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(ErrorMapper.map(e)),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
-          action: SnackBarAction(
-            label: 'Retry',
-            textColor: Colors.white,
-            onPressed: () {
-              _controller.text = content;
-              setState(() => _hasText = true);
-              _retryMessage(userMessage);
-            },
-          ),
         ),
       );
     }
+  }
+
+  /// Classic one-shot send, used as a fallback when the stream never
+  /// started. The user bubble was already added by _sendMessage, so this
+  /// only appends the reply.
+  Future<void> _sendLegacy(ChatMessage userMessage) async {
+    final response = await ChatService.sendMessage(
+      widget.persona.id,
+      userMessage.content,
+      conversationId: _conversationId,
+    );
+    final reply = (response['reply'] as String? ?? '').trim();
+    final conversationId = response['conversationId'] as String?;
+    final messageId = response['messageId'] as String?;
+    if (!mounted) return;
+
+    setState(() {
+      if (conversationId != null && conversationId.isNotEmpty) {
+        _conversationId = conversationId;
+      }
+      if (reply.isNotEmpty) {
+        _messages.add(
+          ChatMessage(
+            id: messageId,
+            role: 'assistant',
+            content: reply,
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
+      _isTyping = false;
+      _animationKey++;
+    });
+    _persistCache();
+    _scrollToBottom();
+  }
+
+  void _handleSendFailure(ChatMessage userMessage, String content, Object e) {
+    AppSound.lightImpact();
+    setState(() {
+      userMessage.failed = true;
+      _isTyping = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ErrorMapper.map(e)),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        action: SnackBarAction(
+          label: 'Retry',
+          textColor: Colors.white,
+          onPressed: () {
+            _controller.text = content;
+            setState(() => _hasText = true);
+            _retryMessage(userMessage);
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _retryMessage(ChatMessage failedMessage) async {
@@ -637,7 +748,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                     final message = _messages[index];
                                     return _AnimatedMessageBubble(
                                       key: ValueKey(
-                                        'msg-${message.content.hashCode}-$index',
+                                        'msg-$index-${message.id ?? ''}',
                                       ),
                                       message: message,
                                       gradient: gradient,
