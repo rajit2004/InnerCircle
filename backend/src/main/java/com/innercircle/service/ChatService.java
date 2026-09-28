@@ -15,18 +15,26 @@ import com.innercircle.repository.MessageRepository;
 import com.innercircle.repository.UserRepository;
 import com.innercircle.repository.PersonaRepository;
 import com.innercircle.util.InputSanitizer;
+import io.netty.channel.ChannelOption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
+import reactor.netty.http.client.HttpClient;
 
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 @Service
@@ -37,6 +45,7 @@ public class ChatService {
     public static final int FREE_TIER_DAILY_MESSAGE_LIMIT = 50;
 
     private final WebClient webClient;
+    private final TransactionTemplate transactionTemplate;
     private final PersonaRepository personaRepository;
     private final ConversationRepository conversationRepository;
     private final MessageRepository messageRepository;
@@ -252,6 +261,314 @@ public class ChatService {
         }
 
         return new ChatResponse(reply, conversation.getId(), assistantMessageId);
+    }
+
+    // ═════════════════════════════════════════════════════════════════════
+    // STREAMING (Phase 5): POST /api/chat/stream
+    //
+    // Unlike chatDirect(), the servlet request thread never blocks on Groq:
+    // validation + user-message persistence run first in a short
+    // transaction (so quota/auth errors still surface as normal HTTP error
+    // responses before any SSE starts), then a worker thread consumes
+    // Groq's SSE deltas and forwards them to the client. The assistant row
+    // is saved in a second short transaction once the stream finishes, so
+    // no DB connection is held open while tokens are in flight.
+    //
+    // Auth note: this is a plain POST with the Authorization header, not an
+    // EventSource GET — the client never auto-reconnects, which is what
+    // caused the Spring Security 403 that killed SSE in Round 4.
+    // ═════════════════════════════════════════════════════════════════════
+
+    public SseEmitter chatStream(ChatRequest request, User user) {
+        // Runs first (synchronously): throws before any SSE starts.
+        StreamContext ctx = transactionTemplate.execute(status -> prepareStream(request, user));
+
+        SseEmitter emitter = new SseEmitter(60_000L);
+        emitter.onTimeout(() -> {
+            try {
+                emitter.complete();
+            } catch (Exception ignored) {
+                // Already completed by the container.
+            }
+        });
+
+        Thread worker = new Thread(() -> runStream(ctx, emitter), "chat-stream");
+        worker.setDaemon(true);
+        worker.start();
+        return emitter;
+    }
+
+    /** Everything that must happen inside a transaction before streaming. */
+    private StreamContext prepareStream(ChatRequest request, User user) {
+        if (!personaService.isPersonaAccessible(user, request.getPersonaId())) {
+            throw new ForbiddenException("Upgrade to premium to chat with this persona");
+        }
+
+        enforceDailyMessageLimit(user);
+
+        Persona persona = personaRepository.findById(request.getPersonaId())
+                .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
+
+        final Conversation conversation;
+        if (request.getConversationId() != null) {
+            conversation = conversationRepository.findById(request.getConversationId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Conversation not found"));
+            if (!conversation.getUser().getId().equals(user.getId())) {
+                throw new ForbiddenException("No access to this conversation");
+            }
+            if (conversation.getPersona() != null
+                    && !conversation.getPersona().getId().equals(request.getPersonaId())) {
+                throw new BadRequestException("Conversation does not match this persona");
+            }
+        } else {
+            conversation = new Conversation();
+            conversation.setUser(user);
+            conversation.setPersona(persona);
+            conversationRepository.save(conversation);
+        }
+
+        String sanitizedContent = sanitizeChatInput(request.getContent());
+        if (sanitizedContent.isBlank()) {
+            throw new BadRequestException("Message is empty after sanitization");
+        }
+
+        Message userMsg = new Message();
+        userMsg.setConversation(conversation);
+        userMsg.setRole("user");
+        userMsg.setContent(sanitizedContent);
+        messageRepository.save(userMsg);
+
+        List<Message> recent = messageRepository.findByConversationOrderByCreatedAtAsc(conversation);
+        recent = recent.stream().skip(Math.max(0, recent.size() - 20)).toList();
+
+        List<Map<String, String>> recentMaps = recent.stream()
+                .map(m -> Map.of("role", m.getRole(), "content", m.getContent()))
+                .toList();
+
+        ConversationUnderstandingService.ConversationState state =
+                understandingService.analyze(sanitizedContent, recentMaps);
+        Relationship relationship = relationshipService.getOrCreateRelationship(user, persona);
+        String relationshipContext = relationshipService.getRelationshipContext(relationship);
+        ResponseStrategyService.ResponseStrategy strategy =
+                strategyService.determine(state, relationship.getRelationshipStage(), persona);
+        List<Memory> memories = memoryService.findRelevantMemories(user, persona.getId(), sanitizedContent);
+        String memoryText = memories.stream()
+                .map(Memory::getFact)
+                .reduce((a, b) -> a + "\n" + b)
+                .orElse("");
+        String systemPrompt = buildSystemPrompt(persona, relationshipContext, memoryText, state, strategy);
+
+        List<Map<String, String>> llmMessages = new ArrayList<>();
+        llmMessages.add(Map.of("role", "system", "content", systemPrompt));
+        for (Message m : recent) {
+            llmMessages.add(Map.of("role", m.getRole(), "content", m.getContent()));
+        }
+
+        return new StreamContext(user, persona, conversation, llmMessages,
+                determineMaxTokens(state), sanitizedContent, state, strategy, relationship);
+    }
+
+    /** Worker thread: consumes Groq's SSE stream and forwards tokens. */
+    private void runStream(StreamContext ctx, SseEmitter emitter) {
+        AtomicBoolean finished = new AtomicBoolean(false);
+        StringBuilder buffer = new StringBuilder();
+        StringBuilder reply = new StringBuilder();
+
+        try {
+            WebClient streamClient = webClient.mutate().clientConnector(new ReactorClientHttpConnector(
+                    HttpClient.create()
+                            .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5000)
+                            .responseTimeout(Duration.ofSeconds(60))))
+                    .build();
+
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", groqModel);
+            body.put("messages", ctx.llmMessages());
+            body.put("max_tokens", ctx.maxTokens());
+            body.put("temperature", 0.9);
+            body.put("frequency_penalty", 0.3);
+            body.put("presence_penalty", 0.3);
+            body.put("stream", true);
+
+            streamClient.post()
+                    .uri(groqUrl)
+                    .header("Authorization", "Bearer " + groqApiKey)
+                    .bodyValue(body)
+                    .retrieve()
+                    .onStatus(HttpStatusCode::isError, resp ->
+                            resp.bodyToMono(String.class)
+                                    .flatMap(errorBody -> {
+                                        log.error("Groq streaming API error: {}", errorBody);
+                                        return Mono.error(new RuntimeException("Groq API error: " + errorBody));
+                                    })
+                    )
+                    .bodyToFlux(String.class)
+                    .timeout(Duration.ofSeconds(60))
+                    .subscribe(
+                            chunk -> {
+                                buffer.append(chunk);
+                                drainLines(buffer, line ->
+                                        handleStreamLine(line, reply, emitter));
+                            },
+                            error -> {
+                                drainLines(buffer, line ->
+                                        handleStreamLine(line, reply, emitter));
+                                completeStream(ctx, emitter, reply, finished, error);
+                            },
+                            () -> {
+                                drainLines(buffer, line ->
+                                        handleStreamLine(line, reply, emitter));
+                                completeStream(ctx, emitter, reply, finished, null);
+                            }
+                    );
+        } catch (Exception e) {
+            log.error("Failed to start Groq stream: {}", e.getMessage(), e);
+            completeStream(ctx, emitter, reply, finished, e);
+        }
+    }
+
+    /** Pulls complete lines out of the SSE buffer and hands them over. */
+    private static void drainLines(StringBuilder buffer, Consumer<String> lineConsumer) {
+        int idx;
+        while ((idx = buffer.indexOf("\n")) >= 0) {
+            String line = buffer.substring(0, idx);
+            buffer.delete(0, idx + 1);
+            lineConsumer.accept(line.strip());
+        }
+    }
+
+    /**
+     * Parses one Groq SSE line: extracts choices[0].delta.content and
+     * forwards it to the client as a token event. "[DONE]" markers and
+     * non-data lines are ignored; malformed payloads are logged and skipped
+     * so one bad chunk cannot kill the stream.
+     */
+    private void handleStreamLine(String line, StringBuilder reply, SseEmitter emitter) {
+        if (!line.startsWith("data:")) {
+            return;
+        }
+        String payload = line.substring(5).strip();
+        if (payload.isEmpty() || "[DONE]".equals(payload)) {
+            return;
+        }
+        String delta = extractDelta(payload);
+        if (delta == null || delta.isEmpty()) {
+            return;
+        }
+        reply.append(delta);
+        try {
+            emitter.send(SseEmitter.event().data(Map.of("type", "token", "content", delta)));
+        } catch (Exception e) {
+            // Client went away — keep collecting so the reply is still
+            // saved server-side when the Groq stream finishes.
+            log.debug("SSE send failed (client disconnected): {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Extracts the streamed text delta from a Groq/OpenAI SSE payload.
+     * Returns null when the payload carries no content delta (role-only
+     * first chunk, finish_reason chunk, etc.). Package-private for tests.
+     */
+    static String extractDelta(String payload) {
+        try {
+            JsonNode node = new ObjectMapper().readTree(payload);
+            JsonNode delta = node.path("choices").path(0).path("delta").path("content");
+            if (delta.isMissingNode() || delta.isNull()) {
+                return null;
+            }
+            return delta.asText("");
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /** Finalizes the stream: filter, persist, emit done, complete. */
+    private void completeStream(StreamContext ctx, SseEmitter emitter,
+                                StringBuilder reply, AtomicBoolean finished,
+                                Throwable error) {
+        if (!finished.compareAndSet(false, true)) {
+            return;
+        }
+
+        String finalReply = reply.toString().strip();
+        boolean useFallback;
+        if (finalReply.isBlank()) {
+            if (error != null) {
+                log.error("Groq stream failed with no partial reply: {}", error.getMessage());
+            } else {
+                log.error("Groq stream completed with an empty reply");
+            }
+            finalReply = getFallbackReply(ctx.persona());
+            useFallback = true;
+        } else {
+            String filtered = naturalnessFilter.filter(stripMarkdown(finalReply), ctx.persona().getRole());
+            if (!filtered.isBlank()) {
+                finalReply = filtered;
+            }
+            useFallback = false;
+        }
+
+        final String replyToSave = finalReply;
+        final boolean fallback = useFallback;
+        UUID assistantMessageId = transactionTemplate.execute(status -> {
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(ctx.conversation());
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(replyToSave);
+            assistantMsg.setMetadata(fallback
+                    ? fallbackMetadata("stream_fallback")
+                    : buildMetadata(ctx.state(), ctx.strategy(), ctx.relationship()));
+            messageRepository.save(assistantMsg);
+
+            if (!replyToSave.isBlank() && !fallback) {
+                relationshipService.recordInteraction(ctx.user(), ctx.persona(),
+                        ctx.state().getTopic(), ctx.state().getEmotion());
+            }
+            return assistantMsg.getId();
+        });
+
+        if (!replyToSave.isBlank() && !fallback) {
+            String contentForMemory = ctx.sanitizedContent();
+            String finalReplyForMemory = replyToSave;
+            Mono.fromRunnable(() -> {
+                try {
+                    memoryService.extractAndStoreMemory(
+                            ctx.user(),
+                            ctx.persona().getId().toString(),
+                            contentForMemory,
+                            finalReplyForMemory
+                    );
+                } catch (Exception e) {
+                    log.warn("Memory extraction failed: {}", e.getMessage());
+                }
+            }).subscribeOn(Schedulers.boundedElastic()).subscribe();
+        }
+
+        try {
+            Map<String, Object> done = new LinkedHashMap<>();
+            done.put("type", "done");
+            done.put("reply", replyToSave);
+            done.put("conversationId", ctx.conversation().getId().toString());
+            done.put("messageId", assistantMessageId != null ? assistantMessageId.toString() : null);
+            emitter.send(SseEmitter.event().data(done));
+        } catch (Exception e) {
+            log.debug("SSE done send failed: {}", e.getMessage());
+        }
+        try {
+            emitter.complete();
+        } catch (Exception ignored) {
+            // Already completed (timeout or client disconnect).
+        }
+    }
+
+    /** Streaming counterpart of chatDirect()'s prep phase. */
+    private record StreamContext(User user, Persona persona, Conversation conversation,
+                                 List<Map<String, String>> llmMessages, int maxTokens,
+                                 String sanitizedContent,
+                                 ConversationUnderstandingService.ConversationState state,
+                                 ResponseStrategyService.ResponseStrategy strategy,
+                                 Relationship relationship) {
     }
 
     /**

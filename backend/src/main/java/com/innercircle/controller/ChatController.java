@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.UUID;
 
@@ -25,6 +26,18 @@ public class ChatController {
     public ResponseEntity<ChatResponse> chat(@AuthenticationPrincipal User user,
                                                 @Valid @RequestBody ChatRequest request) {
         return ResponseEntity.ok(chatService.chatDirect(request, user));
+    }
+
+    // FEATURE (streaming, Phase 5): token-by-token streaming of the reply.
+    // Validation/quota errors are thrown by chatStream() before any SSE
+    // starts, so they still return normal JSON error responses; once the
+    // stream starts, events are data-only SSE frames:
+    //   {"type":"token","content":"..."}   incremental text
+    //   {"type":"done","reply":"...","conversationId":"...","messageId":"..."}
+    @PostMapping("/stream")
+    public SseEmitter stream(@AuthenticationPrincipal User user,
+                             @Valid @RequestBody ChatRequest request) {
+        return chatService.chatStream(request, user);
     }
 
     // FEATURE (chat history, 2026-07-02): new endpoint so the frontend can
