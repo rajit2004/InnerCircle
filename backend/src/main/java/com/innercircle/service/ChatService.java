@@ -393,16 +393,26 @@ public class ChatService {
             streamClient.post()
                     .uri(groqUrl)
                     .header("Authorization", "Bearer " + groqApiKey)
+                    .header("Accept", "text/event-stream")
                     .bodyValue(body)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::isError, resp ->
-                            resp.bodyToMono(String.class)
-                                    .flatMap(errorBody -> {
-                                        log.error("Groq streaming API error: {}", errorBody);
-                                        return Mono.error(new RuntimeException("Groq API error: " + errorBody));
-                                    })
-                    )
-                    .bodyToFlux(String.class)
+                    .<String>exchangeToFlux(response -> {
+                        if (response.statusCode().isError()) {
+                            return response.bodyToMono(String.class).flatMap(errorBody -> {
+                                log.error("Groq streaming API error: {}", errorBody);
+                                return Mono.<String>error(new RuntimeException("Groq API error: " + errorBody));
+                            }).flux();
+                        }
+                        // NOTE: bodyToFlux(String.class) runs Spring's SSE reader on
+                        // text/event-stream responses, which strips the "data: " prefix
+                        // and event delimiters. Extract raw DataBuffers instead so the
+                        // line-based parser below sees the original SSE framing.
+                        return response.body(org.springframework.web.reactive.function.BodyExtractors.toDataBuffers())
+                                .map(buf -> {
+                                    String s = buf.toString(java.nio.charset.StandardCharsets.UTF_8);
+                                    org.springframework.core.io.buffer.DataBufferUtils.release(buf);
+                                    return s;
+                                });
+                    })
                     .timeout(Duration.ofSeconds(60))
                     .subscribe(
                             chunk -> {

@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.context.RequestAttributeSecurityContextRepository;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -31,6 +32,16 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+
+    // FIX (streaming): with Spring Security's requireExplicitSave (default
+    // since 6.1), setting the SecurityContextHolder alone is not persisted
+    // anywhere, so the ASYNC dispatch that follows SseEmitter completion
+    // re-entered the filter chain unauthenticated and was rejected by
+    // AuthorizationFilter ("response already committed" noise included).
+    // Saving to the request attribute restores the same context on ASYNC
+    // dispatch, which is how the initial REQUEST dispatch already behaves.
+    private final RequestAttributeSecurityContextRepository contextRepository =
+            new RequestAttributeSecurityContextRepository();
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -69,6 +80,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 UsernamePasswordAuthenticationToken auth =
                         new UsernamePasswordAuthenticationToken(user, null, authorities);
                 SecurityContextHolder.getContext().setAuthentication(auth);
+                contextRepository.saveContext(SecurityContextHolder.getContext(), request, response);
 
             } catch (Exception e) {
                 // Invalid/expired token, or user no longer exists -- leave the

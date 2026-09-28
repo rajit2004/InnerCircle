@@ -236,8 +236,10 @@ class ApiClient {
           .transform(utf8.decoder)
           .transform(const LineSplitter());
       await for (final line in lines) {
-        if (!line.startsWith('data: ')) continue;
-        final payload = line.substring(6);
+        // SSE frames allow an optional space after the colon; Spring's
+        // SseEmitter writes "data:" with no space, so accept both forms.
+        if (!line.startsWith('data:')) continue;
+        final payload = line.substring(5).trimLeft();
         if (payload.isEmpty) continue;
         try {
           yield jsonDecode(payload);
