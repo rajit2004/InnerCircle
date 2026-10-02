@@ -22,17 +22,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     _OnboardingPageData(
       icon: Icons.favorite_rounded,
       gradient: [Color(0xFFF08CA0), Color(0xFFE85D75)],
-      title: 'Someone who\nunderstands',
+      title: 'Someone who\ngets you',
       subtitle:
           'Not a chatbot. Not a therapist.\nReal companions who text like people who care.',
     ),
     _OnboardingPageData(
       icon: Icons.chat_bubble_rounded,
       gradient: [Color(0xFF6B4C7A), Color(0xFF4E3659)],
-      title: 'Conversations\nthat feel real',
+      title: 'Conversations\nthat feel natural',
       shortSubtitles: [
-        'Short, natural replies',
-        'They remember what you tell them',
+        'Short, real replies — not essays',
+        'They remember what matters to you',
         'No robotic "How can I help?"',
       ],
     ),
@@ -41,15 +41,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       gradient: [Color(0xFFFFCB77), Color(0xFFF5A623)],
       title: 'Your circle,\nyour way',
       shortSubtitles: [
-        'Built-in companions or create your own',
-        'Each has a distinct personality',
+        '4 built-in companions with distinct vibes',
+        'Each has their own personality & voice',
         'They learn and grow with you',
       ],
     ),
     _OnboardingPageData(
       icon: Icons.shield_rounded,
       gradient: [Color(0xFF5FC3B0), Color(0xFF2E9484)],
-      title: 'Private and\npersonal',
+      title: 'Private &\npersonal',
       shortSubtitles: [
         'Your conversations stay yours',
         'No data shared with anyone',

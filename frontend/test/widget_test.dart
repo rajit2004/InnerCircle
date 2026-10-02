@@ -15,7 +15,7 @@ void main() {
     await tester.pumpWidget(const InnerCircleApp());
     await tester.pump(const Duration(seconds: 3));
 
-    expect(find.text('Someone who\nunderstands'), findsOneWidget);
+    expect(find.text('Someone who\ngets you'), findsOneWidget);
     expect(find.text('Continue'), findsOneWidget);
   });
 
