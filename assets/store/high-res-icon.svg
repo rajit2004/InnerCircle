@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="url(#icon-gradient)"/>
+  
+  <!-- Chat bubble icon -->
+  <path d="M140 180 L372 180 L372 340 L256 400 L140 340 Z" fill="rgba(255,255,255,0.9)" stroke="rgba(255,255,255,0.3)" stroke-width="2"/>
+  
+  <!-- Three dots -->
+  <circle cx="190" cy="230" r="12" fill="#6366f1"/>
+  <circle cx="256" cy="230" r="12" fill="#8b5cf6"/>
+  <circle cx="322" cy="230" r="12" fill="#ec4899"/>
+  
+  <!-- Three dots smaller -->
+  <circle cx="190" cy="280" r="8" fill="rgba(99,102,241,0.7)"/>
+  <circle cx="256" cy="280" r="8" fill="rgba(139,92,246,0.7)"/>
+  <circle cx="322" cy="280" r="8" fill="rgba(236,72,153,0.7)"/>
+  
+  <!-- Three dots smallest -->
+  <circle cx="190" cy="330" r="5" fill="rgba(99,102,241,0.5)"/>
+  <circle cx="256" cy="330" r="5" fill="rgba(139,92,246,0.5)"/>
+  <circle cx="322" cy="330" r="5" fill="rgba(236,72,153,0.5)"/>
+</svg>

@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1a1a2e;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#16213e;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#2a2a4a;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e1e3e;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+  
+  <!-- Status bar -->
+  <rect x="0" y="0" width="1080" height="60" fill="#0f0f1a"/>
+  <text x="540" y="40" font-family="Arial, sans-serif" font-size="20" fill="white" text-anchor="middle" font-weight="bold">9:41</text>
+  <text x="980" y="40" font-family="Arial, sans-serif" font-size="16" fill="#888" text-anchor="end">🔋 87%</text>
+  
+  <!-- App bar -->
+  <rect x="0" y="60" width="1080" height="100" fill="#1a1a2e"/>
+  <circle cx="60" cy="110" r="35" fill="#6366f1"/>
+  <text x="60" y="122" font-family="Arial, sans-serif" font-size="28" fill="white" text-anchor="middle">💬</text>
+  <text x="120" y="105" font-family="Arial, sans-serif" font-size="24" fill="white" font-weight="bold">Best Friend</text>
+  <text x="120" y="135" font-family="Arial, sans-serif" font-size="14" fill="#aaa">online</text>
+  
+  <!-- Messages -->
+  <g font-family="Arial, sans-serif">
+    <!-- User message -->
+    <rect x="60" y="200" width="800" height="80" rx="20" fill="url(#card)" stroke="#6366f1" stroke-width="1"/>
+    <text x="80" y="245" font-size="20" fill="white" text-anchor="start">Hey! What's up? I'm here for you! What's new?</text>
+    <text x="80" y="270" font-size="14" fill="#888" text-anchor="start">You • 2:41 PM</text>
+    
+    <!-- Assistant message -->
+    <rect x="60" y="320" width="800" height="100" rx="20" fill="url(#card)" stroke="#8b5cf6" stroke-width="1"/>
+    <circle cx="80" cy="370" r="20" fill="#ec4899"/>
+    <text x="120" y="370" font-size="16" fill="white" font-weight="bold" text-anchor="middle">💕</text>
+    <text x="120" y="400" font-size="18" fill="white">Yo! What's going on? Spill the tea with me! 💪</text>
+    <text x="120" y="425" font-size="14" fill="#888">Best Friend • 2:41 PM</text>
+    
+    <!-- User message 2 -->
+    <rect x="60" y="460" width="800" height="60" rx="20" fill="url(#card)" stroke="#6366f1" stroke-width="1"/>
+    <text x="80" y="500" font-size="20" fill="white" text-anchor="start">I'm doing great! Just finished a big project 🎉</text>
+    <text x="80" y="525" font-size="14" fill="#888" text-anchor="start">You • 2:42 PM</text>
+    
+    <!-- Assistant message 2 -->
+    <rect x="60" y="560" width="800" height="120" rx="20" fill="url(#card)" stroke="#8b5cf6" stroke-width="1"/>
+    <circle cx="80" cy="620" r="20" fill="#ec4899"/>
+    <text x="80" y="620" font-size="16" fill="white" font-weight="bold" text-anchor="middle">💕</text>
+    <text x="120" y="620" font-size="18" fill="white">THAT'S AMAZING BRO! 🎉🎉🎉 You've been grinding on that for WEEKS. Time to celebrate! What's the first thing you're gonna do to treat yourself?</text>
+    <text x="120" y="680" font-size="14" fill="#888">Best Friend • 2:42 PM</text>
+  </g>
+  
+  <!-- Input bar -->
+  <rect x="0" y="1740" width="1080" height="180" fill="#1a1a2e"/>
+  <rect x="30" y="1780" width="800" height="80" rx="40" fill="#2a2a4a"/>
+  <text x="50" y="1830" font-family="Arial, sans-serif" font-size="20" fill="#888" text-anchor="start">Message Best Friend...</text>
+  <circle cx="1000" cy="1820" r="35" fill="#6366f1"/>
+  <text x="1000" y="1832" font-family="Arial, sans-serif" font-size="24" fill="white" text-anchor="middle">➤</text>
+  
+  <!-- Nav bar -->
+  <rect x="0" y="1880" width="1080" height="40" fill="#0f0f1a"/>
+  <g font-family="Arial, sans-serif" font-size="20" fill="#6366f1">
+    <text x="150" y="1905" text-anchor="middle">🏠</text>
+    <text x="360" y="1905" text-anchor="middle">💬</text>
+    <text x="540" y="1905" text-anchor="middle">➕</text>
+    <text x="720" y="1905" text-anchor="middle">🔔</text>
+    <text x="930" y="1905" text-anchor="middle">👤</text>
+  </g>
+</svg>

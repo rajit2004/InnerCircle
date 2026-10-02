@@ -43,12 +43,12 @@ Each third party processes data under its own terms.
 - Backups may retain deleted data for a limited window managed by the database host
 
 ## Your rights
-Depending on your region (GDPR, CCPA, etc.), you may have the right to access, correct, or delete your personal data. Use in-app account deletion or contact `[CONTACT_EMAIL]`.
+Depending on your region (GDPR, CCPA, etc.), you may have the right to access, correct, or delete your personal data. Use in-app account deletion or contact `support@innercircle.app`.
 
 ## Children
 The app is not directed at children under 13 (or the minimum age in your jurisdiction).
 
 ## Changes
-We may update this policy. Material changes will be noted in the app or at `[PRIVACY_URL]`.
+We may update this policy. Material changes will be noted in the app or at `https://innercircle.app/privacy`.
 
-**Last updated:** `[DATE]`
+**Last updated:** `2026-10-02`

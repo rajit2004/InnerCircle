@@ -50,6 +50,6 @@ You may delete your account at any time. We may terminate access for material or
 We may update these Terms. Continued use after changes constitutes acceptance of the revised Terms.
 
 ## 12. Contact
-Questions: `[CONTACT_EMAIL]`
+Questions: `support@innercircle.app`
 
-**Last updated:** `[DATE]`
+**Last updated:** `2026-10-02`
