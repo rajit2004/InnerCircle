@@ -26,7 +26,7 @@ class UpgradeScreen extends StatefulWidget {
 class _UpgradeScreenState extends State<UpgradeScreen>
     with TickerProviderStateMixin {
   bool _upgrading = false;
-  bool _upgraded = false;
+  final bool _upgraded = false;
 
   // Animated gradient background
   late AnimationController _gradientController;
