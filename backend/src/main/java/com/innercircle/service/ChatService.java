@@ -15,7 +15,9 @@ import com.innercircle.repository.MessageRepository;
 import com.innercircle.repository.UserRepository;
 import com.innercircle.repository.PersonaRepository;
 import com.innercircle.util.InputSanitizer;
+import com.innercircle.config.MetricsConfig;
 import com.innercircle.util.RetryUtil;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
 import org.springframework.http.HttpStatus;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +60,7 @@ public class ChatService {
     private final RelationshipService relationshipService;
     private final ResponseStrategyService strategyService;
     private final NaturalnessFilter naturalnessFilter;
+    private final MetricsConfig metricsConfig;
 
     @Value("${groq.api-key}")
     private String groqApiKey;
@@ -170,6 +173,7 @@ public class ChatService {
 
         String response;
         try {
+            var startTime = System.nanoTime();
             response = RetryUtil.executeWithRetry(() ->
                 webClient.post()
                     .uri(groqUrl)
@@ -188,8 +192,11 @@ public class ChatService {
                     .block(),
                 RetryUtil.RetryConfig.userRetry()
             );
+            metricsConfig.recordGroqCall("success");
+            metricsConfig.recordGroqLatency(java.time.Duration.ofNanos(System.nanoTime() - startTime));
         } catch (RetryUtil.RetryExhaustedException e) {
             log.error("Groq request failed after {} attempts: {}", e.getAttempts(), e.getLastError().getMessage());
+            metricsConfig.recordGroqCall("rate_limited");
             String fallbackReply = getFallbackReply(persona);
             Message assistantMsg = new Message();
             assistantMsg.setConversation(conversation);
