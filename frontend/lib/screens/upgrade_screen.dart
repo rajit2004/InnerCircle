@@ -1,5 +1,7 @@
 import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../services/error_mapper.dart';
 import '../services/user_service.dart';
@@ -13,6 +15,7 @@ import '../services/sound_service.dart';
 /// - Side-by-side free vs premium comparison with animated checkmarks
 /// - CTA button with shimmer sweep
 /// - Celebration animation on successful upgrade
+/// - Now integrates with Stripe Checkout for real payments
 class UpgradeScreen extends StatefulWidget {
   const UpgradeScreen({super.key});
 
@@ -129,14 +132,15 @@ class _UpgradeScreenState extends State<UpgradeScreen>
     AppSound.mediumImpact();
 
     try {
-      await UserService.updateSubscription('premium');
+      final checkoutUrl = await UserService.createCheckoutSession('');
       if (!mounted) return;
-      AppSound.heavyImpact();
-      setState(() {
-        _upgrading = false;
-        _upgraded = true;
-      });
-      _celebController.forward();
+      setState(() => _upgrading = false);
+      final uri = Uri.parse(checkoutUrl);
+      if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+        throw Exception('Could not open Stripe Checkout');
+      }
+      // Note: The actual upgrade happens via Stripe webhook
+      // User will be redirected back to the app after payment
     } catch (e) {
       if (!mounted) return;
       setState(() => _upgrading = false);
@@ -234,15 +238,6 @@ class _UpgradeScreenState extends State<UpgradeScreen>
                         const SizedBox(height: 32),
                         // CTA button
                         _buildCTAButton(),
-                        const SizedBox(height: 16),
-                        Text(
-                          "No payment required — this app doesn't have billing yet.",
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: 12,
-                          ),
-                        ),
                         const SizedBox(height: 32),
                       ],
                     ),
@@ -421,7 +416,7 @@ class _UpgradeScreenState extends State<UpgradeScreen>
                         ),
                       )
                     : const Text(
-                        'Upgrade to Premium',
+                        'Subscribe with Stripe',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 16,

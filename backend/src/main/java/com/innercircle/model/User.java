@@ -56,6 +56,12 @@ public class User {
     @JsonIgnore
     private int tokenVersion = 0;
 
+    @JsonIgnore
+    private String stripeCustomerId;
+
+    @JsonIgnore
+    private String stripeSubscriptionId;
+
     @CreationTimestamp
     private Instant createdAt;
 

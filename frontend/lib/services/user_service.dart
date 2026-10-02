@@ -70,6 +70,22 @@ class UserService {
     return profile;
   }
 
+  static Future<String> createCheckoutSession(String priceId) async {
+    final data = await ApiClient.post(
+      '/api/billing/checkout',
+      body: {'priceId': priceId, 'success': true},
+    ) as Map<String, dynamic>;
+    return data['url'] as String;
+  }
+
+  static Future<String> createPortalSession(String returnUrl) async {
+    final data = await ApiClient.post(
+      '/api/billing/portal',
+      body: {'returnUrl': returnUrl},
+    ) as Map<String, dynamic>;
+    return data['url'] as String;
+  }
+
   static Future<void> changePassword({
     required String currentPassword,
     required String newPassword,

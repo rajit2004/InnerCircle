@@ -14,6 +14,8 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
     boolean existsByEmail(String email);
 
+    Optional<User> findByStripeCustomerId(String stripeCustomerId);
+
     // FEATURE (forgot password, 2026-07-06): looks up whichever user currently
     // holds this reset token. See AuthService.resetPassword().
     Optional<User> findByResetToken(String token);

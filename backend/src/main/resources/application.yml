@@ -63,6 +63,13 @@ subscription:
   # server-side purchase verification exists.
   self-serve: ${SUBSCRIPTION_SELF_SERVE:false}
 
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY:}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
+  success-url: ${STRIPE_SUCCESS_URL:http://localhost:5173/settings?success=true}
+  cancel-url: ${STRIPE_CANCEL_URL:http://localhost:5173/settings?canceled=true}
+  premium-price-id: ${STRIPE_PREMIUM_PRICE_ID:}
+
 firebase:
   # Path to a Firebase service-account JSON file. Leave unset to run without
   # real push delivery -- NotificationService will log instead of sending.
