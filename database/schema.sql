@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS profiles (
                                         locked_until TIMESTAMPTZ,
                                         -- SECURITY: bumped on password change/reset so outstanding JWTs are revoked
                                         token_version INT DEFAULT 0,
+                                        stripe_customer_id TEXT,
+                                        stripe_subscription_id TEXT,
                                         version BIGINT DEFAULT 0,
                                         created_at TIMESTAMPTZ DEFAULT NOW(),
                                         updated_at TIMESTAMPTZ DEFAULT NOW()
