@@ -10,6 +10,7 @@ import '../services/error_mapper.dart';
 import '../theme/app_theme.dart';
 import '../theme/motion.dart';
 import '../services/sound_service.dart';
+import '../utils/retry.dart';
 import '../widgets/persona_avatar.dart';
 import '../widgets/shared_widgets.dart';
 
@@ -380,42 +381,76 @@ class _ChatScreenState extends State<ChatScreen> {
     _scrollToBottom();
 
     try {
-      final response = await ChatService.sendMessage(
-        widget.persona.id,
-        content,
-        conversationId: _conversationId,
-      );
-      final reply = (response['reply'] as String? ?? '').trim();
-      final conversationId = response['conversationId'] as String?;
-      final messageId = response['messageId'] as String?;
-      if (!mounted) return;
+      await retryWithBackoff(
+        () => ChatService.sendMessage(
+          widget.persona.id,
+          content,
+          conversationId: _conversationId,
+        ),
+        config: RetryConfig.userRetry,
+        onRetry: (attempt, delay, error) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Retrying... (attempt $attempt/${RetryConfig.userRetry.maxAttempts})'),
+              duration: delay,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        },
+      ).then((response) {
+        if (!mounted) return;
+        final reply = (response['reply'] as String? ?? '').trim();
+        final conversationId = response['conversationId'] as String?;
+        final messageId = response['messageId'] as String?;
 
-      setState(() {
-        if (conversationId != null && conversationId.isNotEmpty) {
-          _conversationId = conversationId;
-        }
-        _messages.add(
-          ChatMessage(
-            role: 'user',
-            content: content,
-            timestamp: DateTime.now(),
-          ),
-        );
-        if (reply.isNotEmpty) {
+        setState(() {
+          if (conversationId != null && conversationId.isNotEmpty) {
+            _conversationId = conversationId;
+          }
           _messages.add(
             ChatMessage(
-              id: messageId,
-              role: 'assistant',
-              content: reply,
+              role: 'user',
+              content: content,
               timestamp: DateTime.now(),
             ),
           );
-        }
-        _isTyping = false;
-        _animationKey++;
+          if (reply.isNotEmpty) {
+            _messages.add(
+              ChatMessage(
+                id: messageId,
+                role: 'assistant',
+                content: reply,
+                timestamp: DateTime.now(),
+              ),
+            );
+          }
+          _isTyping = false;
+          _animationKey++;
+        });
+        _persistCache();
+        _scrollToBottom();
       });
-      _persistCache();
-      _scrollToBottom();
+    } on RetryExhaustedException catch (e) {
+      if (!mounted) return;
+      AppSound.lightImpact();
+      final retryMessage = ChatMessage(
+        role: 'user',
+        content: content,
+        timestamp: DateTime.now(),
+        failed: true,
+      );
+      setState(() {
+        _messages.add(retryMessage);
+        _isTyping = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed after ${e.attempts} attempts: ${ErrorMapper.map(e.lastError)}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       AppSound.lightImpact();
@@ -626,34 +661,59 @@ class _ChatScreenState extends State<ChatScreen> {
     setState(() => _isTyping = true);
 
     try {
-      final response = await ChatService.regenerate(
-        widget.persona.id,
-        _conversationId!,
-      );
-      final reply = (response['reply'] as String? ?? '').trim();
-      final messageId = response['messageId'] as String?;
-      if (!mounted) return;
-
-      setState(() {
-        // Remove last assistant message and add new one
-        if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
-          _messages.removeLast();
-        }
-        if (reply.isNotEmpty) {
-          _messages.add(
-            ChatMessage(
-              id: messageId,
-              role: 'assistant',
-              content: reply,
-              timestamp: DateTime.now(),
+      await retryWithBackoff(
+        () => ChatService.regenerate(
+          widget.persona.id,
+          _conversationId!,
+        ),
+        config: RetryConfig.userRetry,
+        onRetry: (attempt, delay, error) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Regenerating... (attempt $attempt/${RetryConfig.userRetry.maxAttempts})'),
+              duration: delay,
+              behavior: SnackBarBehavior.floating,
             ),
           );
-        }
-        _isTyping = false;
-        _animationKey++;
+        },
+      ).then((response) {
+        if (!mounted) return;
+        final reply = (response['reply'] as String? ?? '').trim();
+        final messageId = response['messageId'] as String?;
+
+        setState(() {
+          // Remove last assistant message and add new one
+          if (_messages.isNotEmpty && _messages.last.role == 'assistant') {
+            _messages.removeLast();
+          }
+          if (reply.isNotEmpty) {
+            _messages.add(
+              ChatMessage(
+                id: messageId,
+                role: 'assistant',
+                content: reply,
+                timestamp: DateTime.now(),
+              ),
+            );
+          }
+          _isTyping = false;
+          _animationKey++;
+        });
+        _persistCache();
+        _scrollToBottom();
       });
-      _persistCache();
-      _scrollToBottom();
+    } on RetryExhaustedException catch (e) {
+      if (!mounted) return;
+      AppSound.lightImpact();
+      setState(() => _isTyping = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed after ${e.attempts} attempts: ${ErrorMapper.map(e.lastError)}'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       AppSound.lightImpact();

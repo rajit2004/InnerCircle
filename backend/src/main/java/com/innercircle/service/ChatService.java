@@ -15,6 +15,7 @@ import com.innercircle.repository.MessageRepository;
 import com.innercircle.repository.UserRepository;
 import com.innercircle.repository.PersonaRepository;
 import com.innercircle.util.InputSanitizer;
+import com.innercircle.util.RetryUtil;
 import io.netty.channel.ChannelOption;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -809,7 +810,8 @@ public class ChatService {
 
         String response;
         try {
-            response = webClient.post()
+            response = RetryUtil.executeWithRetry(() ->
+                webClient.post()
                     .uri(groqUrl)
                     .header("Authorization", "Bearer " + groqApiKey)
                     .bodyValue(body)
@@ -823,7 +825,19 @@ public class ChatService {
                     )
                     .bodyToMono(String.class)
                     .timeout(java.time.Duration.ofSeconds(30))
-                    .block();
+                    .block(),
+                RetryUtil.RetryConfig.userRetry()
+            );
+        } catch (RetryUtil.RetryExhaustedException e) {
+            log.error("Groq regenerate failed after {} attempts: {}", e.getAttempts(), e.getLastError().getMessage());
+            String fallbackReply = getFallbackReply(persona);
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(conversation);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(fallbackReply);
+            assistantMsg.setMetadata(fallbackMetadata("regenerate_fallback"));
+            messageRepository.save(assistantMsg);
+            return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
         } catch (Exception e) {
             log.error("Groq regenerate failed: {}", e.getMessage(), e);
             String fallbackReply = getFallbackReply(persona);
