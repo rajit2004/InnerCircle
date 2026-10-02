@@ -17,6 +17,7 @@ import com.innercircle.repository.PersonaRepository;
 import com.innercircle.util.InputSanitizer;
 import com.innercircle.util.RetryUtil;
 import io.netty.channel.ChannelOption;
+import org.springframework.http.HttpStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -169,21 +170,34 @@ public class ChatService {
 
         String response;
         try {
-            response = webClient.post()
+            response = RetryUtil.executeWithRetry(() ->
+                webClient.post()
                     .uri(groqUrl)
                     .header("Authorization", "Bearer " + groqApiKey)
                     .bodyValue(body)
                     .retrieve()
-                    .onStatus(HttpStatusCode::isError, resp ->
-                            resp.bodyToMono(String.class)
+                    .onStatus(status -> status == HttpStatus.TOO_MANY_REQUESTS || status.is5xxServerError() || status.value() == 408,
+                            resp -> resp.bodyToMono(String.class)
                                     .flatMap(errorBody -> {
-                                        log.error("Groq API error: {}", errorBody);
-                                        return Mono.error(new RuntimeException("Groq API error: " + errorBody));
+                                        log.warn("Groq API rate limited or server error: {}", errorBody);
+                                        return Mono.error(new RuntimeException("Groq API rate limited or server error: " + errorBody));
                                     })
                     )
                     .bodyToMono(String.class)
                     .timeout(java.time.Duration.ofSeconds(30))
-                    .block();
+                    .block(),
+                RetryUtil.RetryConfig.userRetry()
+            );
+        } catch (RetryUtil.RetryExhaustedException e) {
+            log.error("Groq request failed after {} attempts: {}", e.getAttempts(), e.getLastError().getMessage());
+            String fallbackReply = getFallbackReply(persona);
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(conversation);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(fallbackReply);
+            assistantMsg.setMetadata(fallbackMetadata("rate_limit_fallback"));
+            messageRepository.save(assistantMsg);
+            return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
         } catch (Exception e) {
             log.error("Groq request failed: {}", e.getMessage(), e);
             String fallbackReply = getFallbackReply(persona);
@@ -397,6 +411,12 @@ public class ChatService {
                     .header("Accept", "text/event-stream")
                     .bodyValue(body)
                     .<String>exchangeToFlux(response -> {
+                        if (response.statusCode() == HttpStatus.TOO_MANY_REQUESTS || response.statusCode().is5xxServerError()) {
+                            return response.bodyToMono(String.class).flatMap(errorBody -> {
+                                log.warn("Groq streaming rate limited or server error: {}", errorBody);
+                                return Mono.<String>error(new RuntimeException("Groq streaming rate limited: " + errorBody));
+                            }).flux();
+                        }
                         if (response.statusCode().isError()) {
                             return response.bodyToMono(String.class).flatMap(errorBody -> {
                                 log.error("Groq streaming API error: {}", errorBody);
