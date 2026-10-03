@@ -21,7 +21,13 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import com.innercircle.service.EmbeddingService;
 import com.innercircle.service.ConversationUnderstandingService;
 import com.innercircle.service.ConversationUnderstandingService.ConversationState;
+import com.innercircle.dto.ChatRequest;
+import com.innercircle.dto.ChatResponse;
+import com.innercircle.model.Persona;
+import com.innercircle.model.SubscriptionTier;
+import com.innercircle.repository.PersonaRepository;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -133,6 +139,132 @@ class IntegrationSmokeTest {
         assertThat(client.delete().uri("/api/chat?personaId=" + mom)
                 .header("Authorization", auth)
                 .retrieve().toBodilessEntity().getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+    }
+
+    @Test
+    void chatDirectAndStreamEndpointsWork() {
+        String email = "chat-" + UUID.randomUUID() + "@example.com";
+        String password = "Password123!";
+
+        String token = extractToken(client.post().uri("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("email", email, "password", password))
+                .retrieve().toEntity(String.class).getBody());
+        String auth = "Bearer " + token;
+
+        UUID mom = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+
+        // Test non-stream chat
+        ChatRequest chatReq = new ChatRequest();
+        chatReq.setContent("Hello Mom!");
+        chatReq.setPersonaId(mom);
+        ResponseEntity<String> chatResp = client.post().uri("/api/chat")
+                .header("Authorization", auth)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(chatReq)
+                .retrieve().toEntity(String.class);
+        assertThat(chatResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        ChatResponse chatRespBody;
+        try {
+            chatRespBody = new com.fasterxml.jackson.databind.ObjectMapper().readValue(chatResp.getBody(), ChatResponse.class);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new RuntimeException("Failed to parse chat response", e);
+        }
+        assertThat(chatRespBody.getReply()).isNotBlank();
+        assertThat(chatRespBody.getConversationId()).isNotNull();
+
+        // Verify conversation was created and has messages
+        ResponseEntity<String> history = client.get().uri("/api/chat/history?personaId=" + mom)
+                .header("Authorization", auth)
+                .retrieve().toEntity(String.class);
+        assertThat(history.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(history.getBody()).contains("Hello Mom!");
+
+        // Test streaming chat (non-blocking, just verify endpoint responds)
+        ChatRequest streamReq = new ChatRequest();
+        streamReq.setContent("Quick test");
+        streamReq.setPersonaId(mom);
+        streamReq.setConversationId(chatRespBody.getConversationId());
+        ResponseEntity<String> streamResp = client.post().uri("/api/chat/stream")
+                .header("Authorization", auth)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(streamReq)
+                .retrieve().toEntity(String.class);
+        assertThat(streamResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(streamResp.getBody()).contains("data:");
+    }
+
+    @Test
+    void personaEndpointsWork() {
+        String email = "persona-" + UUID.randomUUID() + "@example.com";
+        String password = "Password123!";
+        String token = extractToken(client.post().uri("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("email", email, "password", password))
+                .retrieve().toEntity(String.class).getBody());
+        String auth = "Bearer " + token;
+
+        // List personas
+        ResponseEntity<String> listResp = client.get().uri("/api/personas")
+                .header("Authorization", auth)
+                .retrieve().toEntity(String.class);
+        assertThat(listResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(listResp.getBody()).contains("Best Friend");
+        assertThat(listResp.getBody()).contains("Mom");
+
+        // Get specific persona
+        UUID mom = UUID.fromString("550e8400-e29b-41d4-a716-446655440000");
+        ResponseEntity<String> getResp = client.get().uri("/api/personas/" + mom)
+                .header("Authorization", auth)
+                .retrieve().toEntity(String.class);
+        assertThat(getResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(getResp.getBody()).contains("Mom");
+        assertThat(getResp.getBody()).contains("nurturing_advisor");
+    }
+
+    @Test
+    void userProfileAndSubscriptionEndpointsWork() {
+        String email = "profile-" + UUID.randomUUID() + "@example.com";
+        String password = "Password123!";
+        String token = extractToken(client.post().uri("/api/auth/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("email", email, "password", password))
+                .retrieve().toEntity(String.class).getBody());
+        String auth = "Bearer " + token;
+
+        // Get profile
+        ResponseEntity<String> meResp = client.get().uri("/api/users/me")
+                .header("Authorization", auth)
+                .retrieve().toEntity(String.class);
+        assertThat(meResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(meResp.getBody()).contains(email);
+        assertThat(meResp.getBody()).contains("free");
+
+        // Update profile
+        ResponseEntity<String> updateResp = client.put().uri("/api/users/me")
+                .header("Authorization", auth)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("displayName", "Test User", "language", "es", "timezone", "America/New_York"))
+                .retrieve().toEntity(String.class);
+        assertThat(updateResp.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(updateResp.getBody()).contains("Test User");
+        assertThat(updateResp.getBody()).contains("es");
+        assertThat(updateResp.getBody()).contains("America/New_York");
+
+        // Change password
+        ResponseEntity<Void> pwdResp = client.put().uri("/api/users/me/password")
+                .header("Authorization", auth)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("currentPassword", password, "newPassword", "NewPass123!"))
+                .retrieve().toEntity(Void.class);
+        assertThat(pwdResp.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
+
+        // Login with new password
+        String newToken = extractToken(client.post().uri("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(Map.of("email", email, "password", "NewPass123!"))
+                .retrieve().toEntity(String.class).getBody());
+        assertThat(newToken).isNotBlank();
     }
 
     @TestConfiguration
