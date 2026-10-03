@@ -45,6 +45,14 @@ public class PersonaService {
                 .orElseThrow(() -> new ResourceNotFoundException("Persona not found"));
     }
 
+    public PersonaResponse getPersonaById(UUID id, User user) {
+        Persona persona = getPersonaById(id);
+        if (!isPersonaAccessible(user, id)) {
+            throw new ForbiddenException("You do not have access to this persona");
+        }
+        return toResponse(persona, user);
+    }
+
     public boolean isPersonaAccessible(User user, UUID personaId) {
         Persona persona = getPersonaById(personaId);
         boolean isOwner = persona.getOwner() != null && persona.getOwner().getId().equals(user.getId());

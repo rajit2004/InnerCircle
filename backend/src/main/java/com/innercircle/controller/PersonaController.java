@@ -31,6 +31,11 @@ public class PersonaController {
         return personaService.createCustomPersona(user, request);
     }
 
+    @GetMapping("/{id}")
+    public PersonaResponse getPersona(@AuthenticationPrincipal User user, @PathVariable UUID id) {
+        return personaService.getPersonaById(id, user);
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePersona(@AuthenticationPrincipal User user, @PathVariable UUID id) {
         personaService.deleteCustomPersona(id, user);
