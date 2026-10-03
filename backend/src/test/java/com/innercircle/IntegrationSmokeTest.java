@@ -74,6 +74,12 @@ class IntegrationSmokeTest {
         registry.add("groq.api-key", () -> "test-key");
         registry.add("groq.url", () -> "http://localhost:0/chat/completions");
         registry.add("groq.model", () -> "test-model");
+        registry.add("management.endpoints.web.exposure.include", () -> "health,info,metrics,prometheus");
+        registry.add("management.endpoint.health.show-details", () -> "when-authorized");
+        registry.add("management.endpoint.prometheus.enabled", () -> "true");
+        registry.add("management.metrics.tags.application", () -> "innercircle-backend");
+        registry.add("management.metrics.distribution.percentiles-histogram.http.server.requests", () -> "true");
+        registry.add("management.metrics.distribution.percentiles.http.server.requests", () -> "0.5,0.9,0.95,0.99");
     }
 
     @BeforeEach

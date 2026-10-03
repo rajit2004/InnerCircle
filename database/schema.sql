@@ -1,6 +1,10 @@
 -- Enable pgvector for embeddings
 CREATE EXTENSION IF NOT EXISTS vector;
 
+-- Migration: Add Stripe columns to profiles table (idempotent)
+ALTER TABLE IF EXISTS profiles ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT;
+ALTER TABLE IF EXISTS profiles ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT;
+
 -- Profiles (Users)
 CREATE TABLE IF NOT EXISTS profiles (
                                         id UUID PRIMARY KEY,
