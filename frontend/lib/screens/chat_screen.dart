@@ -392,7 +392,9 @@ class _ChatScreenState extends State<ChatScreen> {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Retrying... (attempt $attempt/${RetryConfig.userRetry.maxAttempts})'),
+              content: Text(
+                'Retrying... (attempt $attempt/${RetryConfig.userRetry.maxAttempts})',
+              ),
               duration: delay,
               behavior: SnackBarBehavior.floating,
             ),
@@ -446,7 +448,9 @@ class _ChatScreenState extends State<ChatScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed after ${e.attempts} attempts: ${ErrorMapper.map(e.lastError)}'),
+          content: Text(
+            'Failed after ${e.attempts} attempts: ${ErrorMapper.map(e.lastError)}',
+          ),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -662,16 +666,15 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       await retryWithBackoff(
-        () => ChatService.regenerate(
-          widget.persona.id,
-          _conversationId!,
-        ),
+        () => ChatService.regenerate(widget.persona.id, _conversationId!),
         config: RetryConfig.userRetry,
         onRetry: (attempt, delay, error) {
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Regenerating... (attempt $attempt/${RetryConfig.userRetry.maxAttempts})'),
+              content: Text(
+                'Regenerating... (attempt $attempt/${RetryConfig.userRetry.maxAttempts})',
+              ),
               duration: delay,
               behavior: SnackBarBehavior.floating,
             ),
@@ -709,7 +712,9 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() => _isTyping = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Failed after ${e.attempts} attempts: ${ErrorMapper.map(e.lastError)}'),
+          content: Text(
+            'Failed after ${e.attempts} attempts: ${ErrorMapper.map(e.lastError)}',
+          ),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),

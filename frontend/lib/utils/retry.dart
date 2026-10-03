@@ -49,7 +49,8 @@ class RetryExhaustedException implements Exception {
   RetryExhaustedException(this.attempts, this.lastError);
 
   @override
-  String toString() => 'RetryExhaustedException after $attempts attempts: $lastError';
+  String toString() =>
+      'RetryExhaustedException after $attempts attempts: $lastError';
 }
 
 /// Executes [operation] with exponential backoff retry logic.
@@ -78,18 +79,21 @@ Future<T> retryWithBackoff<T>(
       }
 
       // Check if error is retryable
-      bool shouldRetry = isRetryable?.call(e) ?? _isRetryableByDefault(e, config);
+      bool shouldRetry =
+          isRetryable?.call(e) ?? _isRetryableByDefault(e, config);
       if (!shouldRetry) {
         rethrow;
       }
 
       // Apply jitter to prevent thundering herd
-      final jitter = delay.inMilliseconds * config.jitterFactor * (Random().nextDouble() * 2 - 1);
+      final jitter =
+          delay.inMilliseconds *
+          config.jitterFactor *
+          (Random().nextDouble() * 2 - 1);
       final actualDelay = Duration(
-        milliseconds: (delay.inMilliseconds + jitter).clamp(
-          0,
-          config.maxDelay.inMilliseconds,
-        ).round(),
+        milliseconds: (delay.inMilliseconds + jitter)
+            .clamp(0, config.maxDelay.inMilliseconds)
+            .round(),
       );
 
       if (onRetry != null) {
