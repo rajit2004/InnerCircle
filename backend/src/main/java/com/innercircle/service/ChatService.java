@@ -17,8 +17,10 @@ import com.innercircle.repository.PersonaRepository;
 import com.innercircle.util.InputSanitizer;
 import com.innercircle.config.MetricsConfig;
 import com.innercircle.util.RetryUtil;
+import com.innercircle.util.CircuitBreaker;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
+import jakarta.annotation.PostConstruct;
 import org.springframework.http.HttpStatus;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -72,6 +74,23 @@ public class ChatService {
     private String groqUrl;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    // RELIABILITY: circuit breaker wraps all Groq calls so a sustained outage
+    // fails fast (single exception) instead of tying up threads with retries.
+    // 5 consecutive failures opens the breaker for 30s, then one trial call.
+    private CircuitBreaker groqBreaker;
+
+    @PostConstruct
+    void initGroqBreaker() {
+        groqBreaker = new CircuitBreaker(
+                "groq-api",
+                5,
+                Duration.ofSeconds(30),
+                Duration.ofSeconds(10)
+        );
+        groqBreaker.setOnStateChange(() ->
+                metricsConfig.recordGroqCall("circuit_" + groqBreaker.getState().name().toLowerCase()));
+    }
 
     @Transactional
     public ChatResponse chatDirect(ChatRequest request, User user) {
@@ -174,26 +193,39 @@ public class ChatService {
         String response;
         try {
             var startTime = System.nanoTime();
-            response = RetryUtil.executeWithRetry(() ->
-                webClient.post()
-                    .uri(groqUrl)
-                    .header("Authorization", "Bearer " + groqApiKey)
-                    .bodyValue(body)
-                    .retrieve()
-                    .onStatus(status -> status == HttpStatus.TOO_MANY_REQUESTS || status.is5xxServerError() || status.value() == 408,
-                            resp -> resp.bodyToMono(String.class)
-                                    .flatMap(errorBody -> {
-                                        log.warn("Groq API rate limited or server error: {}", errorBody);
-                                        return Mono.error(new RuntimeException("Groq API rate limited or server error: " + errorBody));
-                                    })
-                    )
-                    .bodyToMono(String.class)
-                    .timeout(java.time.Duration.ofSeconds(30))
-                    .block(),
-                RetryUtil.RetryConfig.userRetry()
+            response = groqBreaker.execute(() ->
+                RetryUtil.executeWithRetry(() ->
+                    webClient.post()
+                        .uri(groqUrl)
+                        .header("Authorization", "Bearer " + groqApiKey)
+                        .bodyValue(body)
+                        .retrieve()
+                        .onStatus(status -> status == HttpStatus.TOO_MANY_REQUESTS || status.is5xxServerError() || status.value() == 408,
+                                resp -> resp.bodyToMono(String.class)
+                                        .flatMap(errorBody -> {
+                                            log.warn("Groq API rate limited or server error: {}", errorBody);
+                                            return Mono.error(new RuntimeException("Groq API rate limited or server error: " + errorBody));
+                                        })
+                        )
+                        .bodyToMono(String.class)
+                        .timeout(java.time.Duration.ofSeconds(30))
+                        .block(),
+                    RetryUtil.RetryConfig.userRetry()
+                )
             );
             metricsConfig.recordGroqCall("success");
             metricsConfig.recordGroqLatency(java.time.Duration.ofNanos(System.nanoTime() - startTime));
+        } catch (CircuitBreaker.CircuitOpenException e) {
+            log.warn("Groq circuit breaker OPEN — failing fast without retry");
+            metricsConfig.recordGroqCall("circuit_open");
+            String fallbackReply = getFallbackReply(persona);
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(conversation);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(fallbackReply);
+            assistantMsg.setMetadata(fallbackMetadata("circuit_open_fallback"));
+            messageRepository.save(assistantMsg);
+            return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
         } catch (RetryUtil.RetryExhaustedException e) {
             log.error("Groq request failed after {} attempts: {}", e.getAttempts(), e.getLastError().getMessage());
             metricsConfig.recordGroqCall("rate_limited");
@@ -837,24 +869,37 @@ public class ChatService {
 
         String response;
         try {
-            response = RetryUtil.executeWithRetry(() ->
-                webClient.post()
-                    .uri(groqUrl)
-                    .header("Authorization", "Bearer " + groqApiKey)
-                    .bodyValue(body)
-                    .retrieve()
-                    .onStatus(HttpStatusCode::isError, resp ->
-                            resp.bodyToMono(String.class)
-                                    .flatMap(errorBody -> {
-                                        log.error("Groq API error on regenerate: {}", errorBody);
-                                        return Mono.error(new RuntimeException("Groq API error: " + errorBody));
-                                    })
-                    )
-                    .bodyToMono(String.class)
-                    .timeout(java.time.Duration.ofSeconds(30))
-                    .block(),
-                RetryUtil.RetryConfig.userRetry()
+            response = groqBreaker.execute(() ->
+                RetryUtil.executeWithRetry(() ->
+                    webClient.post()
+                        .uri(groqUrl)
+                        .header("Authorization", "Bearer " + groqApiKey)
+                        .bodyValue(body)
+                        .retrieve()
+                        .onStatus(HttpStatusCode::isError, resp ->
+                                resp.bodyToMono(String.class)
+                                        .flatMap(errorBody -> {
+                                            log.error("Groq API error on regenerate: {}", errorBody);
+                                            return Mono.error(new RuntimeException("Groq API error: " + errorBody));
+                                        })
+                        )
+                        .bodyToMono(String.class)
+                        .timeout(java.time.Duration.ofSeconds(30))
+                        .block(),
+                    RetryUtil.RetryConfig.userRetry()
+                )
             );
+        } catch (CircuitBreaker.CircuitOpenException e) {
+            log.warn("Groq circuit breaker OPEN — failing fast on regenerate");
+            metricsConfig.recordGroqCall("circuit_open");
+            String fallbackReply = getFallbackReply(persona);
+            Message assistantMsg = new Message();
+            assistantMsg.setConversation(conversation);
+            assistantMsg.setRole("assistant");
+            assistantMsg.setContent(fallbackReply);
+            assistantMsg.setMetadata(fallbackMetadata("regenerate_circuit_open"));
+            messageRepository.save(assistantMsg);
+            return new ChatResponse(fallbackReply, conversation.getId(), assistantMsg.getId());
         } catch (RetryUtil.RetryExhaustedException e) {
             log.error("Groq regenerate failed after {} attempts: {}", e.getAttempts(), e.getLastError().getMessage());
             String fallbackReply = getFallbackReply(persona);
