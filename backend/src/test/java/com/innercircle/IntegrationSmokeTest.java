@@ -80,6 +80,11 @@ class IntegrationSmokeTest {
         registry.add("management.metrics.tags.application", () -> "innercircle-backend");
         registry.add("management.metrics.distribution.percentiles-histogram.http.server.requests", () -> "true");
         registry.add("management.metrics.distribution.percentiles.http.server.requests", () -> "0.5,0.9,0.95,0.99");
+        registry.add("spring.autoconfigure.exclude", () -> String.join(",",
+                "org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration",
+                "org.springframework.boot.data.redis.autoconfigure.DataRedisReactiveAutoConfiguration",
+                "org.springframework.boot.data.redis.autoconfigure.health.DataRedisHealthContributorAutoConfiguration",
+                "org.springframework.boot.data.redis.autoconfigure.health.DataRedisReactiveHealthContributorAutoConfiguration"));
     }
 
     @BeforeEach
