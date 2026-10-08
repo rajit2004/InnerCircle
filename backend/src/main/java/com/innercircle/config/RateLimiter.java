@@ -35,12 +35,18 @@ public class RateLimiter {
     // is not available, we fall back to the in-memory map.
     public RateLimiter(ObjectProvider<StringRedisTemplate> redisProvider,
                        @Value("${spring.data.redis.host:}") String redisHost) {
-        StringRedisTemplate template = redisProvider.getIfAvailable();
-        // Only enable Redis if the host is actually configured — the
-        // template bean exists even with an empty host (Spring Boot
-        // defaults to localhost), so we must check the property.
-        this.redisEnabled = (template != null && redisHost != null && !redisHost.isBlank());
-        this.redis = redisEnabled ? template : null;
+        // Check the host property FIRST, before touching the provider.
+        // Calling getIfAvailable() forces Spring to instantiate the
+        // StringRedisTemplate / LettuceConnectionFactory beans even when
+        // Redis isn't configured — which fails startup with
+        // "'host' must not be empty" if spring.data.redis.host is blank.
+        // Only resolve the template when a host is actually configured.
+        StringRedisTemplate template = null;
+        if (redisHost != null && !redisHost.isBlank()) {
+            template = redisProvider.getIfAvailable();
+        }
+        this.redisEnabled = (template != null);
+        this.redis = template;
         if (redisEnabled) {
             log.info("RateLimiter: using Redis backend at {} (distributed counters)", redisHost);
         } else {
