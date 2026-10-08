@@ -144,6 +144,12 @@ management:
       show-details: when-authorized
     prometheus:
       enabled: true
+  tracing:
+    # OPT-IN: distributed tracing auto-activates when OTEL_EXPORTER_OTLP_ENDPOINT
+    # is set (e.g. http://jaeger:4317 or https://otel-collector:4317).
+    # Without an exporter endpoint, tracing is a no-op — zero overhead.
+    sampling:
+      probability: ${OTEL_SAMPLING_PROBABILITY:1.0}
   metrics:
     tags:
       application: ${spring.application.name}

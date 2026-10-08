@@ -23,9 +23,22 @@
         <java.version>17</java.version>
         <jjwt.version>0.12.6</jjwt.version>
         <lombok.version>1.18.38</lombok.version>
+        <!-- Spring Boot 4.1 BOM manages micrometer-core but not micrometer-tracing.
+             1.5.0 is the latest released line compatible with Spring Boot 3.4+/4.x. -->
+        <micrometer-tracing.version>1.5.0</micrometer-tracing.version>
     </properties>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-tracing</artifactId>
+                <version>${micrometer-tracing.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.micrometer</groupId>
+                <artifactId>micrometer-tracing-bridge-otel</artifactId>
+                <version>${micrometer-tracing.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.projectlombok</groupId>
                 <artifactId>lombok</artifactId>
@@ -114,6 +127,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <!--  Distributed tracing (opt-in): auto-activates only when
+              OTEL_EXPORTER_OTLP_ENDPOINT is set. No-op otherwise.  -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-otel</artifactId>
         </dependency>
         <!--  JWT  -->
         <dependency>
