@@ -1,0 +1,133 @@
+# Prometheus alerting rules for InnerCircle backend.
+#
+# Usage: point Prometheus at these rules via your prometheus.yml:
+#   rule_files:
+#     - /path/to/innercircle/monitoring/alerts.yml
+#
+# Metric names come from Spring Boot Actuator + Micrometer
+# (/actuator/prometheus). Custom counters are defined in MetricsConfig.
+
+groups:
+  - name: innercircle-availability
+    rules:
+      - alert: BackendDown
+        expr: up{job="innercircle-backend"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend instance is down"
+          description: "Prometheus has not scraped the backend for over 1 minute."
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_server_requests_seconds_count{job="innercircle-backend",status=~"5.."}[5m]))
+            /
+          sum(rate(http_server_requests_seconds_count{job="innercircle-backend"}[5m]))
+            > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "5xx error rate above 5%"
+          description: "More than 5% of requests are returning 5xx errors over the last 5 minutes."
+
+      - alert: HighP99Latency
+        expr: |
+          histogram_quantile(0.99,
+            sum(rate(http_server_requests_seconds_bucket{job="innercircle-backend"}[5m])) by (le)
+          ) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "p99 latency above 2 seconds"
+          description: "99th percentile request latency has exceeded 2s for 10 minutes."
+
+  - name: innercircle-database
+    rules:
+      - alert: DatabasePoolExhausted
+        expr: hikaricp_connections_pending{job="innercircle-backend"} > 5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "HikariCP connection pool under pressure"
+          description: "More than 5 threads are waiting for a database connection."
+
+      - alert: DatabasePoolSaturated
+        expr: |
+          hikaricp_connections_active{job="innercircle-backend"}
+            /
+          hikaricp_connections_max{job="innercircle-backend"}
+            > 0.9
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Database connection pool >90% utilized"
+          description: "The HikariCP pool is nearly exhausted. Consider raising maximum-pool-size or fixing slow queries."
+
+  - name: innercircle-groq
+    rules:
+      - alert: GroqHighErrorRate
+        expr: |
+          sum(rate(groq_api_calls_total{job="innercircle-backend",status=~"rate_limited|error"}[5m]))
+            /
+          sum(rate(groq_api_calls_total{job="innercircle-backend"}[5m]))
+            > 0.20
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Groq API error rate above 20%"
+          description: "More than 1 in 5 Groq calls are failing or rate-limited over the last 5 minutes."
+
+      - alert: GroqCircuitOpen
+        expr: groq_api_calls_total{job="innercircle-backend",status="circuit_open"} > 0
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Groq circuit breaker has OPENED"
+          description: "The circuit breaker is short-circuiting Groq calls. Users are receiving fallback replies. Investigate Groq API health."
+
+      - alert: GroqHighLatency
+        expr: |
+          histogram_quantile(0.95,
+            sum(rate(groq_api_latency_seconds_bucket{job="innercircle-backend"}[5m])) by (le)
+          ) > 10
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Groq p95 latency above 10 seconds"
+          description: "Groq responses are taking longer than 10s at the 95th percentile."
+
+  - name: innercircle-jvm
+    rules:
+      - alert: HighHeapUsage
+        expr: |
+          sum(jvm_memory_used_bytes{job="innercircle-backend",area="heap"})
+            /
+          sum(jvm_memory_max_bytes{job="innercircle-backend",area="heap"})
+            > 0.9
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "JVM heap usage above 90%"
+          description: "Heap has been above 90% for 10 minutes. Risk of GC pressure or OOM."
+
+      - alert: HighGCPause
+        expr: |
+          sum(rate(jvm_gc_pause_seconds_sum{job="innercircle-backend"}[5m]))
+            /
+          sum(rate(jvm_gc_pause_seconds_count{job="innercircle-backend"}[5m]))
+            > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Average GC pause above 500ms"
+          description: "Garbage collection pauses are degrading response times."
