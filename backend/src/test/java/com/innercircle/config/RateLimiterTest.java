@@ -2,6 +2,9 @@ package com.innercircle.config;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.ObjectProvider;
+
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -11,7 +14,36 @@ class RateLimiterTest {
 
     @BeforeEach
     void setUp() {
-        rateLimiter = new RateLimiter();
+        // Use the in-memory backend by passing a no-op ObjectProvider
+        // and an empty Redis host string.
+        ObjectProvider<org.springframework.data.redis.core.StringRedisTemplate> noRedis =
+                new ObjectProvider<>() {
+                    @Override
+                    public org.springframework.data.redis.core.StringRedisTemplate getObject(Object... args) {
+                        return null;
+                    }
+
+                    @Override
+                    public org.springframework.data.redis.core.StringRedisTemplate getObject() {
+                        return null;
+                    }
+
+                    @Override
+                    public org.springframework.data.redis.core.StringRedisTemplate getIfAvailable() {
+                        return null;
+                    }
+
+                    @Override
+                    public org.springframework.data.redis.core.StringRedisTemplate getIfUnique() {
+                        return null;
+                    }
+
+                    @Override
+                    public Stream<org.springframework.data.redis.core.StringRedisTemplate> stream() {
+                        return Stream.empty();
+                    }
+                };
+        rateLimiter = new RateLimiter(noRedis, "");
     }
 
     @Test
