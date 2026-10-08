@@ -183,15 +183,9 @@ CREATE INDEX IF NOT EXISTS idx_push_tokens_user
     ON push_tokens (user_id);
 
 -- pgvector similarity search (HNSW). Requires pgvector >= 0.5.0;
--- falls back silently to sequential scan on older versions because
--- we use IF NOT EXISTS + a DO block guard.
-DO $$
-BEGIN
-    CREATE INDEX IF NOT EXISTS idx_memories_embedding_hnsw
-        ON memories USING hnsw (embedding vector_cosine_ops);
-EXCEPTION WHEN undefined_object OR feature_not_supported THEN
-    RAISE NOTICE 'HNSW index skipped (pgvector too old or extension missing)';
-END $$;
+-- IF NOT EXISTS makes this idempotent across runs.
+CREATE INDEX IF NOT EXISTS idx_memories_embedding_hnsw
+    ON memories USING hnsw (embedding vector_cosine_ops);
 
 -- Seed personas with new behavior-based prompts
 INSERT INTO personas (id, name, role, avatar_emoji, personality, system_prompt, greeting, subscription_tier, is_active)
