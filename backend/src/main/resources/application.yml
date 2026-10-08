@@ -24,6 +24,29 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:password}
     driver-class-name: org.postgresql.Driver
+    hikari:
+      # PERFORMANCE: HikariCP pool tuning. Defaults are conservative
+      # (max=10, idle=10, maxLifetime=30min). These values balance a
+      # single-instance deployment (~50 concurrent users) against the
+      # risk of leaking connections when a Groq .block() holds one for
+      # up to 30s inside a @Transactional.
+      maximum-pool-size: ${DB_POOL_MAX:15}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      # Connections idle longer than this are recycled. Lower than the
+      # default 10min so dead connections are reaped before a user
+      # notices a timeout.
+      idle-timeout: 300000
+      # Hard cap on connection age — forces rotation so we never hold a
+      # connection that PostgreSQL has silently closed.
+      max-lifetime: 600000
+      # Fail fast if the DB is unreachable at startup instead of
+      # hanging the boot sequence on the driver default (30s).
+      connection-timeout: 5000
+      # Test connection validity before handing it to a thread —
+      # cheap SELECT 1 prevents "connection is not open" errors after
+      # a network blip.
+      connection-test-query: SELECT 1
+      pool-name: InnerCirclePool
   sql:
     init:
       mode: always
