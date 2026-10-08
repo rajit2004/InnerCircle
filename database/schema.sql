@@ -154,6 +154,45 @@ CREATE TABLE IF NOT EXISTS scheduled_messages (
                                                   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- PERFORMANCE: composite and covering indexes for hot query paths.
+-- These are safe to re-run (idempotent) and mirror what a DBA would add
+-- after reviewing EXPLAIN ANALYZE on the main chat/persona queries.
+
+-- Chat history: list messages in a conversation ordered by time.
+CREATE INDEX IF NOT EXISTS idx_messages_conv_created
+    ON messages (conversation_id, created_at);
+
+-- Conversation list: "recent conversations for user" sorted by updated_at.
+CREATE INDEX IF NOT EXISTS idx_conversations_user_updated
+    ON conversations (user_id, updated_at DESC);
+
+-- Custom persona lookup: "personas owned by this user".
+CREATE INDEX IF NOT EXISTS idx_personas_owner
+    ON personas (owner_user_id) WHERE owner_user_id IS NOT NULL;
+
+-- Password reset / lockout lookups.
+CREATE INDEX IF NOT EXISTS idx_profiles_reset_token
+    ON profiles (reset_token) WHERE reset_token IS NOT NULL;
+
+-- Scheduled messages scanner: "active schedules due now".
+CREATE INDEX IF NOT EXISTS idx_scheduled_messages_due
+    ON scheduled_messages (scheduled_at, is_active) WHERE is_active = TRUE;
+
+-- Push token delivery: "all tokens for a user".
+CREATE INDEX IF NOT EXISTS idx_push_tokens_user
+    ON push_tokens (user_id);
+
+-- pgvector similarity search (HNSW). Requires pgvector >= 0.5.0;
+-- falls back silently to sequential scan on older versions because
+-- we use IF NOT EXISTS + a DO block guard.
+DO $$
+BEGIN
+    CREATE INDEX IF NOT EXISTS idx_memories_embedding_hnsw
+        ON memories USING hnsw (embedding vector_cosine_ops);
+EXCEPTION WHEN undefined_object OR feature_not_supported THEN
+    RAISE NOTICE 'HNSW index skipped (pgvector too old or extension missing)';
+END $$;
+
 -- Seed personas with new behavior-based prompts
 INSERT INTO personas (id, name, role, avatar_emoji, personality, system_prompt, greeting, subscription_tier, is_active)
 VALUES
